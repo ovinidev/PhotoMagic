@@ -34,7 +34,7 @@ O sucesso deles é: achar o botão branco, esperar a contagem quando ela existe,
 | --- | --- |
 | Computador | Notebook com Windows 10 ou 11. Janela do operador |
 | TV | Samsung UN49MU6120, 49", em retrato, moldura touch, HDMI como segundo monitor. A janela da câmera é desenhada para 1080×1920 |
-| Webcam | Logitech MX Brio 705 for Business, até 3840×2160, presa no topo da TV, girada 90° |
+| Webcam | Logitech MX Brio 705 for Business, até 3840×2160, presa na horizontal no topo da TV. O retrato é rotação de software de 90° |
 | Impressora | DNP DS-RX1, 300×300 DPI, papel 6×4" (152×102 mm), corte de 2" que gera duas tiras |
 | Arquivo de impressão | 1844×1240 px. Margem de 22 px nas laterais e 20 px em cima e embaixo |
 | Rede | Não há internet na festa. Captura, arquivo e impressão funcionam offline |
@@ -46,13 +46,17 @@ A etiqueta da TV e o diálogo atual da impressora estão nas figuras 3 e 10, no 
 Estas decisões vieram do dono do produto. A implementação segue isto, sem reabrir.
 
 1. **Template.** A tira de cima leva as fotos 1, 2 e 3 na vertical (Angle 270). A tira de baixo leva as fotos 1 e 2 na horizontal (Angle 0). Os números da tabela do briefing são aproximados: foram mexidos na demonstração e não medem os quadrados cinzas. O Cima 3 com Angle 0 e Top 194 é sobra dessa demo. Os espaços ficam dentro dos quadrados cinzas e continuam ajustáveis no editor.
-2. **Câmera.** A webcam física está girada 90°, como o app atual (rotação 90° nas configurações dele). A imagem de trabalho é retrato. Nos espaços horizontais o encaixe padrão corta o centro. O operador ajusta o enquadramento (mover, girar, zoom) no notebook.
-3. **Impressão.** O corte de 2" começa ligado. Dá para imprimir só uma tira, e essa escolha acontece na tela de criar o evento, antes de iniciar, dizendo qual tira.
+2. **Câmera.** A Logitech fica montada na horizontal, no topo da TV, sem giro físico. A rotação de 90° para retrato é feita por software, como no Webcam Photobooth. O sentido mora na constante `CAMERA_ROTATION_DEG`, valor inicial 90. A imagem de trabalho é retrato. Nos espaços horizontais o encaixe padrão corta o centro. O operador ajusta o enquadramento (mover, girar, zoom) no notebook.
+3. **Impressão.** O corte de 2" começa ligado quando saem as duas tiras. Imprimir só uma tira é uma escolha feita na tela de criar o evento, antes de iniciar, dizendo qual tira. Nesse modo a saída continua a folha 6×4, com a metade não escolhida em branco e o corte de 2" desligado. Não depende de um papel 6×2 do driver. Se o driver expuser um 6×2 nativo, isso fica como melhoria, a validar no hardware.
 4. **Driver.** Corte de 2" e os estados sem papel, sem ribbon e desligada usam o que o driver do Windows expuser. O teste no aparelho é do dono. O código de impressão fica isolado, com um modo simulado que os testes usam no lugar do hardware.
 5. **Tela inicial.** Só cria evento novo. Não lista eventos antigos.
 6. **Assinatura.** O cliente tem certificado de assinatura de código para Windows. O CI assina quando os secrets existem (por exemplo `CSC_LINK` e `CSC_KEY_PASSWORD`) e gera o instalador mesmo quando não existem.
 7. **Ajustes da webcam.** Brilho, contraste, saturação, nitidez, balanço de branco e ganho entram por constraints do dispositivo. Compensação de luz de fundo só aparece se o dispositivo expuser essa capability.
 8. **Pasta do evento.** `Desktop\<Nome do evento>`, com `app.getPath('desktop')`. O arquivo salvo é só a montagem JPG, nomeada `HH-mm-ss.jpg`.
+9. **Cópias.** Mais para em 10. Menos para em 1. Aprovado pelo dono.
+10. **Queda no meio da rodada.** Até o Imprimir, a rodada vive na memória. Se o processo cair antes, as três fotos se perdem. Não há rascunho em disco, porque a pasta do evento só recebe a montagem. Aprovado pelo dono.
+11. **Snap do editor.** O espaço encosta nas bordas e nos centros. O giro encosta em 0°, 90°, 180° e 270° dentro de 4°. Alt desliga o snap. Aprovado pelo dono.
+12. **Release.** Cada push na `main` gera o instalador. A GitHub Release, que o electron-updater enxerga, sai quando a versão do `package.json` ainda não foi publicada. Aprovado pelo dono.
 
 ## 5. Fluxo
 
@@ -137,7 +141,7 @@ Seed da primeira execução, já sem o ângulo errado e sem a sobreposição de 
 | Baixo 1 | 1 | 72 | 670 | 500 | 281 | 0 |
 | Baixo 2 | 2 | 620 | 670 | 500 | 281 | 0 |
 
-Esse seed é ponto de partida, não a medida dos quadrados cinzas. O primeiro uso real termina com o operador encostando cada espaço no quadrado do template da festa. 620 existe para a largura 500 não cruzar o espaço que começa em 72.
+Esse seed é a suposição de trabalho. As medidas dos quadrados cinzas estão pendentes do cliente; até lá o app grava estes números e o operador ainda pode arrastar cada espaço. 620 existe para a largura 500 não cruzar o espaço que começa em 72. A linha de corte usada junto com esse seed é y = 620, também pendente do cliente.
 
 ### 6.3 Evento no notebook
 
@@ -171,7 +175,7 @@ Abre em tela cheia no monitor da TV assim que o evento começa. O visual segue a
 
 ### 6.5 Impressão (TV)
 
-Depois da terceira foto a TV mostra a prévia da folha, Imprimir, Cancelar, Mais e Menos. As cópias começam em 1. Uma cópia é uma folha: com as duas tiras, a faca corta essa folha em duas; no modo de uma tira, uma cópia é uma tira do lado escolhido.
+Depois da terceira foto a TV mostra a prévia da folha, Imprimir, Cancelar, Mais e Menos. As cópias começam em 1 e param em 10. Uma cópia é sempre uma folha 6×4. Com as duas tiras, a faca corta essa folha em duas. Com uma tira só, a folha sai inteira, a metade escolhida impressa e a outra em branco.
 
 Cancelar descarta a rodada e volta à câmera, sem arquivo. Imprimir grava o JPG e envia à DS-RX1. Em seguida a TV oferece Imprimir novamente e Nova rodada.
 
@@ -215,7 +219,7 @@ Dado o seed, os cinco espaços têm os valores da tabela de seed, Cima 3 está e
 
 Dado um arraste com o botão preso, Left e Top do painel mudam antes de soltar. Dado um giro, Angle muda antes de soltar. Dado um redimensionamento, Width e Height mudam antes de soltar. Durante o gesto não há escrita em disco.
 
-Dado o espaço a 6 px de uma borda da folha, de um centro, da margem (22 / 1822 na horizontal, 20 / 1220 na vertical), da linha de corte y = 620 ou da borda de outro espaço, o painel mostra o valor encostado ainda com o botão preso. A 9 px, permanece onde o ponteiro deixou. A tolerância de 8 px está no DESIGN. Com Alt preso, o mesmo gesto a 6 px não encosta.
+Dado o espaço a 6 px de uma borda da folha, de um centro, da margem (22 / 1822 na horizontal, 20 / 1220 na vertical), da linha de corte de trabalho (y = 620, pendente do cliente) ou da borda de outro espaço, o painel mostra o valor encostado ainda com o botão preso. A 9 px, permanece onde o ponteiro deixou. A tolerância de 8 px está no DESIGN. Com Alt preso, o mesmo gesto a 6 px não encosta. O giro a 3° de 0, 90, 180 ou 270 encosta nesse ângulo; a 5° não encosta.
 
 Dado o layout salvo e o app reaberto, os cinco espaços voltam com os mesmos números. Um segundo evento usa esses números sem novo ajuste.
 
@@ -231,7 +235,7 @@ Dado um segundo monitor em paisagem, a tela avisa que a TV não está em retrato
 
 ### RF05 — Ao vivo espelhado, arquivo igual
 
-Dado um quadro de fixture com uma marca no lado esquerdo do sensor, a TV mostra essa marca no lado em que um espelho a colocaria, com a pessoa de pé (rotação de 90° aplicada).
+Dado um quadro de fixture com uma marca no lado esquerdo do sensor, a TV mostra essa marca no lado em que um espelho a colocaria, com a pessoa de pé. A câmera está na horizontal; quem põe a imagem em pé é `CAMERA_ROTATION_DEG` (inicial 90), a mesma constante no preview e no arquivo.
 
 O JPG da montagem, aberto depois, mostra a mesma orientação e o mesmo espelhamento daquele quadro. Não há um caminho de preview e outro de arquivo.
 
@@ -275,7 +279,7 @@ Cancelar volta à câmera com o contador em 1/3 e não cria arquivo na pasta do 
 
 Dado o modo das duas tiras, Imprimir envia o JPG à impressora cujo nome contém `DS-RX1`, sem diálogo, com corte de 2" pedido ao driver, orientação retrato, 300 DPI e uma folha por cópia.
 
-Dado “só a de cima” ou “só a de baixo” escolhido antes do evento, o pedido indica essa tira e pede o corte desligado apenas se a camada de impressão precisar disso para entregar uma tira. O operador não vê o nome da flag do driver; vê a tira que escolheu.
+Dado “só a de cima” ou “só a de baixo” escolhido antes do evento, o JPEG continua 1844×1240. A metade não escolhida é branca. O pedido é a folha 6×4 com o corte de 2" desligado. O ticket simulado registra a tira e que a outra metade está em branco. O app não exige papel 6×2.
 
 Dado o modo simulado, Imprimir não abre diálogo e grava um ticket com o caminho do JPG, as cópias, a tira e o corte pedido.
 
@@ -381,6 +385,7 @@ O ícone do instalador, do atalho, da barra de tarefas e da janela é o símbolo
 - Conta de usuário, nuvem, pagamento, moldura animada, compartilhamento
 - Matiz, gama e “ativar cor” da webcam
 - Listar ou reabrir eventos antigos na tela inicial. Os JPG continuam na pasta do Desktop e o sistema de arquivos do Windows serve para isso
+- Papel nativo 6×2. A v1 imprime a folha 6×4 com a metade não usada em branco. Se o driver expuser 6×2, isso entra depois, validado no hardware
 - macOS e Linux como alvo de produção. O CI pode exercitar lógica pura em Linux; o instalador é Windows
 
 ![Figura 12 — Configurações do app atual. Esta tela não volta](assets/briefing/image11.png)
@@ -393,21 +398,19 @@ O arquivo de trabalho transparente está em `assets/brand/logo.png`. O símbolo 
 
 ![Figura 13 — Logo do cliente, como veio no briefing](assets/briefing/image6.png)
 
-## 11. Pontos em aberto e suposições
+## 11. Pendências e o que ainda falta confirmar
 
-Suposições que a implementação pode seguir. O dono confirma no hardware onde está marcado.
+### Pendente do cliente
 
-1. **Sentido da rotação.** O app pede 90° no mesmo sentido do Webcam Photobooth. O sinal (horário ou anti-horário) fica numa constante só. Se a pessoa nascer de cabeça para baixo na MX Brio montada, troca-se essa constante. Critério visual: a pessoa fica de pé.
-2. **Quadrados cinzas.** Não há coordenada medida da arte. O seed da seção 6.2 é o que o app grava na primeira execução. O operador arrasta até cobrir os quadrados.
-3. **Linha de corte.** A faca de 2" é tratada como a linha horizontal y = 620 da folha de 1240 px. Um espaço que cruza essa linha gera aviso no editor. Confirmar com uma folha de teste.
-4. **Uma tira só.** O produto escolhe a tira de cima ou a de baixo. Como a DS-RX1 materializa isso (mídia 2×6, ou folha 4×6 com a outra metade em branco) fica dentro da camada de impressão e depende do que o driver aceitar. O modo simulado grava a escolha. O dono valida na impressora.
-5. **Ribbon e papel.** Só entram os status que o spooler ou o driver expuserem. Status ausente vira “o driver não informou”, não um chute.
-6. **Orientação Portrait.** O diálogo atual marca Portrait para um bitmap 1844×1240, que é mais largo do que alto. O app faz o mesmo e não gira o bitmap de novo. Uma folha de teste confirma que a tira sai em pé.
-7. **Hora do arquivo.** É a hora local do Windows, não um fuso fixo.
-8. **Teto de cópias.** Mais para em 10.
-9. **Ângulos do editor.** Além do snap de bordas e centros, o giro encosta em 0°, 90°, 180° e 270° dentro de 4°. Alt desliga os dois snaps.
-10. **Alt.** Segurar Alt durante o gesto desliga o snap. Não estava no briefing; entra para o operador conseguir um ajuste fino.
-11. **Release.** Cada push na `main` gera instalador. A GitHub Release, que é o que o electron-updater enxerga, sai quando a versão do `package.json` ainda não foi publicada. Publicar a cada commit exigiria uma versão nova a cada commit; a regra adotada é subir a versão no PR que deve chegar às máquinas.
-12. **Logo.** O PNG transparente foi obtido retirando o fundo 242 do raster. Não é vetor. Um SVG do cliente substitui `logo.png` e `mark.png`.
-13. **Câmera quando há várias.** Prefere o dispositivo cujo nome contém `MX Brio`. Sem ele, usa o primeiro e, se houver mais de um, mostra a escolha no criar evento.
-14. **Rodada e queda de energia.** A rodada vive na memória até o Imprimir. Encerrar o processo antes disso perde as três fotos. Não há rascunho em disco, porque a pasta do evento só recebe a montagem.
+O app segue com a suposição atual até esses dados chegarem. Não bloqueiam a implementação.
+
+1. **Quadrados cinzas.** Não há coordenada medida da arte. O seed da seção 6.2 é o que o app grava na primeira execução. O operador ainda arrasta cada espaço até cobrir o quadrado.
+2. **Linha de corte.** A faca de 2" é tratada como y = 620 na folha de 1240 px. Um espaço que cruza essa linha gera aviso no editor. O valor troca quando o cliente passar a medida.
+
+### Ainda em aberto
+
+1. **Ribbon e papel.** Só entram os status que o spooler ou o driver expuserem. Status ausente vira “o driver não informou”, não um chute.
+2. **Orientação Portrait.** O diálogo atual marca Portrait para um bitmap 1844×1240, que é mais largo do que alto. O app faz o mesmo e não gira o bitmap de novo. Uma folha de teste confirma que a tira sai em pé.
+3. **Hora do arquivo.** É a hora local do Windows, não um fuso fixo.
+4. **Logo.** O PNG transparente foi obtido retirando o fundo 242 do raster. Não é vetor. Um SVG do cliente substitui `logo.png` e `mark.png`.
+5. **Câmera quando há várias.** Prefere o dispositivo cujo nome contém `MX Brio`. Sem ele, usa o primeiro e, se houver mais de um, mostra a escolha no criar evento.

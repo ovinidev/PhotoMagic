@@ -72,11 +72,11 @@ Teste de regra pura fica ao lado do arquivo (`snap.test.ts`).
 ## Regras fáceis de quebrar
 
 - A pasta do evento é `app.getPath('desktop') + '\\' + nome`. Dentro dela só entra a montagem `HH-mm-ss.jpg`. Nem foto original, nem template, nem JSON
-- A foto salva é a imagem que a pessoa viu. Preview e arquivo usam a mesma função: girar 90° e depois espelhar na horizontal. Sem segundo caminho “parecido”
+- A Logitech fica montada na horizontal. A foto salva é a imagem que a pessoa viu. Preview e arquivo usam a mesma função: girar `CAMERA_ROTATION_DEG` (inicial 90) e depois espelhar na horizontal. Sem segundo caminho “parecido”, e sem girar a câmera no hardware
 - São 5 espaços, num layout global, o mesmo para todos os eventos. Cima 1, 2 e 3 usam as fotos 1, 2 e 3 com Angle 270. Baixo 1 e 2 usam as fotos 1 e 2 com Angle 0. O fundo muda por evento; a posição, não
-- A tabela do briefing é aproximada. O Cima 3 com Angle 0 e Top 194 é sobra da demonstração. Os espaços ficam dentro dos quadrados cinzas e não se sobrepõem. Baixo 1 e Baixo 2 com Left 72 e 403 e largura 500 se cruzam: o seed do app já separa o de baixo
+- A tabela do briefing é aproximada. O Cima 3 com Angle 0 e Top 194 é sobra da demonstração. Os espaços ficam dentro dos quadrados cinzas e não se sobrepõem. Baixo 1 e Baixo 2 com Left 72 e 403 e largura 500 se cruzam: o seed do app já separa o de baixo. As medidas dos quadrados e a linha de corte (y = 620) estão pendentes do cliente; até lá vale o seed
 - Nos espaços horizontais o encaixe padrão é `cover` com pan zero, o que corta o centro do retrato. O operador ajusta cada espaço da rodada (mover, girar, zoom) sem recapturar
-- O corte de 2 polegadas começa ligado. Imprimir só uma tira é uma escolha feita antes de iniciar o evento, e a escolha diz qual tira. Quem fala com o driver é só `src/main/print/`. O modo simulado existe desde o primeiro PR que imprimir
+- O corte de 2 polegadas começa ligado nas duas tiras. Imprimir só uma tira é uma escolha feita antes de iniciar o evento, e a escolha diz qual tira. A saída dessa escolha é a folha 6×4 com a outra metade em branco e o corte desligado. Não peça papel 6×2. Quem fala com o driver é só `src/main/print/`. O modo simulado existe desde o primeiro PR que imprimir
 - Impressão silenciosa, na DS-RX1, sem diálogo do Windows
 - Se a webcam ou a impressora cair no meio da rodada, a rodada fica na memória. A janela da TV continua respondendo
 - A tela inicial só cria evento. Não lista eventos antigos
@@ -84,7 +84,8 @@ Teste de regra pura fica ao lado do arquivo (`snap.test.ts`).
 - O build do Windows assina se `CSC_LINK` e `CSC_KEY_PASSWORD` existirem. Sem esses secrets o instalador sai sem assinatura e o job continua verde
 - O template aceito tem exatamente 1844×1240 px. A montagem também. DPI 300
 - O nome do arquivo usa a hora local do Windows, 24 h, hífens: `21-45-08.jpg`. Dois arquivos no mesmo segundo ganham `-2`, `-3`
-- Arrastar ou girar um espaço no editor não grava disco e não chama IPC. O painel Left/Top/Angle atualiza no mesmo frame. A gravação é no soltar
+- Arrastar ou girar um espaço no editor não grava disco e não chama IPC. O painel Left/Top/Angle atualiza no mesmo frame. A gravação é no soltar. O snap de bordas e centros vale no gesto; o giro encosta em 0°, 90°, 180° e 270°. Alt desliga o snap
+- Mais cópias para em 10. A GitHub Release só sai quando a versão do `package.json` ainda não foi publicada
 
 ## O que não fazer
 

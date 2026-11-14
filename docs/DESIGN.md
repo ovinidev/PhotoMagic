@@ -122,10 +122,12 @@ A TV é a única dona do `MediaStream`. O obturador do notebook não captura por
 
 ## 5. Captura
 
+A MX Brio fica montada na horizontal, no topo da TV. O sensor entrega paisagem. Quem põe a pessoa em pé é o software, como a rotação de 90° do Webcam Photobooth. Não há giro físico da câmera.
+
 Ordem fixa, uma função só, usada pela prévia e pelo arquivo:
 
-1. Quadro cru da MX Brio, ideal 3840×2160, 30 fps, sem áudio
-2. Rotação de 90° para a pessoa ficar de pé. O ângulo mora em `CAMERA_ROTATION_DEG`, valor inicial `90`, num único arquivo
+1. Quadro cru, ideal 3840×2160, 30 fps, sem áudio
+2. Rotação para retrato. O ângulo mora em `CAMERA_ROTATION_DEG`, valor inicial `90`, num único arquivo. Trocar o sinal dessa constante vira a imagem se o primeiro teste no hardware mostrar a pessoa de cabeça para baixo
 3. Espelhamento horizontal
 
 `getUserMedia` pede `width` e `height` ideais 3840 e 2160. Se a câmera recusar, fica o maior modo que ela entregar. O dispositivo preferido é aquele cujo rótulo contém `MX Brio`. Sem ele, o primeiro `videoinput`. Com mais de uma câmera e nenhuma Brio, o criar evento mostra um select.
@@ -166,12 +168,13 @@ Para cada espaço, nessa ordem:
 2. Encaixe `cover` no retângulo não rotacionado (`width` × `height`), com o pan, o zoom (1 a 3) e a rotação de enquadramento daquele espaço. Zoom 1 e pan 0 cortam o centro: num espaço horizontal, o retrato perde topo e base em partes iguais
 3. Rotação do resultado pelo `angle` do espaço, em torno do centro
 4. Composição sobre o template em `left`, `top`
+5. Se a festa imprime só uma tira, a metade não escolhida (corte de trabalho em y = 620) é preenchida de branco. As duas tiras mantêm a folha inteira
 
 O teste de ouro não depende de adivinhar o pivô: um quadro com uma barra clara no topo tem de mostrar essa barra no topo de cada um dos cinco espaços, as três de cima em pé (verticais) e as duas de baixo em pé (horizontais). Se um ângulo de 270 deitar a pessoa, o sinal da rotação do espaço está errado e o teste falha.
 
 Depois dos cinco espaços, o `sharp` grava JPEG qualidade 95, densidade 300, 1844×1240. Esse é o arquivo `HH-mm-ss.jpg`.
 
-A linha de corte usada pelo editor é y = 620. Espaço cujo retângulo já rotacionado cruza essa linha não impede salvar, e o editor mostra aviso. A confirmação de que a faca cai exatamente aí é uma folha de teste (PRD, ponto em aberto 3).
+A linha de corte usada pelo editor é y = 620. É suposição de trabalho, pendente do cliente, junto com as medidas dos quadrados cinzas. Até esses dados chegarem, o espaço que cruza essa linha não impede salvar, e o editor mostra aviso.
 
 ### Modelo do editor
 
@@ -260,7 +263,11 @@ Duas implementações da mesma interface:
 
 A impressão real é silenciosa (`silent: true`, `deviceName` da fila). O diálogo do Windows não abre. Papel 6,00" × 4,00" (152 × 102 mm), 300 DPI, orientação Portrait, igual à figura 10. O bitmap não é girado de novo.
 
-O corte de 2" é a flag que o driver mostra como `2inch cut`: `Disable` ou `Enable (Printer V.1.10 or later)`. O main pede `Enable` quando a festa está nas duas tiras. Quando a festa é uma tira só, pede a mídia ou o ticket que entregar apenas a tira escolhida; se o driver não tiver esse caminho, o resultado é `cut-unavailable` ou `failed` com detalhe, e a UI não finge que a tira única saiu. Não se imprime as duas “para não perder a festa” sem avisar.
+O corte de 2" é a flag que o driver mostra como `2inch cut`: `Disable` ou `Enable (Printer V.1.10 or later)`.
+
+- Nas duas tiras o main pede `Enable` e compõe as duas metades. Se o driver não expuser o corte, o resultado é `cut-unavailable` e a UI não trata a folha como impressa.
+- Numa tira só o JPEG continua 1844×1240. A metade não escolhida é branca (acima ou abaixo de y = 620, a linha de trabalho). O pedido é a mesma folha 6×4, com `2inch cut` em `Disable`. Isso vale em qualquer driver, sem papel 6×2.
+- Um modo 6×2 nativo, se o driver expuser a mídia, fica para uma melhoria depois. A v1 não o usa. A validação é no hardware, quando essa melhoria entrar.
 
 ![Figura 11 — 2inch cut no driver da DS-RX1](assets/briefing/image2.png)
 
@@ -275,9 +282,9 @@ Status, a partir do que o Windows expuser (flags do tipo offline e sem papel, e 
 
 Outras opções visíveis no driver (borda, overcoat glossy, print re-try, layout da página) não são alteradas por este app.
 
-Ordem do Imprimir: compor, gravar o JPG na pasta do evento, então enviar. Se o envio falha, o arquivo fica e a rodada continua na tela de impressão. Se a gravação falha, não há impressão e não há arquivo pela metade anunciado como sucesso.
+Ordem do Imprimir: compor, gravar o JPG na pasta do evento, então enviar. Se o envio falha, o arquivo fica e a rodada continua na tela de impressão. Se a gravação falha, não há impressão e a tela não anuncia sucesso.
 
-Cópias: o ticket leva de 1 a 10. Uma cópia em `both` é uma folha, que a faca divide. Uma cópia em `top` ou `bottom` é uma tira.
+Cópias: o ticket leva de 1 a 10, teto aprovado pelo dono. Cada cópia é uma folha 6×4. Em `both` a faca divide a folha. Em `top` ou `bottom` a folha sai inteira, com a outra metade em branco.
 
 ## 11. Atualização e assinatura
 
