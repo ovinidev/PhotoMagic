@@ -1,0 +1,13 @@
+# Same contract as CI (DESIGN §12): oxlint, typecheck, unit tests, Playwright on Electron.
+set -e
+
+pnpm lint
+pnpm typecheck
+pnpm test
+
+# Electron needs a display. Only a headless Linux shell (no X11, no Wayland) gets a virtual one.
+if [ "$(uname -s)" = "Linux" ] && [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
+  xvfb-run --auto-servernum pnpm test:e2e
+else
+  pnpm test:e2e
+fi
