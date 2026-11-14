@@ -1,35 +1,37 @@
-# Foto Mágica 2.0 — Desenho técnico e visual
+# Foto Mágica 2.0 — Technical and visual design
 
-> Como o app é construído. O que ele faz está em [PRD.md](./PRD.md). Se os dois discordarem, o PRD vence e este arquivo muda no mesmo PR.
+> How the app is built. What it does is in [PRD.md](./PRD.md). If the two disagree, the PRD wins and this file changes in the same PR.
+>
+> **Language note.** This document is written in English. End-user UI strings (labels, messages, empty states) stay in pt-BR and are quoted verbatim.
 
-O desenho de pastas segue o [PilatePay](https://github.com/ovinidev/PilatePay), lido em 2026-11-14 (`src/app`, `src/features/<nome>`, `src/shared`, `e2e/`, `docs/PRD.md`, `docs/DESIGN.md`). O PilatePay é um PWA com Supabase. Aqui não há backend: o processo principal do Electron ocupa o lugar do servidor, e o renderer repete o miolo feature-based. O linter de lá é o ESLint; o deste repo é o oxlint.
+The folder layout follows [PilatePay](https://github.com/ovinidev/PilatePay), read on 2026-11-14 (`src/app`, `src/features/<name>`, `src/shared`, `e2e/`, `docs/PRD.md`, `docs/DESIGN.md`). PilatePay is a PWA with Supabase. Here there is no backend: Electron's main process takes the place of the server, and the renderer repeats the feature-based core. Its linter is ESLint; this repo's is oxlint.
 
 ## 1. Stack
 
-| Área | Escolha |
+| Area | Choice |
 | --- | --- |
-| Casca | Electron, duas `BrowserWindow` |
-| UI | React + TypeScript estrito |
+| Shell | Electron, two `BrowserWindow`s |
+| UI | React + strict TypeScript |
 | Bundle | electron-vite (main, preload, renderer) |
-| Notebook | Tailwind CSS + shadcn/ui, Inter empacotada com `@fontsource/inter` |
-| TV | Superfície própria em `features/camera`, vidro fosco, sem skin de formulário |
-| Validação | Zod na borda de cada canal de IPC e na leitura do JSON local |
-| Imagem | `sharp`, isolado em `src/main/compose/` |
-| Impressão | Módulo `src/main/print/`, com implementação Windows e implementação simulada |
-| Atualização | electron-updater, provider GitHub |
-| Instalador | electron-builder, alvo NSIS, no GitHub Actions |
-| Testes | Vitest + Testing Library; Playwright com `_electron.launch` |
-| Lint | oxlint (`.oxlintrc.json`). Sem ESLint |
-| Pacotes | pnpm, Node `>= 22` |
+| Laptop | Tailwind CSS + shadcn/ui, Inter bundled with `@fontsource/inter` |
+| TV | Own surface in `features/camera`, frosted glass, no form skin |
+| Validation | Zod at the edge of every IPC channel and when reading local JSON |
+| Image | `sharp`, isolated in `src/main/compose/` |
+| Printing | Module `src/main/print/`, with a Windows implementation and a simulated implementation |
+| Update | electron-updater, GitHub provider |
+| Installer | electron-builder, NSIS target, on GitHub Actions |
+| Tests | Vitest + Testing Library; Playwright with `_electron.launch` |
+| Lint | oxlint (`.oxlintrc.json`). No ESLint |
+| Packages | pnpm, Node `>= 22` |
 
-## 2. Processos
+## 2. Processes
 
 ```mermaid
 flowchart LR
   subgraph main [Main]
-    Win[Janelas e screen]
+    Win[Windows and screen]
     Ipc[IPC]
-    Disk[userData e Desktop]
+    Disk[userData and Desktop]
     Comp[sharp]
     Prn[print]
     Up[electron-updater]
@@ -37,18 +39,18 @@ flowchart LR
   subgraph pre [Preload]
     Bridge[contextBridge]
   end
-  subgraph op [Renderer do notebook]
-    Home[Criar evento e editor]
-    Round[Rodada e enquadramento]
+  subgraph op [Laptop renderer]
+    Home[Create event and editor]
+    Round[Round and framing]
   end
-  subgraph tv [Renderer da TV]
-    Cam[getUserMedia e obturador]
-    PrintUI[Impressão e galeria]
+  subgraph tv [TV renderer]
+    Cam[getUserMedia and shutter]
+    PrintUI[Printing and gallery]
   end
   op --> Bridge
   tv --> Bridge
   Bridge --> Ipc
-  Cam -->|um JPEG por foto| Ipc
+  Cam -->|one JPEG per photo| Ipc
   Ipc --> Comp
   Comp --> Disk
   Ipc --> Prn
@@ -56,14 +58,14 @@ flowchart LR
   Win --> tv
 ```
 
-- `nodeIntegration` desligado, `contextIsolation` ligado, `sandbox` ligado nas duas janelas
-- O renderer não importa `electron` nem `fs`. Tudo passa pelo objeto único exposto no preload
-- A prévia ao vivo não atravessa o processo principal: o quadro do notebook viaja num `MessageChannel` entre as duas janelas. Só a foto, no obturador, vai para o main como `Uint8Array` de JPEG
-- O main é a fonte da verdade da rodada. Os dois renderers recebem o mesmo estado
+- `nodeIntegration` off, `contextIsolation` on, `sandbox` on in both windows
+- The renderer imports neither `electron` nor `fs`. Everything goes through the single object exposed by the preload
+- The live preview does not cross the main process: the laptop frame travels over a `MessageChannel` between the two windows. Only the photo, at the shutter, goes to main as a JPEG `Uint8Array`
+- Main is the source of truth for the round. Both renderers receive the same state
 
-## 3. Janelas e monitor da TV
+## 3. Windows and the TV monitor
 
-`src/shared/displays.ts` exporta uma função pura. `src/main/windows/` só lê `screen.getAllDisplays()` e entrega a lista:
+`src/shared/displays.ts` exports a pure function. `src/main/windows/` only reads `screen.getAllDisplays()` and hands over the list:
 
 ```ts
 type DisplayInfo = {
@@ -81,159 +83,159 @@ type GuestChoice =
   | { kind: 'missing' }
 ```
 
-A escolha, na ordem:
+The choice, in order:
 
-1. Entre os monitores que não são o primário, o retrato (`height > width`) cuja proporção mais se aproxima de 9:16
-2. Se só houver externo em paisagem, `landscape-external`
-3. Se só houver o primário, `missing`
+1. Among the monitors that are not the primary, the portrait one (`height > width`) whose aspect ratio is closest to 9:16
+2. If there is only a landscape external, `landscape-external`
+3. If there is only the primary, `missing`
 
-O módulo que lê `screen.getAllDisplays()` é fino e entrega `DisplayInfo[]` para essa função. O teste de unidade cobre as três saídas sem Electron. Com `FOTOMAGICA_E2E=1`, a lista vem de um fixture: primário 1920×1080 e um secundário 1080×1920. Assim o E2E não depende de dois monitores físicos.
+The module that reads `screen.getAllDisplays()` is thin and hands `DisplayInfo[]` to this function. The unit test covers the three outputs without Electron. With `FOTOMAGICA_E2E=1`, the list comes from a fixture: primary 1920×1080 and a secondary 1080×1920. This way E2E does not depend on two physical monitors.
 
-A janela do operador abre no monitor primário, com moldura, tamanho confortável (mínimo 1280×800). A janela da TV não tem moldura, ignora o fechar acidental e cobre `bounds` do monitor escolhido. Quem a fecha é o main, no Encerrar evento ou ao sair do app.
+The operator window opens on the primary monitor, with a frame and a comfortable size (minimum 1280×800). The TV window has no frame, ignores accidental close and covers the `bounds` of the chosen monitor. Main closes it, on `Encerrar evento` or when quitting the app.
 
-A TV de referência é 1080×1920. Se o Windows reportar outra altura em retrato (por exemplo 2160×3840 em DIP diferentes), a UI da TV escala a partir de um quadro lógico de 1080×1920 para continuar com os mesmos alvos de 64 px proporcionais à tela. O cálculo dessa escala é função pura, com teste.
+The reference TV is 1080×1920. If Windows reports another portrait height (for example 2160×3840 at different DIPs), the TV UI scales from a logical frame of 1080×1920 to keep the same 64 px targets proportional to the screen. The computation of that scale is a pure function, with a test.
 
-Samsung UN49MU6120, etiqueta do equipamento:
+Samsung UN49MU6120, equipment label:
 
-![Figura 3 — Etiqueta da TV](assets/briefing/image8.png)
+![Figure 3 — TV label](assets/briefing/image8.png)
 
 ## 4. IPC
 
-O preload expõe `window.fotomagica`. Cada método valida a entrada e a saída com Zod. Nomes de canal e schemas ficam em `src/shared/ipc/`, sem React e sem Electron, importados pelo main, pelo preload e pelo renderer. O renderer só chama o objeto tipado.
+The preload exposes `window.fotomagica`. Each method validates input and output with Zod. Channel names and schemas live in `src/shared/ipc/`, with no React and no Electron, imported by main, preload and renderer. The renderer only calls the typed object.
 
-| Direção | Canal | Papel |
+| Direction | Channel | Role |
 | --- | --- | --- |
-| invoke | `event:start` | Nome, modo (`two-strips` ou `one-strip`) e o caminho do template desse modo. Devolve o monitor escolhido ou o erro |
-| invoke | `event:end` | Fecha a TV e esquece a rodada não impressa |
-| invoke | `layout:get` / `layout:save` | Lê e grava os dois layouts: cinco espaços em `two-strips`, três em `one-strip` |
-| send | `session:request-shutter` | O notebook pede a captura. O main encaminha à TV |
-| send | `session:photo` | A TV entrega o JPEG já girado e espelhado |
-| invoke | `session:set-framing` | Pan, zoom e rotação de um espaço da rodada |
-| invoke | `session:cancel` | Descarta a rodada |
-| invoke | `session:print` | Cópias. Compõe, salva, imprime |
-| invoke | `session:reprint` | Reenvia um JPG da pasta |
-| invoke | `gallery:list` | Lista os JPG da pasta do evento |
-| invoke | `webcam:get` / `webcam:set` | Constraints persistidas |
-| invoke | `printer:status` | Estado atual |
-| event | `session:state` | Main → as duas janelas, a cada mudança da rodada |
-| event | `printer:status-changed` | Main → notebook e TV |
+| invoke | `event:start` | Name, mode (`two-strips` or `one-strip`) and the path of that mode's template. Returns the chosen monitor or the error |
+| invoke | `event:end` | Closes the TV and forgets the unprinted round |
+| invoke | `layout:get` / `layout:save` | Reads and writes both layouts: five slots in `two-strips`, three in `one-strip` |
+| send | `session:request-shutter` | The laptop requests the capture. Main forwards it to the TV |
+| send | `session:photo` | The TV delivers the already rotated and mirrored JPEG |
+| invoke | `session:set-framing` | Pan, zoom and rotation of one slot of the round |
+| invoke | `session:cancel` | Discards the round |
+| invoke | `session:print` | Copies. Composes, saves, prints |
+| invoke | `session:reprint` | Resends a JPG from the folder |
+| invoke | `gallery:list` | Lists the JPGs in the event folder |
+| invoke | `webcam:get` / `webcam:set` | Persisted constraints |
+| invoke | `printer:status` | Current state |
+| event | `session:state` | Main → both windows, on every round change |
+| event | `printer:status-changed` | Main → laptop and TV |
 
-A TV é a única dona do `MediaStream`. O obturador do notebook não captura por conta própria: pede ao main, o main manda a TV executar o mesmo caminho (timer incluso).
+The TV is the sole owner of the `MediaStream`. The laptop's shutter does not capture on its own: it asks main, and main tells the TV to run the same path (timer included).
 
-## 5. Captura
+## 5. Capture
 
-A MX Brio fica montada na horizontal, no topo da TV. O sensor entrega paisagem. Quem põe a pessoa em pé é o software, como a rotação de 90° do Webcam Photobooth. Não há giro físico da câmera.
+The MX Brio is mounted horizontally, on top of the TV. The sensor delivers landscape. Software stands the person upright, like the 90° rotation of Webcam Photobooth. There is no physical rotation of the camera.
 
-Ordem fixa, uma função só, usada pela prévia e pelo arquivo:
+Fixed order, a single function, used by the preview and by the file:
 
-1. Quadro cru, ideal 3840×2160, 30 fps, sem áudio
-2. Rotação para retrato. O ângulo mora em `CAMERA_ROTATION_DEG`, valor inicial `90`, num único arquivo. Trocar o sinal dessa constante vira a imagem se o primeiro teste no hardware mostrar a pessoa de cabeça para baixo
-3. Espelhamento horizontal
+1. Raw frame, ideally 3840×2160, 30 fps, no audio
+2. Rotation to portrait. The angle lives in `CAMERA_ROTATION_DEG`, initial value `90`, in a single file. Flipping the sign of this constant turns the image over if the first test on the hardware shows the person upside down
+3. Horizontal mirroring
 
-`getUserMedia` pede `width` e `height` ideais 3840 e 2160. Se a câmera recusar, fica o maior modo que ela entregar. O dispositivo preferido é aquele cujo rótulo contém `MX Brio`. Sem ele, o primeiro `videoinput`. Com mais de uma câmera e nenhuma Brio, o criar evento mostra um select.
+`getUserMedia` asks for ideal `width` and `height` of 3840 and 2160. If the camera refuses, the largest mode it delivers is kept. The preferred device is the one whose label contains `MX Brio`. Without it, the first `videoinput`. With more than one camera and no Brio, create-event shows a select.
 
-A prévia da TV desenha esse quadro num canvas, com `requestAnimationFrame`. A câmera abre uma vez, na TV. No início do evento o main entrega um `MessageChannel` às duas janelas. A TV transfere, a cada frame, um `ImageBitmap` já girado e espelhado, no tamanho da prévia do notebook, e descarta o frame se o notebook ainda não consumiu o anterior. Isso não passa pelo `invoke` e não grava disco. O JPEG em resolução cheia continua sendo um único envio, no obturador.
+The TV preview draws this frame on a canvas, with `requestAnimationFrame`. The camera opens once, on the TV. At the start of the event main hands a `MessageChannel` to both windows. On every frame the TV transfers an `ImageBitmap`, already rotated and mirrored, at the size of the laptop preview, and drops the frame if the laptop has not yet consumed the previous one. This does not go through `invoke` and does not write to disk. The full-resolution JPEG remains a single send, at the shutter.
 
-No obturador a TV exporta um JPEG qualidade 95 do quadro já transformado (retrato, espelhado) e envia os bytes. O main guarda as três capturas na rodada. Não escreve essas três no disco.
+At the shutter the TV exports a quality-95 JPEG of the already transformed frame (portrait, mirrored) and sends the bytes. Main keeps the three captures in the round. It does not write those three to disk.
 
 ### Constraints
 
-O painel lê `track.getCapabilities()` e só desenha o que existir:
+The panel reads `track.getCapabilities()` and only draws what exists:
 
-| Controle | Constraint |
+| Control | Constraint |
 | --- | --- |
-| Brilho | `brightness` |
-| Contraste | `contrast` |
-| Saturação | `saturation` |
-| Nitidez | `sharpness` |
-| Balanço de branco | `whiteBalanceMode` e, no manual, `colorTemperature` |
-| Ganho | `gain`, ou o nome que a capability trouxer para o ganho da figura 8 |
-| Luz de fundo | `backlightCompensation`, somente se existir |
+| Brightness | `brightness` |
+| Contrast | `contrast` |
+| Saturation | `saturation` |
+| Sharpness | `sharpness` |
+| White balance | `whiteBalanceMode` and, in manual, `colorTemperature` |
+| Gain | `gain`, or whatever name the capability uses for the gain in figure 8 |
+| Backlight | `backlightCompensation`, only if it exists |
 
-`applyConstraints` roda na TV. O valor salvo vai junto no `webcam:set`. Na abertura do evento a TV reaplica o JSON. `powerLineFrequency`, se existir, é fixado em 60, sem controle na tela.
+`applyConstraints` runs on the TV. The saved value goes along in `webcam:set`. When the event opens, the TV reapplies the JSON. `powerLineFrequency`, if it exists, is fixed at 60, with no control on screen.
 
-Os números visíveis na figura 8 (brilho 145, contraste 111, e o resto) são o estado daquele Windows no dia da foto. O app não os copia como padrão de fábrica: mostra o que a câmera reportar e persiste o que o operador mudar.
+The numbers visible in figure 8 (brightness 145, contrast 111, and the rest) are the state of that Windows on the day of the photo. The app does not copy them as factory defaults: it shows what the camera reports and persists what the operator changes.
 
-## 6. Montagem
+## 6. Montage
 
-A folha lógica é 1844×1240 px, 300 DPI. É o “print extent” do app atual. Os 1800×1200 que também aparecem no diálogo são a área interna: 1844 − 22 − 22 e 1240 − 20 − 20.
+The logical sheet is 1844×1240 px, 300 DPI. It is the "print extent" of the current app. The 1800×1200 that also appears in the dialog is the inner area: 1844 − 22 − 22 and 1240 − 20 − 20.
 
-![Figura 10 — DS-RX1, 300 DPI, 6×4", extent 1844×1240, margens 22 e 20, orientação Portrait](assets/briefing/image12.png)
+![Figure 10 — DS-RX1, 300 DPI, 6×4", extent 1844×1240, margins 22 and 20, Portrait orientation](assets/briefing/image12.png)
 
-`src/main/compose/renderSheet.ts` é função pura em cima de buffers. O `sharp` fica numa casca fina que essa função chama, para o teste poder substituir.
+`src/main/compose/renderSheet.ts` is a pure function over buffers. `sharp` sits in a thin shell that this function calls, so the test can replace it.
 
-Para cada espaço, nessa ordem:
+For each slot, in this order:
 
-1. A captura da foto indicada (1, 2 ou 3), já em pé e espelhada
-2. Encaixe `cover` no retângulo não rotacionado (`width` × `height`), com o pan, o zoom (1 a 3) e a rotação de enquadramento daquele espaço. Zoom 1 e pan 0 cortam o centro: num espaço horizontal, o retrato perde topo e base em partes iguais
-3. Rotação do resultado pelo `angle` do espaço, em torno do centro
-4. Composição sobre o template daquele modo em `left`, `top`
+1. The capture of the indicated photo (1, 2 or 3), already upright and mirrored
+2. `cover` fit into the unrotated rectangle (`width` × `height`), with that slot's pan, zoom (1 to 3) and framing rotation. Zoom 1 and pan 0 crop the center: in a horizontal slot, the portrait loses top and bottom in equal parts
+3. Rotation of the result by the slot's `angle`, around the center
+4. Composition over that mode's template at `left`, `top`
 
-O modo escolhido só muda qual layout e qual template entram. Os dois preenchem os 1844×1240. O modo 1 tira não pinta uma metade de branco.
+The chosen mode only changes which layout and which template are used. Both fill the 1844×1240. The 1 tira mode does not paint half of it white.
 
-O teste de ouro não depende de adivinhar o pivô: um quadro com uma barra clara no topo tem de mostrar essa barra no topo de cada espaço. No modo 2 tiras, as três de cima ficam verticais e as duas de baixo horizontais. No modo 1 tira, os três espaços do seed ficam verticais e a folha não tem metade vazia. Se um ângulo de 270 deitar a pessoa, o sinal da rotação do espaço está errado e o teste falha.
+The golden test does not depend on guessing the pivot: a frame with a light bar at the top must show that bar at the top of each slot. In 2 tiras mode, the top three are vertical and the bottom two horizontal. In 1 tira mode, the three seed slots are vertical and the sheet has no empty half. If an angle of 270 lays the person down, the sign of the slot rotation is wrong and the test fails.
 
-Depois dos espaços do modo, o `sharp` grava JPEG qualidade 95, densidade 300, 1844×1240. Esse é o arquivo `HH-mm-ss.jpg`.
+After the mode's slots, `sharp` writes a quality-95 JPEG, density 300, 1844×1240. This is the `HH-mm-ss.jpg` file.
 
-A linha de corte usada pelo editor, só no layout de 2 tiras, é y = 620. É suposição de trabalho, pendente do cliente, junto com as medidas dos quadrados cinzas. Até esses dados chegarem, o espaço que cruza essa linha não impede salvar, e o editor mostra aviso. O layout de 1 tira não desenha essa linha.
+The cut line used by the editor, only in the 2-strip layout, is y = 620. It is a working assumption, pending from the client, along with the measurements of the gray squares. Until that data arrives, a slot that crosses this line does not prevent saving, and the editor shows a warning. The 1-strip layout does not draw this line.
 
-### Modelo do editor
+### Editor model
 
-Left e Top são o canto superior esquerdo do retângulo antes da rotação. Width e Height não trocam quando o ângulo muda. A rotação é em torno do centro. O painel mostra esses números inteiros.
+Left and Top are the top-left corner of the rectangle before rotation. Width and Height do not swap when the angle changes. Rotation is around the center. The panel shows these numbers as integers.
 
-No app atual, Angle 270 com 500×281 desenha um espaço alto, e Angle 0 desenha um espaço deitado. O renderer novo reproduz isso. O número da foto é desenhado no espaço local, então gira junto, como na demonstração: na vertical o “3” fica de lado. É o comportamento do app atual, e o editor mantém.
+In the current app, Angle 270 with 500×281 draws a tall slot, and Angle 0 draws a lying-down slot. The new renderer reproduces this. The photo number is drawn in the slot's local space, so it rotates with it, as in the demonstration: vertically the "3" is sideways. This is the current app's behavior, and the editor keeps it.
 
-![Figura 4 — Espaço selecionado com borda vermelha tracejada](assets/briefing/image4.png)
+![Figure 4 — Selected slot with dashed red border](assets/briefing/image4.png)
 
-## 7. Editor fluido e snap
+## 7. Fluid editor and snap
 
-O editor tem um seletor de modo. `two-strips` mostra os cinco espaços e a linha de corte. `one-strip` mostra os três. Os gestos abaixo valem para os dois. O travamento do Webcam Photobooth vem de refazer o layout inteiro, ou de falar com o processo, a cada movimento do mouse. O editor novo trata o gesto assim:
+The editor has a mode selector. `two-strips` shows the five slots and the cut line. `one-strip` shows the three. The gestures below apply to both. Webcam Photobooth's freezing comes from redoing the whole layout, or from talking to the process, on every mouse move. The new editor handles the gesture like this:
 
-- `pointerdown` no espaço ou na alça guarda a origem
-- `pointermove` atualiza um ref e escreve direto no transform do DOM e no `value` dos campos Left, Top, Angle, Width e Height, no mesmo frame
-- Não há `invoke` nem escrita em disco enquanto o botão está preso
-- `pointerup` commita o estado React e chama `layout:save` uma vez, gravando só o layout que está na tela (`two-strips` ou `one-strip`)
+- `pointerdown` on the slot or the handle stores the origin
+- `pointermove` updates a ref and writes directly to the DOM transform and to the `value` of the Left, Top, Angle, Width and Height fields, in the same frame
+- There is no `invoke` and no disk write while the button is held
+- `pointerup` commits the React state and calls `layout:save` once, writing only the layout that is on screen (`two-strips` or `one-strip`)
 
-Alças: noroeste, norte, nordeste, leste, sudeste, sul, sudoeste, oeste, nos cantos e nos meios das arestas do retângulo já rotacionado. A alça de rotação fica para fora do meio da aresta inferior, ligada ao centro por uma haste tracejada. No vídeo do editor atual, com o espaço em pé, essa haste aponta para baixo e o número gira junto com o espaço.
+Handles: northwest, north, northeast, east, southeast, south, southwest, west, at the corners and at the midpoints of the edges of the already rotated rectangle. The rotation handle sits outside the middle of the bottom edge, connected to the center by a dashed rod. In the current editor's video, with the slot upright, this rod points down and the number rotates with the slot.
 
-O snap é função pura `snap(draft, others, modifiers) -> draft`:
+Snap is a pure function `snap(draft, others, modifiers) -> draft`:
 
-| Alvo | Onde |
+| Target | Where |
 | --- | --- |
-| Folha | x = 0 e 1844, y = 0 e 1240, centro x = 922, y = 620 |
-| Margem de impressão | x = 22 e 1822, y = 20 e 1220 |
-| Corte | y = 620, somente no layout de 2 tiras |
-| Outros espaços | arestas e centro do retângulo já rotacionado |
+| Sheet | x = 0 and 1844, y = 0 and 1240, center x = 922, y = 620 |
+| Print margin | x = 22 and 1822, y = 20 and 1220 |
+| Cut | y = 620, only in the 2-strip layout |
+| Other slots | edges and center of the already rotated rectangle |
 
-A tolerância é 8 px no espaço da folha, não em pixels da tela. O giro também encosta em 0, 90, 180 e 270 dentro de 4°. Alt preso devolve o draft sem alteração. O teste de unidade cobre encostar, não encostar e o Alt.
+The tolerance is 8 px in sheet space, not screen pixels. Rotation also snaps to 0, 90, 180 and 270 within 4°. Alt held returns the draft unchanged. The unit test covers snapping, not snapping and Alt.
 
-Tamanho mínimo do espaço: 40×40 px, para a alça não inverter o retângulo.
+Minimum slot size: 40×40 px, so the handle does not invert the rectangle.
 
-## 8. Enquadramento da rodada
+## 8. Round framing
 
-Isto não é o editor de espaços. Com a festa aberta, o espaço fica parado. O gesto na prévia do notebook mexe na foto dentro dele: arrastar move, a roda dá zoom, uma alça pequena (cor de tinta, não o vermelho do editor) gira a foto. Cada espaço da rodada tem o seu pan, zoom e rotação, inclusive quando dois espaços usam a mesma captura.
+This is not the slot editor. With the party open, the slot stays still. The gesture on the laptop preview moves the photo inside it: dragging moves, the wheel zooms, a small handle (ink color, not the editor's red) rotates the photo. Each slot of the round has its own pan, zoom and rotation, including when two slots use the same capture.
 
-O notebook mostra, ao lado, a câmera sem cromado de iPhone, no retrato inteiro. No modo 2 tiras, um retângulo guia marca a faixa horizontal da tira de baixo. No modo 1 tira, o guia segue o espaço retrato da próxima foto.
+Next to it, the laptop shows the camera without the iPhone chrome, in the full portrait. In 2 tiras mode, a guide rectangle marks the horizontal band of the bottom strip. In 1 tira mode, the guide follows the portrait slot of the next photo.
 
-## 9. Persistência
+## 9. Persistence
 
-| Dado | Lugar |
+| Data | Location |
 | --- | --- |
-| Os dois layouts, os dois templates, webcam, nome da impressora | `app.getPath('userData')/config.json` |
-| Cópia do template do modo e meta do evento aberto (nome, modo, id) | `app.getPath('userData')/events/<id>/` |
-| Montagem JPG | `app.getPath('desktop')/<nome do evento>/HH-mm-ss.jpg` |
+| Both layouts, both templates, webcam, printer name | `app.getPath('userData')/config.json` |
+| Copy of the mode's template and meta of the open event (name, mode, id) | `app.getPath('userData')/events/<id>/` |
+| JPG montage | `app.getPath('desktop')/<event name>/HH-mm-ss.jpg` |
 
-O nome da pasta passa por uma função pura: trim, recusa vazio, recusa caracteres `\ / : * ? " < > |`, recusa nome reservado do Windows, recusa ponto ou espaço no fim. O teste lista esses casos.
+The folder name goes through a pure function: trim, reject empty, reject the characters `\ / : * ? " < > |`, reject reserved Windows names, reject a trailing dot or space. The test lists these cases.
 
-Hora do arquivo: hora local, 24 h, `HH-mm-ss.jpg`. Colisão no mesmo segundo acrescenta `-2`, `-3`, função pura sobre a lista de nomes já existentes.
+File time: local time, 24 h, `HH-mm-ss.jpg`. A collision in the same second appends `-2`, `-3`, a pure function over the list of existing names.
 
-A rodada (três JPEG e os enquadramentos) fica na memória do main. Não há rascunho. Fechar o processo antes do Imprimir perde a rodada.
+The round (three JPEGs and the framings) lives in main's memory. There is no draft. Closing the process before `Imprimir` loses the round.
 
-O JSON é lido com Zod. Arquivo ausente ou inválido volta aos dois seeds do PRD e a webcam vazia, sem derrubar a abertura. Um layout inválido não apaga o outro.
+The JSON is read with Zod. A missing or invalid file falls back to the two PRD seeds and an empty webcam, without breaking startup. An invalid layout does not erase the other.
 
-## 10. Impressão
+## 10. Printing
 
-Só `src/main/print/` conhece driver, diálogo ou simulação. React pede `printer:status` e `session:print`.
+Only `src/main/print/` knows the driver, dialog or simulation. React asks for `printer:status` and `session:print`.
 
 ```ts
 type PrintMode = 'two-strips' | 'one-strip'
@@ -257,242 +259,242 @@ type PrintResult =
   | { ok: false; reason: 'offline' | 'no-paper' | 'no-ribbon' | 'cut-unavailable' | 'failed'; detail: string }
 ```
 
-Duas implementações da mesma interface:
+Two implementations of the same interface:
 
-- `SimulatedPrinter`, usada com `FOTOMAGICA_PRINTER=simulated`. Copia o JPEG para `userData/simulated-prints/` e grava o ticket em JSON. `FOTOMAGICA_PRINTER_STATUS` força `ready`, `offline`, `no-paper` ou `no-ribbon`. `FOTOMAGICA_PRINTER_CUT=unsupported` devolve `cut-unavailable`
-- `WindowsDnpPrinter`, a única que fala com o spooler. Escolhe a fila cujo nome contém `DS-RX1`
+- `SimulatedPrinter`, used with `FOTOMAGICA_PRINTER=simulated`. Copies the JPEG to `userData/simulated-prints/` and writes the ticket as JSON. `FOTOMAGICA_PRINTER_STATUS` forces `ready`, `offline`, `no-paper` or `no-ribbon`. `FOTOMAGICA_PRINTER_CUT=unsupported` returns `cut-unavailable`
+- `WindowsDnpPrinter`, the only one that talks to the spooler. Picks the queue whose name contains `DS-RX1`
 
-A impressão real é silenciosa (`silent: true`, `deviceName` da fila). O diálogo do Windows não abre. Papel 6,00" × 4,00" (152 × 102 mm), 300 DPI, orientação Portrait, igual à figura 10. O bitmap não é girado de novo.
+Real printing is silent (`silent: true`, the queue's `deviceName`). The Windows dialog does not open. Paper 6.00" × 4.00" (152 × 102 mm), 300 DPI, Portrait orientation, same as figure 10. The bitmap is not rotated again.
 
-O corte de 2" é a flag que o driver mostra como `2inch cut`: `Disable` ou `Enable (Printer V.1.10 or later)`.
+The 2" cut is the flag the driver shows as `2inch cut`: `Disable` or `Enable (Printer V.1.10 or later)`.
 
-- Em `two-strips` o main pede `Enable` e compõe os cinco espaços sobre o template desse modo. Se o driver não aceitar ligar o corte, o resultado é `cut-unavailable` e a UI não trata a folha como impressa.
-- Em `one-strip` o main pede `Disable` e compõe os três espaços sobre o template desse modo, preenchendo a folha 1844×1240. Não há metade em branco e não há papel 6×2. Se o driver não aceitar desligar o corte, o resultado também é `cut-unavailable`: a folha não sai cortada por engano.
+- In `two-strips` main requests `Enable` and composes the five slots over that mode's template. If the driver does not accept turning the cut on, the result is `cut-unavailable` and the UI does not treat the sheet as printed.
+- In `one-strip` main requests `Disable` and composes the three slots over that mode's template, filling the 1844×1240 sheet. There is no blank half and no 6×2 paper. If the driver does not accept turning the cut off, the result is also `cut-unavailable`: the sheet must not come out cut by mistake.
 
-![Figura 11 — 2inch cut no driver da DS-RX1](assets/briefing/image2.png)
+![Figure 11 — 2inch cut in the DS-RX1 driver](assets/briefing/image2.png)
 
-Status, a partir do que o Windows expuser (flags do tipo offline e sem papel, e o que mais a fila DS-RX1 preencher):
+Status, from whatever Windows exposes (flags such as offline and out of paper, and whatever else the DS-RX1 queue fills in):
 
-| Estado | Mensagem |
+| State | Message |
 | --- | --- |
-| offline / desligada | Impressora desligada |
-| sem papel | Impressora sem papel |
-| sem ribbon | Impressora sem ribbon |
-| flag ausente | O driver não informou papel nem ribbon |
+| offline / powered off | Impressora desligada |
+| out of paper | Impressora sem papel |
+| out of ribbon | Impressora sem ribbon |
+| flag missing | O driver não informou papel nem ribbon |
 
-Outras opções visíveis no driver (borda, overcoat glossy, print re-try, layout da página) não são alteradas por este app.
+Other options visible in the driver (border, glossy overcoat, print re-try, page layout) are not changed by this app.
 
-Ordem do Imprimir: compor, gravar o JPG na pasta do evento, então enviar. Se o envio falha, o arquivo fica e a rodada continua na tela de impressão. Se a gravação falha, não há impressão e a tela não anuncia sucesso.
+Order of `Imprimir`: compose, write the JPG to the event folder, then send. If sending fails, the file stays and the round remains on the print screen. If the write fails, there is no printing and the screen does not announce success.
 
-Cópias: o ticket leva de 1 a 10, teto aprovado pelo dono. Cada cópia é uma folha 6×4. Em `two-strips` a faca divide a folha. Em `one-strip` a folha sai inteira, com as três fotos.
+Copies: the ticket carries 1 to 10, a ceiling approved by the owner. Each copy is one 6×4 sheet. In `two-strips` the blade splits the sheet. In `one-strip` the sheet comes out whole, with the three photos.
 
-## 11. Atualização e assinatura
+## 11. Update and signing
 
-electron-updater com provider GitHub, no repositório `ovinidev/PhotoMagic`. A checagem roda na abertura, somente sem evento em andamento. Falha de rede é ignorada: o app abre. O download não ocupa a TV. A instalação acontece ao sair, quando uma versão nova já tiver sido baixada.
+electron-updater with the GitHub provider, on the repository `ovinidev/PhotoMagic`. The check runs at startup, only with no event in progress. A network failure is ignored: the app opens. The download does not occupy the TV. Installation happens on quit, when a new version has already been downloaded.
 
-O instalador publicado se chama `FotoMagica-Setup.exe`, para o endereço estável:
+The published installer is named `FotoMagica-Setup.exe`, for the stable address:
 
 `https://github.com/ovinidev/PhotoMagic/releases/latest/download/FotoMagica-Setup.exe`
 
-Assinatura, no job do Windows, só entra se os secrets estiverem preenchidos:
+Signing, in the Windows job, only applies if the secrets are filled in:
 
-- `CSC_LINK`: certificado `.pfx` em base64
+- `CSC_LINK`: `.pfx` certificate in base64
 - `CSC_KEY_PASSWORD`
 
-`CSC_IDENTITY_AUTO_DISCOVERY` fica `false`. O step exporta `CSC_LINK` e `CSC_KEY_PASSWORD` apenas quando o secret é não vazio. Sem eles o electron-builder gera o instalador sem assinatura e o job termina verde. O workflow não guarda o certificado no repositório.
+`CSC_IDENTITY_AUTO_DISCOVERY` stays `false`. The step exports `CSC_LINK` and `CSC_KEY_PASSWORD` only when the secret is non-empty. Without them electron-builder produces the installer unsigned and the job ends green. The workflow does not store the certificate in the repository.
 
-NSIS: por máquina, atalho na área de trabalho, diretório de instalação escolhível. `appId`: `com.fotomagica.desktop`. `productName`: `Foto Mágica`.
+NSIS: per machine, desktop shortcut, selectable install directory. `appId`: `com.fotomagica.desktop`. `productName`: `Foto Mágica`.
 
-Ícone do builder: `assets/brand/icon.png` (símbolo sobre fundo claro). O builder emite o `.ico` com 16, 32, 48 e 256. A logo completa não vai para o ícone pequeno, porque o texto não sobrevive a 16 px.
+Builder icon: `assets/brand/icon.png` (symbol on a light background). The builder emits the `.ico` with 16, 32, 48 and 256. The full logo does not go into the small icon, because the text does not survive at 16 px.
 
-## 12. CI e testes
+## 12. CI and tests
 
-O workflow ainda não está no repositório. A primeira implementação que criar o app adiciona `.github/workflows/ci.yml` com este contrato.
+The workflow is not in the repository yet. The first implementation that creates the app adds `.github/workflows/ci.yml` with this contract.
 
-**Em todo pull request e em todo push**
+**On every pull request and every push**
 
-- Node 22, pnpm com lockfile congelado
+- Node 22, pnpm with a frozen lockfile
 - `pnpm typecheck`
-- `pnpm lint` (`oxlint .`, avisos reprovam)
+- `pnpm lint` (`oxlint .`, warnings fail)
 - `pnpm test:coverage`
-- `pnpm exec playwright install --with-deps chromium` quando o runner for Linux
-- `pnpm test:e2e` com `FOTOMAGICA_E2E=1` e `FOTOMAGICA_PRINTER=simulated`
+- `pnpm exec playwright install --with-deps chromium` when the runner is Linux
+- `pnpm test:e2e` with `FOTOMAGICA_E2E=1` and `FOTOMAGICA_PRINTER=simulated`
 
-O E2E de pull request pode rodar em `ubuntu-latest`: a impressora é simulada, a câmera é fixture e o segundo monitor é injetado. O que é específico de Windows (DEVMODE, assinatura, NSIS) fica no job de empacotar.
+The pull-request E2E can run on `ubuntu-latest`: the printer is simulated, the camera is a fixture and the second monitor is injected. What is Windows-specific (DEVMODE, signing, NSIS) stays in the packaging job.
 
-**No push da `main`, job extra em `windows-latest`**
+**On push to `main`, an extra job on `windows-latest`**
 
 - `pnpm dist` (electron-builder `--win`)
-- Publica GitHub Release quando `package.json` `version` ainda não existe como release
-- Assina só com os secrets presentes, como na seção 11
+- Publishes a GitHub Release when `package.json` `version` does not yet exist as a release
+- Signs only with the secrets present, as in section 11
 
-Um push que não sobe a versão gera o instalador como artefato do workflow e não cria outra release. O electron-updater só enxerga release publicada.
+A push that does not bump the version produces the installer as a workflow artifact and does not create another release. electron-updater only sees a published release.
 
-### O que o teste cobre
+### What the tests cover
 
-Regra pura, ao lado do arquivo, em Vitest:
+Pure rules, next to the file, in Vitest:
 
-- escolha do monitor
-- snap, inclusive Alt e o snap de ângulo
-- nome de pasta e nome `HH-mm-ss`
-- tamanho do template
-- encaixe `cover` com barra no topo (RF08)
-- mapeamento do ticket: `two-strips` pede corte ligado, `one-strip` pede corte desligado e compõe três espaços na folha inteira
+- monitor choice
+- snap, including Alt and angle snap
+- folder name and `HH-mm-ss` name
+- template size
+- `cover` fit with a bar at the top (RF08)
+- ticket mapping: `two-strips` requests cut on, `one-strip` requests cut off and composes three slots over the whole sheet
 
-E2E, em `e2e/`, um spec por fluxo, no Electron de verdade:
+E2E, in `e2e/`, one spec per flow, on real Electron:
 
-| Spec | Fluxo |
+| Spec | Flow |
 | --- | --- |
-| `create-event.spec.ts` | Nome, template certo e errado, pasta |
-| `layout-editor.spec.ts` | Arraste com painel ao vivo, snap, uma gravação no soltar, os dois layouts independentes |
-| `capture-round.spec.ts` | Três fotos, contador, timer, cancelar |
-| `print.spec.ts` | Ticket simulado, cópias, falha de status, arquivo único |
-| `gallery.spec.ts` | Lista, tela cheia, reimprimir |
-| `resilience.spec.ts` | Webcam some no meio, TV segue respondendo, encerrar fecha a TV |
+| `create-event.spec.ts` | Name, correct and wrong template, folder |
+| `layout-editor.spec.ts` | Drag with live panel, snap, one write on release, the two independent layouts |
+| `capture-round.spec.ts` | Three photos, counter, timer, cancel |
+| `print.spec.ts` | Simulated ticket, copies, status failure, single file |
+| `gallery.spec.ts` | List, fullscreen, reprint |
+| `resilience.spec.ts` | Webcam disappears mid-round, TV keeps responding, ending closes the TV |
 
-Cenário do PRD cuja tela ainda não existe fica `test.fixme`, com o id do requisito no título, e vira teste no PR que faz a tela. O E2E não aponta para a DS-RX1 nem para a MX Brio.
+A PRD scenario whose screen does not exist yet stays as `test.fixme`, with the requirement id in the title, and becomes a test in the PR that builds the screen. E2E does not point at the DS-RX1 or the MX Brio.
 
-Hook husky `pre-push`: typecheck, lint, `pnpm test`, `pnpm test:e2e`. Igual ao papel do hook no PilatePay.
+Husky `pre-push` hook: typecheck, lint, `pnpm test`, `pnpm test:e2e`. Same role as the hook in PilatePay.
 
-oxlint, configuração mínima esperada: plugins `react`, `typescript` e `import`; categoria `correctness` em erro; regra de hooks do React em erro; ignorar `dist`, `out`, `release`, `coverage`, `playwright-report`. Sem arquivo de ESLint ao lado.
+oxlint, expected minimal configuration: plugins `react`, `typescript` and `import`; category `correctness` as error; React hooks rule as error; ignore `dist`, `out`, `release`, `coverage`, `playwright-report`. No ESLint file alongside.
 
-## 13. Pastas
+## 13. Folders
 
 ```
 src/
-  shared/                sem React e sem Electron
-    ipc/                 nomes de canal e schemas Zod
-    layout/              snap, seed, geometria
-    capture/             rotação, espelho, cover
-    files/               nome de pasta e HH-mm-ss
-    displays.ts          escolha do monitor da TV
+  shared/                no React and no Electron
+    ipc/                 channel names and Zod schemas
+    layout/              snap, seed, geometry
+    capture/             rotation, mirror, cover
+    files/               folder name and HH-mm-ss
+    displays.ts          TV monitor choice
   main/
     index.ts
-    windows/             lê screen e chama a função pura de displays
-    ipc/                 handlers, um módulo por área
-    session/             estado da rodada
-    compose/             casca do sharp em volta de renderSheet
+    windows/             reads screen and calls the pure displays function
+    ipc/                 handlers, one module per area
+    session/             round state
+    compose/             sharp shell around renderSheet
     print/               types.ts, SimulatedPrinter.ts, WindowsDnpPrinter.ts
-    persist/             config.json e a meta do evento
+    persist/             config.json and the event meta
     updater/
   preload/
     index.ts             contextBridge
   renderer/
     operator.html
     guest.html
-    app/                 rotas do notebook e casca da TV
+    app/                 laptop routes and TV shell
     features/
-      events/            criar evento, nome, template do modo, 2 tiras ou 1 tira
-      layout/            editor e alças
-      session/           prévia da montagem e enquadramento no notebook
-      camera/            TV: ao vivo, obturador, timer, grade
-      print/             tela de impressão da TV
+      events/            create event, name, mode template, 2 tiras or 1 tira
+      layout/            editor and handles
+      session/           montage preview and framing on the laptop
+      camera/            TV: live view, shutter, timer, grid
+      print/             TV print screen
       gallery/
-      webcam/            painel de constraints
+      webcam/            constraints panel
     shared/
-      components/ui/     shadcn, usado pelo notebook
+      components/ui/     shadcn, used by the laptop
       hooks/
       utils/
 e2e/
 docs/
   PRD.md
   DESIGN.md
-  assets/briefing/       figuras image1.png … image13.png
+  assets/briefing/       figures image1.png … image13.png
 assets/brand/
-  logo.png               lockup transparente
-  mark.png               símbolo transparente, 1024
-  icon.png               símbolo em fundo claro, fonte do .ico
+  logo.png               transparent lockup
+  mark.png               transparent symbol, 1024
+  icon.png               symbol on a light background, source of the .ico
 ```
 
-Regras, as mesmas do PilatePay:
+Rules, the same as PilatePay:
 
-- Feature importa `shared/` e o `index.ts` de outra feature
-- `shared/` não importa feature nem `app/`
-- Só se criam as subpastas que a feature usa (`components/`, `hooks/`, `utils/`, `pages/`)
-- A tela inicial não é uma feature: é página de `app/` que compõe `events` e `layout`
-- O main importa tipos e funções puras de `src/shared/`, nunca um componente
-- Alias `@shared` aponta para `src/shared`. Alias `@brand` aponta para `assets/brand`, de onde a UI importa `logo.png`
+- A feature imports `shared/` and another feature's `index.ts`
+- `shared/` does not import a feature or `app/`
+- Only the subfolders the feature uses are created (`components/`, `hooks/`, `utils/`, `pages/`)
+- The home screen is not a feature: it is a page in `app/` that composes `events` and `layout`
+- Main imports types and pure functions from `src/shared/`, never a component
+- Alias `@shared` points to `src/shared`. Alias `@brand` points to `assets/brand`, from where the UI imports `logo.png`
 
-Não há `supabase/`, `vercel.json` nem cliente de API. Não há TanStack Query: o estado de servidor do PilatePay aqui é o IPC.
+There is no `supabase/`, no `vercel.json` and no API client. There is no TanStack Query: PilatePay's server state is, here, IPC.
 
-## 14. Design visual
+## 14. Visual design
 
-Duas superfícies. O notebook é papel claro. A TV é a câmera do iPhone, escura e translúcida, por cima da imagem. Light mode do requisito vale para o notebook. A TV não é um formulário claro, porque a referência da figura 7 é a câmera.
+Two surfaces. The laptop is light paper. The TV is the iPhone camera, dark and translucent, over the image. The light-mode requirement applies to the laptop. The TV is not a light form, because the reference in figure 7 is the camera.
 
 ### Tokens
 
-Ficam em `src/renderer/index.css`, como variáveis, e o Tailwind 4 as lê no `@theme`.
+They live in `src/renderer/index.css`, as variables, and Tailwind 4 reads them in `@theme`.
 
-| Token | Valor | Uso |
+| Token | Value | Use |
 | --- | --- | --- |
-| `--bg` | `#F4F1EB` | Fundo do notebook |
-| `--bg-raised` | `#FBF9F6` | Cartão, painel, campo |
-| `--ink` | `#1C1917` | Texto e botão primário |
-| `--ink-soft` | `#57534E` | Texto secundário |
-| `--line` | `#E7E0D6` | Fio, borda de campo |
-| `--primary` | `#1C1917` | Botão cheio |
-| `--primary-ink` | `#FBF9F6` | Texto do botão cheio |
-| `--danger` | `#9F1239` | Erro de impressora, destrutivo |
-| `--selection` | `#E11D48` | Borda tracejada e alças do editor |
-| `--ok` | `#3F6212` | Impressora pronta |
-| `--glass` | `rgba(28, 28, 30, 0.42)` | Barras da TV |
-| `--glass-strong` | `rgba(28, 28, 30, 0.62)` | Painel de ajustes sobre a imagem |
-| `--shutter` | `#FFFFFF` | Botão de captura |
+| `--bg` | `#F4F1EB` | Laptop background |
+| `--bg-raised` | `#FBF9F6` | Card, panel, field |
+| `--ink` | `#1C1917` | Text and primary button |
+| `--ink-soft` | `#57534E` | Secondary text |
+| `--line` | `#E7E0D6` | Hairline, field border |
+| `--primary` | `#1C1917` | Filled button |
+| `--primary-ink` | `#FBF9F6` | Filled button text |
+| `--danger` | `#9F1239` | Printer error, destructive |
+| `--selection` | `#E11D48` | Dashed border and editor handles |
+| `--ok` | `#3F6212` | Printer ready |
+| `--glass` | `rgba(28, 28, 30, 0.42)` | TV bars |
+| `--glass-strong` | `rgba(28, 28, 30, 0.62)` | Adjustments panel over the image |
+| `--shutter` | `#FFFFFF` | Capture button |
 
-Sem roxo de destaque e sem o vinho do PilatePay. A cor da marca é o preto da logo. O vermelho existe para o editor continuar reconhecível para quem usava o app atual, e para erro.
+No purple accent and no PilatePay burgundy. The brand color is the logo's black. The red exists so the editor remains recognizable to people who used the current app, and for errors.
 
-Inter, pesos 400, 500 e 600, arquivos locais. A palavra FOTO MÁGICA na interface é a logo, não texto com outra fonte. Números de contagem e de relógio usam dígitos tabulares.
+Inter, weights 400, 500 and 600, local files. The words FOTO MÁGICA in the interface are the logo, not text in another font. Count and clock numbers use tabular digits.
 
-### Notebook
+### Laptop
 
-Fundo `--bg`, cartões `--bg-raised`, borda de 1 px `--line`, raio 12 px nos cartões e 8 px nos campos. Botão primário é preto com texto claro. Botão secundário é fantasma, borda `--line`. Foco visível: anel de 2 px `--ink`, offset 2 px.
+Background `--bg`, cards `--bg-raised`, 1 px `--line` border, 12 px radius on cards and 8 px on fields. The primary button is black with light text. The secondary button is ghost, with a `--line` border. Visible focus: 2 px `--ink` ring, 2 px offset.
 
-Cabeçalho com o símbolo e o nome do evento quando houver. A tela inicial centraliza a logo completa, o nome, o modo (2 tiras ou 1 tira) e o arquivo daquele modo. Uma coluna só, largura máxima 720 px, porque é um formulário curto e não um dashboard.
+Header with the symbol and the event name when there is one. The home screen centers the full logo, the name, the mode (2 tiras or 1 tira) and the file for that mode. A single column, maximum width 720 px, because it is a short form and not a dashboard.
 
-O editor é a exceção de largura: a folha 1844×1240 escala para caber na janela, com o painel de números numa coluna fixa de 320 px à esquerda, na mesma ordem do app atual (foto, Left, Top, Width, Height, Angle).
+The editor is the exception to width: the 1844×1240 sheet scales to fit the window, with the numbers panel in a fixed 320 px column on the left, in the same order as the current app (photo, Left, Top, Width, Height, Angle).
 
-Estados de vazio, de erro e de carregamento existem em toda tela do notebook. Vazio da galeria: “Nenhuma montagem ainda”. Erro de template: as dimensões lidas e as esperadas. Carregar o arquivo: o botão mostra espera e não dispara duas vezes.
+Empty, error and loading states exist on every laptop screen. Empty gallery: "Nenhuma montagem ainda". Template error: the dimensions read and the expected ones. Loading the file: the button shows waiting and does not fire twice.
 
 ### TV
 
-Quadro lógico 1080×1920.
+Logical frame 1080×1920.
 
-- A imagem ocupa o miolo, de borda a borda, já espelhada
-- Barra superior de vidro: ícone de ajustes (no lugar do flash) e o interruptor da grade de terços. Sem ícone de virar câmera
-- Barra inferior de vidro: miniatura circular de 96 px da última montagem à esquerda; o botão branco no centro, 96 px de diâmetro dentro de um anel; o timer (desligado, 5 s, 10 s) como três alvos à direita do botão, cada um com pelo menos 64 px
-- Contador `1/3` acima do botão, em branco, peso 600
-- Contagem regressiva no centro da imagem, cerca de 18% da altura lógica
-- `backdrop-filter: blur(24px)`. Se o compositor não tiver blur, a barra cai para `rgba(28, 28, 30, 0.72)`, opaca o bastante para o rótulo continuar legível
+- The image fills the core, edge to edge, already mirrored
+- Top glass bar: adjustments icon (in place of the flash) and the rule-of-thirds grid toggle. No flip-camera icon
+- Bottom glass bar: 96 px circular thumbnail of the last montage on the left; the white button in the center, 96 px in diameter inside a ring; the timer (off, 5 s, 10 s) as three targets to the right of the button, each at least 64 px
+- `1/3` counter above the button, in white, weight 600
+- Countdown in the center of the image, about 18% of the logical height
+- `backdrop-filter: blur(24px)`. If the compositor has no blur, the bar falls back to `rgba(28, 28, 30, 0.72)`, opaque enough for the label to stay legible
 
-A grade de terços são fios brancos a 20% de opacidade. Desligada, some por completo.
+The rule-of-thirds grid is white hairlines at 20% opacity. When off, it disappears completely.
 
-A tela de impressão mantém a imagem da última prévia ao fundo, escurecida, e flutua os controles como na figura 9: Imprimir e Cancelar de um lado, Mais e Menos do outro, a quantidade no centro, a prévia da folha embaixo. Cada alvo tem no mínimo 64 px; o círculo desenhado pode ser maior. Rótulo embaixo do ícone, em branco: Imprimir, Cancelar, Mais, Menos.
+The print screen keeps the image of the last preview in the background, darkened, and floats the controls as in figure 9: `Imprimir` and `Cancelar` on one side, `Mais` and `Menos` on the other, the quantity in the center, the sheet preview below. Each target is at least 64 px; the drawn circle may be larger. Label under the icon, in white: `Imprimir`, `Cancelar`, `Mais`, `Menos`.
 
-![Figura 9 — Disposição que a tela de impressão conserva](assets/briefing/image3.png)
+![Figure 9 — Layout the print screen keeps](assets/briefing/image3.png)
 
-Uma marca da logo, só o símbolo, pode sentar no canto da tela de impressão, fora da prévia da folha, a não mais que 48 px de altura. A imagem ao vivo, a contagem e a prévia da folha não levam logo.
+A logo mark, the symbol only, may sit in the corner of the print screen, outside the sheet preview, no taller than 48 px. The live image, the countdown and the sheet preview carry no logo.
 
-### Movimento
+### Motion
 
-O obturador pisca um branco de 80 ms. A contagem troca de número sem bounce. O editor não anima o espaço durante o arraste: ele cola no ponteiro, já com o snap aplicado, e o painel mostra esse valor no mesmo frame.
+The shutter flashes white for 80 ms. The countdown swaps numbers without bounce. The editor does not animate the slot during the drag: it sticks to the pointer, with snap already applied, and the panel shows that value in the same frame.
 
-`prefers-reduced-motion` desliga o pisca e a transição de barra. O snap e a contagem permanecem, porque são informação, não enfeite.
+`prefers-reduced-motion` turns off the flash and the bar transition. Snap and the countdown remain, because they are information, not decoration.
 
 ## 15. Logo
 
-O briefing entregou a logo com fundo cinza sólido `(242, 242, 242)`.
+The briefing delivered the logo with a solid gray background `(242, 242, 242)`.
 
-| Arquivo | O que é |
+| File | What it is |
 | --- | --- |
-| `docs/assets/briefing/image6.png` | Original, fundo cinza |
-| `assets/brand/logo.png` | Lockup com fundo removido. O alfa vem de tratar o pixel como tinta preta sobre 242 |
-| `assets/brand/mark.png` | Símbolo (M, moldura, câmera), sem a frase, 1024×1024, transparente |
-| `assets/brand/icon.png` | O mesmo símbolo sobre `#F4F1EB`, opaco, fonte do `.ico` |
+| `docs/assets/briefing/image6.png` | Original, gray background |
+| `assets/brand/logo.png` | Lockup with the background removed. The alpha comes from treating the pixel as black ink over 242 |
+| `assets/brand/mark.png` | Symbol (M, frame, camera), without the phrase, 1024×1024, transparent |
+| `assets/brand/icon.png` | The same symbol over `#F4F1EB`, opaque, source of the `.ico` |
 
-O recorte foi feito no raster. As bordas finas da moldura e da câmera aguentam fundo claro e fundo escuro no tamanho de tela. Em 16 px elas entopem. Quando o cliente tiver o SVG, ele substitui `logo.png` e `mark.png`; o `icon.png` é regerado a partir do símbolo, de novo sobre o fundo claro, para a barra de tarefas escura do Windows não engolir o traço preto.
+The cutout was done on the raster. The thin edges of the frame and the camera hold up on light and dark backgrounds at screen size. At 16 px they clog. When the client has the SVG, it replaces `logo.png` and `mark.png`; `icon.png` is regenerated from the symbol, again over the light background, so that Windows' dark taskbar does not swallow the black stroke.
 
-![Figura 13 — Original](assets/briefing/image6.png)
+![Figure 13 — Original](assets/briefing/image6.png)
 
-## 16. Figuras do briefing usadas aqui
+## 16. Briefing figures used here
 
-As treze estão em `docs/assets/briefing/`. As que este desenho não repetiu ficam no PRD: montagem física (image7), notebook (image13), painel de números (image1), câmera atual (image9), referência do iPhone (image5), ajustes da webcam (image10) e a tela de configurações que não volta (image11).
+All thirteen are in `docs/assets/briefing/`. The ones this design did not repeat stay in the PRD: physical assembly (image7), laptop (image13), numbers panel (image1), current camera (image9), iPhone reference (image5), webcam adjustments (image10) and the settings screen that does not come back (image11).

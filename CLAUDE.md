@@ -1,29 +1,35 @@
 # CLAUDE.md
 
-Foto Mágica 2.0 é um photobooth de festa: TV vertical touch, webcam no topo, notebook do operador e impressora DNP DS-RX1. O que o produto faz está em [docs/PRD.md](docs/PRD.md). Como construir está em [docs/DESIGN.md](docs/DESIGN.md). Se o código discordar dos docs, pare e pergunte. Se mudar uma regra, atualize o doc no mesmo PR.
+Foto Mágica 2.0 is a party photobooth: vertical touch TV, webcam on top, operator laptop and a DNP DS-RX1 printer. What the product does is in [docs/PRD.md](docs/PRD.md). How to build it is in [docs/DESIGN.md](docs/DESIGN.md). If the code disagrees with the docs, stop and ask. If you change a rule, update the doc in the same PR.
 
-Este arquivo é o guia de agentes. No [PilatePay](https://github.com/ovinidev/PilatePay) o equivalente é `AGENTS.md`. A estrutura de pastas deste repo segue a de lá, lida em 2026-11-14, com o acréscimo de `src/main` e `src/preload` porque aqui o app é Electron. O PilatePay usa ESLint; aqui o linter é o oxlint, por decisão deste projeto.
+This file is the agent guide. In [PilatePay](https://github.com/ovinidev/PilatePay) the equivalent is `AGENTS.md`. This repo's folder structure follows that one, read on 2026-11-14, with the addition of `src/main` and `src/preload` because here the app is Electron. PilatePay uses ESLint; here the linter is oxlint, by decision of this project.
 
-Este repositório ainda não tem o app. Os comandos abaixo são o contrato da primeira implementação. Não invente outro gerenciador de pacotes, outro linter nem outro runner de E2E.
+This repository does not have the app yet. The commands below are the contract for the first implementation. Do not invent another package manager, another linter or another E2E runner.
+
+## Language and tooling rules (read first)
+
+- **Language.** Code, identifiers, comments, commit messages, branch names, PR titles and descriptions, and documentation are all in **English**. The only exception is end-user UI strings (everything the operator or guests see on screen), which are **pt-BR**.
+- **Tooling.** All coding for this project is done with the **Claude Code CLI**. **Never use Grok models.**
 
 ## Stack
 
-- Electron + React + TypeScript estrito, Windows 10/11
-- Vite via electron-vite (main, preload e renderer)
-- Tailwind CSS + shadcn/ui no notebook; a TV é desenhada à parte (DESIGN §14)
-- Zod em todo payload de IPC
-- Vitest + Testing Library; Playwright no Electron (`_electron.launch`)
-- oxlint. Sem ESLint, sem `eslint.config.js`, sem dependência `eslint`
-- pnpm. Sem npm, yarn, ou `package-lock.json`
-- Node `>=22`, campo `packageManager` no `package.json`
+- Electron + React + strict TypeScript, Windows 10/11
+- Vite via electron-vite (main, preload and renderer)
+- Tailwind CSS + shadcn/ui on the laptop; the TV is designed separately (DESIGN §14)
+- Zod on every IPC payload
+- Vitest + Testing Library; Playwright on Electron (`_electron.launch`)
+- oxlint. No ESLint, no `eslint.config.js`, no `eslint` dependency
+- pnpm. No npm, yarn, or `package-lock.json`
+- Node `>=22`, `packageManager` field in `package.json`
 
-## Idioma
+## Language details
 
-- Código, identificadores, comentários, nomes de teste e mensagens de commit: inglês
-- Docs de produto (`CLAUDE.md`, `docs/`) e todo texto que a pessoa vê: pt-BR
-- O PilatePay escreve docs em inglês. Aqui os docs ficam em português de propósito
+- Code, identifiers, comments, test names, commit messages, branch names, PR titles and descriptions: English
+- Product docs (`CLAUDE.md`, `docs/`): English
+- End-user UI strings (all text a person sees in the app, e.g. button labels and messages): pt-BR, quoted verbatim in the docs
+- PilatePay also writes docs in English; this repo now matches
 
-## Comandos
+## Commands
 
 ```bash
 pnpm dev                 # electron-vite dev
@@ -32,71 +38,71 @@ pnpm lint                # oxlint .
 pnpm test                # vitest run
 pnpm test:coverage       # vitest run --coverage
 pnpm exec vitest run <file> --reporter=dot
-pnpm test:e2e            # playwright test, contra o Electron
+pnpm test:e2e            # playwright test, against Electron
 pnpm exec playwright test <spec> --reporter=dot
 pnpm build               # electron-vite build
 pnpm dist                # build + electron-builder --win
 ```
 
-Enquanto itera, rode só o teste do arquivo que mexeu, com saída curta, e reporte falha. Não rode a suíte inteira a cada tentativa. Lint, typecheck, unitário e E2E entram no hook husky `pre-push` e no GitHub Actions (DESIGN §12).
+While iterating, run only the test for the file you touched, with short output, and report failures. Do not run the whole suite on every attempt. Lint, typecheck, unit and E2E go in the husky `pre-push` hook and in GitHub Actions (DESIGN §12).
 
-O E2E não usa a webcam nem a DS-RX1. Ele sobe com `FOTOMAGICA_E2E=1` e `FOTOMAGICA_PRINTER=simulated`.
+E2E does not use the webcam or the DS-RX1. It starts with `FOTOMAGICA_E2E=1` and `FOTOMAGICA_PRINTER=simulated`.
 
-## Pastas
+## Folders
 
-Feature-based, como o PilatePay. Detalhe e árvore em [docs/DESIGN.md](docs/DESIGN.md) §13.
+Feature-based, like PilatePay. Detail and tree in [docs/DESIGN.md](docs/DESIGN.md) §13.
 
-- `src/main/`: processo principal. Janelas, IPC, disco, impressão, auto-update
-- `src/preload/`: `contextBridge`. Única ponte do renderer para o Node
-- `src/shared/`: schemas Zod, nomes de canal e funções puras. Sem React e sem Electron. Main, preload e renderer importam daqui
-- `src/renderer/app/`: rotas e cascas das duas janelas
-- `src/renderer/features/<nome>/`: uma área, exportada só pelo `index.ts`
-- `src/renderer/shared/`: ui, hooks e utils de tela. Não importa feature nem `app`
-- `e2e/`: Playwright. Um spec por fluxo, não por arquivo de implementação
-- `docs/`: PRD, DESIGN, figuras do briefing
-- `assets/brand/`: logo transparente, símbolo e ícone
+- `src/main/`: main process. Windows, IPC, disk, printing, auto-update
+- `src/preload/`: `contextBridge`. The only bridge from the renderer to Node
+- `src/shared/`: Zod schemas, channel names and pure functions. No React and no Electron. Main, preload and renderer import from here
+- `src/renderer/app/`: routes and shells of the two windows
+- `src/renderer/features/<name>/`: one area, exported only through `index.ts`
+- `src/renderer/shared/`: ui, hooks and screen utils. Does not import a feature or `app`
+- `e2e/`: Playwright. One spec per flow, not per implementation file
+- `docs/`: PRD, DESIGN, briefing figures
+- `assets/brand/`: transparent logo, symbol and icon
 
-Uma feature importa `src/renderer/shared/`, `src/shared/` e o `index.ts` de outra feature. Nunca o miolo dela. Código novo nasce na feature dona do assunto. Só vai para `src/renderer/shared/` quando uma segunda feature precisa. Regra pura vai para `src/shared/`.
+A feature imports `src/renderer/shared/`, `src/shared/` and another feature's `index.ts`. Never its internals. New code is born in the feature that owns the subject. It only moves to `src/renderer/shared/` when a second feature needs it. Pure rules go to `src/shared/`.
 
-Teste de regra pura fica ao lado do arquivo (`snap.test.ts`).
+Tests of pure rules sit next to the file (`snap.test.ts`).
 
-## Convenções
+## Conventions
 
-- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. Sem `remote`, sem `window.require`
-- Todo canal de IPC tem nome estável, schema Zod e tipo no preload. O renderer não monta string de canal na mão
-- Regra de negócio pura (snap, corte, nome de arquivo, escolha do monitor, geometria do espaço) não importa Electron nem React. Assim o Vitest cobre sem subir janela
-- UI do notebook usa componente shadcn de `shared/components/ui/` antes de criar outro. A TV não é um diálogo shadcn com outro tema: é a superfície da câmera, desenhada em `features/camera`
-- Texto visível em pt-BR, com os rótulos do PRD (`Iniciar evento`, `Encerrar evento`, `Imprimir`, `Cancelar`, `Mais`, `Menos`, `Nova rodada`, `Imprimir novamente`)
-- Botão, checkbox e select do notebook levam `cursor-pointer` e alvo de toque de pelo menos 44 px. Na TV o mínimo é 64 px
+- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. No `remote`, no `window.require`
+- Every IPC channel has a stable name, a Zod schema and a type in the preload. The renderer does not build channel strings by hand
+- Pure business rules (snap, crop, file name, monitor choice, space geometry) do not import Electron or React. This way Vitest covers them without opening a window
+- Laptop UI uses a shadcn component from `shared/components/ui/` before creating another. The TV is not a shadcn dialog with another theme: it is the camera surface, drawn in `features/camera`
+- Visible text in pt-BR, with the PRD labels (`Iniciar evento`, `Encerrar evento`, `Imprimir`, `Cancelar`, `Mais`, `Menos`, `Nova rodada`, `Imprimir novamente`)
+- Laptop button, checkbox and select carry `cursor-pointer` and a touch target of at least 44 px. On the TV the minimum is 64 px
 
-## Regras fáceis de quebrar
+## Easy-to-break rules
 
-- A pasta do evento é `app.getPath('desktop') + '\\' + nome`. Dentro dela só entra a montagem `HH-mm-ss.jpg`. Nem foto original, nem template, nem JSON
-- A Logitech fica montada na horizontal. A foto salva é a imagem que a pessoa viu. Preview e arquivo usam a mesma função: girar `CAMERA_ROTATION_DEG` (inicial 90) e depois espelhar na horizontal. Sem segundo caminho “parecido”, e sem girar a câmera no hardware
-- Há dois layouts salvos, editáveis e independentes. O de 2 tiras tem 5 espaços: cima 1, 2 e 3 com Angle 270, baixo 1 e 2 com Angle 0. O de 1 tira tem 3 espaços, fotos 1, 2 e 3, cobrindo a folha inteira, sem corte. O evento usa o layout do modo escolhido antes de iniciar. A posição não muda por evento; o fundo muda
-- A tabela do briefing é aproximada e vale só para o layout de 2 tiras. O Cima 3 com Angle 0 e Top 194 é sobra da demonstração. Os espaços ficam dentro dos quadrados cinzas e não se sobrepõem. Baixo 1 e Baixo 2 com Left 72 e 403 e largura 500 se cruzam: o seed já separa o de baixo. As medidas dos quadrados e a linha de corte (y = 620) estão pendentes do cliente. O seed de 1 tira também está pendente de validação
-- Nos espaços horizontais o encaixe padrão é `cover` com pan zero, o que corta o centro do retrato. O operador ajusta cada espaço da rodada (mover, girar, zoom) sem recapturar
-- O corte de 2 polegadas liga no modo 2 tiras e desliga no modo 1 tira. O modo 1 tira preenche a folha 1844×1240 com as três fotos. Não deixe metade em branco e não peça papel 6×2. Quem fala com o driver é só `src/main/print/`. O modo simulado existe desde o primeiro PR que imprimir
-- Impressão silenciosa, na DS-RX1, sem diálogo do Windows
-- Se a webcam ou a impressora cair no meio da rodada, a rodada fica na memória. A janela da TV continua respondendo
-- A tela inicial só cria evento. Não lista eventos antigos
-- Sem rede no evento. O auto-update não roda com evento aberto e não segura a abertura quando estiver offline
-- O build do Windows assina se `CSC_LINK` e `CSC_KEY_PASSWORD` existirem. Sem esses secrets o instalador sai sem assinatura e o job continua verde
-- O template aceito tem exatamente 1844×1240 px. A montagem também. DPI 300
-- O nome do arquivo usa a hora local do Windows, 24 h, hífens: `21-45-08.jpg`. Dois arquivos no mesmo segundo ganham `-2`, `-3`
-- Arrastar ou girar um espaço no editor não grava disco e não chama IPC. O painel Left/Top/Angle atualiza no mesmo frame. A gravação é no soltar. O snap de bordas e centros vale no gesto; o giro encosta em 0°, 90°, 180° e 270°. Alt desliga o snap
-- Mais cópias para em 10. A GitHub Release só sai quando a versão do `package.json` ainda não foi publicada
+- The event folder is `app.getPath('desktop') + '\\' + name`. Only the `HH-mm-ss.jpg` montage goes inside it. No original photo, no template, no JSON
+- The Logitech is mounted horizontally. The saved photo is the image the person saw. Preview and file use the same function: rotate by `CAMERA_ROTATION_DEG` (initial 90) and then mirror horizontally. No second "similar" path, and no rotating the camera in hardware
+- There are two saved layouts, editable and independent. The 2-strip one has 5 slots: top 1, 2 and 3 with Angle 270, bottom 1 and 2 with Angle 0. The 1-strip one has 3 slots, photos 1, 2 and 3, covering the whole sheet, with no cut. The event uses the layout of the mode chosen before starting. The position does not change per event; the background does
+- The briefing table is approximate and only applies to the 2-strip layout. Cima 3 with Angle 0 and Top 194 is a leftover of the demonstration. The slots stay inside the gray squares and do not overlap. Baixo 1 and Baixo 2 with Left 72 and 403 and width 500 overlap: the seed already separates the bottom one. The measurements of the squares and the cut line (y = 620) are pending from the client. The 1-strip seed is also pending validation
+- In horizontal slots the default fit is `cover` with zero pan, which crops the center of the portrait. The operator adjusts each slot of the round (move, rotate, zoom) without recapturing
+- The 2-inch cut turns on in 2-strip mode and off in 1-strip mode. The 1-strip mode fills the 1844×1240 sheet with the three photos. Do not leave half blank and do not ask for 6×2 paper. Only `src/main/print/` talks to the driver. The simulated mode exists since the first PR that prints
+- Silent printing, on the DS-RX1, with no Windows dialog
+- If the webcam or the printer drops mid-round, the round stays in memory. The TV window keeps responding
+- The home screen only creates an event. It does not list old events
+- No network at the event. Auto-update does not run with an event open and does not hold up startup when offline
+- The Windows build signs if `CSC_LINK` and `CSC_KEY_PASSWORD` exist. Without those secrets the installer comes out unsigned and the job stays green
+- The accepted template is exactly 1844×1240 px. The montage too. DPI 300
+- The file name uses Windows local time, 24 h, hyphens: `21-45-08.jpg`. Two files in the same second get `-2`, `-3`
+- Dragging or rotating a slot in the editor does not write to disk and does not call IPC. The Left/Top/Angle panel updates in the same frame. The write happens on release. Snap to edges and centers applies during the gesture; rotation snaps to 0°, 90°, 180° and 270°. Alt turns snap off
+- More copies stops at 10. The GitHub Release only goes out when the `package.json` version has not been published yet
 
-## O que não fazer
+## What not to do
 
-- Não criar conta, backend, galeria na nuvem nem salvar as três fotos soltas
-- Não reabrir o diálogo de impressão “só desta vez”
-- Não fixar o índice do monitor. A TV é escolhida pela API `screen`
-- Não tratar os números da demo, nem o seed de 1 tira, como medida de uma arte já aprovada
-- Não chamar o driver a partir de um componente React
-- Não acrescentar ESLint ao lado do oxlint
-- Não fazer layout de celular. O notebook é a janela principal; a TV é 1080×1920 em retrato
-- Não colocar a logo por cima da imagem ao vivo
-- Não deixar a TV enxergar o sistema de arquivos
-- Não implementar vídeo, modo retrato, câmera frontal nem a tela de configurações do app atual
-- Não escrever a rodada em disco “por segurança” antes do imprimir. Até imprimir, a rodada é memória. Cair o processo antes disso perde a rodada; é a regra
+- Do not create an account, backend, cloud gallery or save the three loose photos
+- Do not reopen the print dialog "just this once"
+- Do not hardcode the monitor index. The TV is chosen by the `screen` API
+- Do not treat the demo numbers, or the 1-strip seed, as the measurement of an approved artwork
+- Do not call the driver from a React component
+- Do not add ESLint next to oxlint
+- Do not make a phone layout. The laptop is the main window; the TV is 1080×1920 in portrait
+- Do not put the logo over the live image
+- Do not let the TV see the file system
+- Do not implement video, portrait mode, front camera or the current app's settings screen
+- Do not write the round to disk "for safety" before print. Until print, the round is memory. If the process dies before that, the round is lost; that is the rule
