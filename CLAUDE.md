@@ -4,7 +4,7 @@ Foto Mágica 2.0 is a party photobooth: vertical touch TV, webcam on top, operat
 
 This file is the agent guide. In [PilatePay](https://github.com/ovinidev/PilatePay) the equivalent is `AGENTS.md`. This repo's folder structure follows that one, read on 2026-11-14, with the addition of `src/main` and `src/preload` because here the app is Electron. PilatePay uses ESLint; here the linter is oxlint, by decision of this project.
 
-This repository does not have the app yet. The commands below are the contract for the first implementation. Do not invent another package manager, another linter or another E2E runner.
+The foundation scaffold (shell windows, typed IPC, tooling, CI) is in place; product features are not built yet. The commands below are the contract. Do not invent another package manager, another linter or another E2E runner.
 
 ## Language and tooling rules (read first)
 
@@ -21,7 +21,7 @@ This repository does not have the app yet. The commands below are the contract f
 - oxlint. No ESLint, no `eslint.config.js`, no `eslint` dependency
 - pnpm. No npm, yarn, or `package-lock.json`
 - Node `>=22`, `packageManager` field in `package.json`
-- Husky with a `pre-push` hook (oxlint, typecheck, unit tests and Playwright). Setup comes with the first implementation
+- Husky with a `pre-push` hook (oxlint, typecheck, unit tests and Playwright), in `.husky/pre-push`
 
 ## Language details
 
@@ -34,12 +34,12 @@ This repository does not have the app yet. The commands below are the contract f
 
 ```bash
 pnpm dev                 # electron-vite dev
-pnpm typecheck           # tsc --noEmit
-pnpm lint                # oxlint .
+pnpm typecheck           # tsc --noEmit on tsconfig.node, tsconfig.web and tsconfig.e2e
+pnpm lint                # oxlint --deny-warnings .
 pnpm test                # vitest run
 pnpm test:coverage       # vitest run --coverage
 pnpm exec vitest run <file> --reporter=dot
-pnpm test:e2e            # playwright test, against Electron
+pnpm test:e2e            # playwright test, against Electron (global setup runs electron-vite build)
 pnpm exec playwright test <spec> --reporter=dot
 pnpm build               # electron-vite build
 pnpm dist                # build + electron-builder --win
@@ -52,7 +52,7 @@ pnpm vitest run <files> --reporter=dot
 pnpm playwright test <specs> --reporter=dot
 ```
 
-Do not run the full lint, build, unit or Playwright suite yourself. The Husky `pre-push` hook runs oxlint, typecheck, unit tests and Playwright; GitHub Actions runs the same contract (DESIGN §12). Husky setup comes with the first implementation. Tail only failures; never paste long test or build logs.
+Do not run the full lint, build, unit or Playwright suite yourself. The Husky `pre-push` hook runs oxlint, typecheck, unit tests and Playwright; GitHub Actions runs the same contract (DESIGN §12). On Linux without a display the hook wraps Playwright in `xvfb-run`. Tail only failures; never paste long test or build logs.
 
 E2E does not use the webcam or the DS-RX1. It starts with `FOTOMAGICA_E2E=1` and `FOTOMAGICA_PRINTER=simulated`.
 
@@ -66,7 +66,7 @@ Feature-based, like PilatePay. Detail and tree in [docs/DESIGN.md](docs/DESIGN.m
 - `src/renderer/app/`: routes and shells of the two windows
 - `src/renderer/features/<name>/`: one area, exported only through `index.ts`
 - `src/renderer/shared/`: ui, hooks and screen utils. Does not import a feature or `app`
-- `e2e/`: Playwright. One spec per flow, not per implementation file
+- `e2e/`: Playwright. One spec per flow, not per implementation file. `fixtures.ts` launches the built app with the E2E env
 - `docs/`: PRD, DESIGN, briefing figures
 - `assets/brand/`: transparent logo, symbol and icon
 

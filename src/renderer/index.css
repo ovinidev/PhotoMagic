@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+
+/* Design tokens, DESIGN §14. The laptop is light paper; the TV glass tokens are used by features/camera. */
+:root {
+  --bg: #f4f1eb;
+  --bg-raised: #fbf9f6;
+  --ink: #1c1917;
+  --ink-soft: #57534e;
+  --line: #e7e0d6;
+  --primary: #1c1917;
+  --primary-ink: #fbf9f6;
+  --danger: #9f1239;
+  --selection: #e11d48;
+  --ok: #3f6212;
+  --glass: rgba(28, 28, 30, 0.42);
+  --glass-strong: rgba(28, 28, 30, 0.62);
+  --shutter: #ffffff;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-raised: var(--bg-raised);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-danger: var(--danger);
+  --color-selection: var(--selection);
+  --color-ok: var(--ok);
+  --color-glass: var(--glass);
+  --color-glass-strong: var(--glass-strong);
+  --color-shutter: var(--shutter);
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 12px;
+  --radius-field: 8px;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+}

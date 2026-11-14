@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"],
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.e2e.tsbuildinfo"
+  },
+  "include": ["playwright.config.ts", "e2e/**/*", "src/shared/**/*", "src/preload/fotomagica.d.ts"]
+}

@@ -309,23 +309,23 @@ Builder icon: `assets/brand/icon.png` (symbol on a light background). The builde
 
 ## 12. CI and tests
 
-The workflow is not in the repository yet. The first implementation that creates the app adds `.github/workflows/ci.yml` with this contract.
+Two workflows implement this contract. `.github/workflows/ci.yml` runs the checks on pull requests and on pushes to any branch except `main`; it is also a reusable workflow. `.github/workflows/release.yml` runs on push to `main`: it calls `ci.yml` and then the Windows job below.
 
 **On every pull request and every push**
 
 - Node 22, pnpm with a frozen lockfile
 - `pnpm typecheck`
-- `pnpm lint` (`oxlint .`, warnings fail)
+- `pnpm lint` (`oxlint --deny-warnings .`)
 - `pnpm test:coverage`
 - `pnpm exec playwright install --with-deps chromium` when the runner is Linux
-- `pnpm test:e2e` with `FOTOMAGICA_E2E=1` and `FOTOMAGICA_PRINTER=simulated`
+- `pnpm test:e2e` with `FOTOMAGICA_E2E=1` and `FOTOMAGICA_PRINTER=simulated`, under `xvfb-run`. Playwright's global setup runs `electron-vite build` first
 
 The pull-request E2E can run on `ubuntu-latest`: the printer is simulated, the camera is a fixture and the second monitor is injected. What is Windows-specific (DEVMODE, signing, NSIS) stays in the packaging job.
 
 **On push to `main`, an extra job on `windows-latest`**
 
 - `pnpm dist` (electron-builder `--win`)
-- Publishes a GitHub Release when `package.json` `version` does not yet exist as a release
+- Publishes a GitHub Release `v<version>` (installer, blockmap and `latest.yml`, not a draft) when `package.json` `version` does not yet exist as a release
 - Signs only with the secrets present, as in section 11
 
 A push that does not bump the version produces the installer as a workflow artifact and does not create another release. electron-updater only sees a published release.
@@ -354,20 +354,22 @@ E2E, in `e2e/`, one spec per flow, on real Electron:
 
 A PRD scenario whose screen does not exist yet stays as `test.fixme`, with the requirement id in the title, and becomes a test in the PR that builds the screen. E2E does not point at the DS-RX1 or the MX Brio.
 
-The project uses Husky with a `pre-push` hook that runs oxlint, typecheck, unit tests (`pnpm test`) and Playwright (`pnpm test:e2e`). Setup comes with the first implementation, in the same role as the hook in PilatePay. While iterating, run only the files or specs you touched, with summarized output (see CLAUDE.md); do not run the full suite yourself. Tail only failures; never paste long test or build logs.
+The project uses Husky with a `pre-push` hook that runs oxlint, typecheck, unit tests (`pnpm test`) and Playwright (`pnpm test:e2e`). It lives in `.husky/pre-push`, in the same role as the hook in PilatePay; on Linux without `DISPLAY` or `WAYLAND_DISPLAY` it runs Playwright under `xvfb-run`. While iterating, run only the files or specs you touched, with summarized output (see CLAUDE.md); do not run the full suite yourself. Tail only failures; never paste long test or build logs.
 
-oxlint, expected minimal configuration: plugins `react`, `typescript` and `import`; category `correctness` as error; React hooks rule as error; ignore `dist`, `out`, `release`, `coverage`, `playwright-report`. No ESLint file alongside.
+oxlint, minimal configuration: plugins `react`, `typescript` and `import`; category `correctness` as error; React hooks rule as error; ignore `dist`, `out`, `release`, `coverage`, `playwright-report`. `no-restricted-imports` enforces the folder rules of §13: no feature internals across features, no Electron or Node in the renderer, no React or Electron in `src/shared`, and `renderer/shared` never imports a feature or `app`. No ESLint file alongside.
 
 ## 13. Folders
 
 ```
 src/
   shared/                no React and no Electron
-    ipc/                 channel names and Zod schemas
+    ipc/                 channel names, Zod schemas and the invoke contract
     layout/              snap, seed, geometry
     capture/             rotation, mirror, cover
     files/               folder name and HH-mm-ss
     displays.ts          TV monitor choice
+    constants.ts         rotation, sheet, margins, copies, TV frame
+    runtime.ts           FOTOMAGICA_* environment flags
   main/
     index.ts
     windows/             reads screen and calls the pure displays function
@@ -379,6 +381,7 @@ src/
     updater/
   preload/
     index.ts             contextBridge
+    fotomagica.d.ts      window.fotomagica type for the renderer
   renderer/
     operator.html
     guest.html
@@ -395,6 +398,7 @@ src/
       components/ui/     shadcn, used by the laptop
       hooks/
       utils/
+    test/                Vitest setup for renderer tests
 e2e/
 docs/
   PRD.md
@@ -413,7 +417,7 @@ Rules, the same as PilatePay:
 - Only the subfolders the feature uses are created (`components/`, `hooks/`, `utils/`, `pages/`)
 - The home screen is not a feature: it is a page in `app/` that composes `events` and `layout`
 - Main imports types and pure functions from `src/shared/`, never a component
-- Alias `@shared` points to `src/shared`. Alias `@brand` points to `assets/brand`, from where the UI imports `logo.png`
+- Alias `@shared` points to `src/shared`. Alias `@brand` points to `assets/brand`, from where the UI imports `logo.png`. Alias `@renderer` points to `src/renderer` and is only used inside the renderer
 
 There is no `supabase/`, no `vercel.json` and no API client. There is no TanStack Query: PilatePay's server state is, here, IPC.
 

@@ -1,0 +1,102 @@
+# Every push to main: the CI checks, then the Windows installer (DESIGN §11, §12).
+# A GitHub Release is published only when the package.json version has no release yet.
+# Code signing is optional: without CSC_LINK / CSC_KEY_PASSWORD the installer is unsigned and the job stays green.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  windows:
+    name: Windows installer
+    needs: checks
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Decide whether this version is new
+        id: version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if gh release view "v$version" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "Release v$version already exists: building the installer as an artifact only."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "Release v$version does not exist yet: it will be published."
+          fi
+
+      - name: Enable code signing when the secrets exist
+        shell: bash
+        env:
+          CSC_LINK_SECRET: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD_SECRET: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          if [ -n "$CSC_LINK_SECRET" ] && [ -n "$CSC_KEY_PASSWORD_SECRET" ]; then
+            delimiter="EOF_$(date +%s%N)"
+            {
+              echo "CSC_LINK<<$delimiter"; echo "$CSC_LINK_SECRET"; echo "$delimiter"
+              echo "CSC_KEY_PASSWORD<<$delimiter"; echo "$CSC_KEY_PASSWORD_SECRET"; echo "$delimiter"
+            } >> "$GITHUB_ENV"
+            echo "Signing enabled."
+          else
+            echo "CSC_LINK / CSC_KEY_PASSWORD not set: the installer will be unsigned."
+          fi
+
+      - name: Build installer
+        run: pnpm dist --publish never
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FotoMagica-Setup-${{ steps.version.outputs.version }}
+          path: |
+            release/FotoMagica-Setup.exe
+            release/FotoMagica-Setup.exe.blockmap
+            release/latest.yml
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        if: steps.version.outputs.publish == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" \
+            release/FotoMagica-Setup.exe \
+            release/FotoMagica-Setup.exe.blockmap \
+            release/latest.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Foto Mágica $VERSION" \
+            --generate-notes

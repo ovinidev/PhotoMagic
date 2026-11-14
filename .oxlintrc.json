@@ -1,0 +1,153 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "react",
+    "typescript",
+    "import"
+  ],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": [
+              "**/features/*/*"
+            ],
+            "message": "Import another feature only through its index.ts."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/shared/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "electron",
+                "message": "src/shared has no Electron: keep rules pure."
+              },
+              {
+                "name": "react",
+                "message": "src/shared has no React: keep rules pure."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "@renderer/*",
+                  "**/renderer/**",
+                  "**/main/**",
+                  "**/preload/**"
+                ],
+                "message": "src/shared imports nothing from main, preload or renderer."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/renderer/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "electron",
+                "message": "The renderer talks to main only through window.fotomagica."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "node:*",
+                  "fs",
+                  "path",
+                  "child_process"
+                ],
+                "message": "The renderer has no Node access."
+              },
+              {
+                "group": [
+                  "**/features/*/*"
+                ],
+                "message": "Import another feature only through its index.ts."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/renderer/shared/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "electron",
+                "message": "The renderer talks to main only through window.fotomagica."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "node:*",
+                  "fs",
+                  "path",
+                  "child_process"
+                ],
+                "message": "The renderer has no Node access."
+              },
+              {
+                "group": [
+                  "@renderer/features/*",
+                  "@renderer/app/*",
+                  "**/features/**",
+                  "**/app/**"
+                ],
+                "message": "renderer/shared does not import a feature or app."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "e2e/**"
+      ],
+      "rules": {
+        "no-empty-pattern": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "dist",
+    "out",
+    "release",
+    "coverage",
+    "playwright-report",
+    "test-results",
+    "node_modules"
+  ]
+}
