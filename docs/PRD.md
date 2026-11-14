@@ -6,7 +6,7 @@
 
 ## 1. Produto
 
-O Foto Mágica é um photobooth de festa. Uma TV fica em pé, com touch e uma webcam no topo. Os convidados tiram 3 fotos. O app encaixa essas fotos num template do evento e manda a folha para a DNP DS-RX1, que corta em duas tiras.
+O Foto Mágica é um photobooth de festa. Uma TV fica em pé, com touch e uma webcam no topo. Os convidados tiram 3 fotos. O app encaixa essas fotos num template do evento e manda a folha para a DNP DS-RX1. No modo padrão a impressora corta a folha em duas tiras. No outro modo a folha 6×4 sai inteira, sem corte, com as três fotos ocupando a folha.
 
 Hoje isso roda no Webcam Photobooth. O app novo mantém o ritmo da fila (chegar, posar, três toques, imprimir) e troca o que trava, o que pede configuração no meio da festa e o que o operador tem de ligar na mão na impressora.
 
@@ -45,9 +45,9 @@ A etiqueta da TV e o diálogo atual da impressora estão nas figuras 3 e 10, no 
 
 Estas decisões vieram do dono do produto. A implementação segue isto, sem reabrir.
 
-1. **Template.** A tira de cima leva as fotos 1, 2 e 3 na vertical (Angle 270). A tira de baixo leva as fotos 1 e 2 na horizontal (Angle 0). Os números da tabela do briefing são aproximados: foram mexidos na demonstração e não medem os quadrados cinzas. O Cima 3 com Angle 0 e Top 194 é sobra dessa demo. Os espaços ficam dentro dos quadrados cinzas e continuam ajustáveis no editor.
+1. **Template de duas tiras.** A tira de cima leva as fotos 1, 2 e 3 na vertical (Angle 270). A tira de baixo leva as fotos 1 e 2 na horizontal (Angle 0). Os números da tabela do briefing são aproximados: foram mexidos na demonstração e não medem os quadrados cinzas. O Cima 3 com Angle 0 e Top 194 é sobra dessa demo. Os espaços ficam dentro dos quadrados cinzas e continuam ajustáveis no editor. Esse é o layout do modo com corte.
 2. **Câmera.** A Logitech fica montada na horizontal, no topo da TV, sem giro físico. A rotação de 90° para retrato é feita por software, como no Webcam Photobooth. O sentido mora na constante `CAMERA_ROTATION_DEG`, valor inicial 90. A imagem de trabalho é retrato. Nos espaços horizontais o encaixe padrão corta o centro. O operador ajusta o enquadramento (mover, girar, zoom) no notebook.
-3. **Impressão.** O corte de 2" começa ligado quando saem as duas tiras. Imprimir só uma tira é uma escolha feita na tela de criar o evento, antes de iniciar, dizendo qual tira. Nesse modo a saída continua a folha 6×4, com a metade não escolhida em branco e o corte de 2" desligado. Não depende de um papel 6×2 do driver. Se o driver expuser um 6×2 nativo, isso fica como melhoria, a validar no hardware.
+3. **Impressão.** Antes de iniciar o evento o operador escolhe o modo. **2 tiras** é o padrão: corte de 2" ligado e o layout de cinco espaços. **1 tira** desliga o corte e usa um layout próprio de três espaços, fotos 1, 2 e 3, cobrindo a folha 6×4 inteira (1844×1240). Não é meia folha em branco e não é papel 6×2. Os dois layouts ficam salvos e os dois se editam no editor.
 4. **Driver.** Corte de 2" e os estados sem papel, sem ribbon e desligada usam o que o driver do Windows expuser. O teste no aparelho é do dono. O código de impressão fica isolado, com um modo simulado que os testes usam no lugar do hardware.
 5. **Tela inicial.** Só cria evento novo. Não lista eventos antigos.
 6. **Assinatura.** O cliente tem certificado de assinatura de código para Windows. O CI assina quando os secrets existem (por exemplo `CSC_LINK` e `CSC_KEY_PASSWORD`) e gera o instalador mesmo quando não existem.
@@ -62,7 +62,7 @@ Estas decisões vieram do dono do produto. A implementação segue isto, sem rea
 
 ```mermaid
 flowchart TD
-  A["Tela inicial no notebook"] --> B["Criar evento: nome, template 1844×1240, qual tira imprimir"]
+  A["Tela inicial no notebook"] --> B["Criar evento: nome, modo 2 tiras ou 1 tira, template desse modo"]
   B --> C["Editor de espaços, opcional"]
   C --> D["Iniciar evento"]
   D --> E["Criar ou reusar Desktop/Nome do evento"]
@@ -89,9 +89,11 @@ Cancelar não grava arquivo: a montagem só existe em disco no Imprimir. Imprimi
 
 ### 6.1 Criar evento (notebook)
 
-Campos: nome do evento, importar template PNG ou JPG, e a impressão da festa: as duas tiras (padrão), só a de cima, ou só a de baixo.
+Campos: nome do evento, o modo da festa (2 tiras, padrão, ou 1 tira) e importar o template PNG ou JPG desse modo.
 
-O app lê o tamanho do arquivo. Com 1844×1240, o template é aceito. Com outro tamanho, a tela mostra a largura e a altura encontradas e o botão Iniciar evento fica desligado.
+O app lê o tamanho do arquivo. Com 1844×1240, o template é aceito para o modo selecionado. Com outro tamanho, a tela mostra a largura e a altura encontradas e o botão Iniciar evento fica desligado.
+
+Suposição, até o cliente dizer o contrário: cada modo tem o seu fundo. A arte de duas tiras e a arte de três fotos na folha inteira são desenhos diferentes, então o arquivo importado grava no modo que está selecionado. Iniciar usa o template desse modo. O outro modo conserva o arquivo dele. O mesmo arquivo pode ser importado nos dois, e mesmo assim ficam gravados separados.
 
 Há um caminho para o editor de espaços antes de iniciar. Iniciar evento cria a pasta no Desktop e abre a câmera na TV.
 
@@ -99,7 +101,9 @@ A tela não mostra eventos anteriores.
 
 ### 6.2 Editor de espaços (notebook)
 
-Cinco espaços, sempre estes:
+O editor guarda dois layouts. Um seletor troca qual está na tela. Editar um não altera o outro. Os dois sobrevivem ao reinício e valem para todos os eventos daquele modo.
+
+**2 tiras** tem cinco espaços e a guia da linha de corte:
 
 | Espaço | Foto padrão | Orientação | Angle |
 | --- | --- | --- | --- |
@@ -109,11 +113,13 @@ Cinco espaços, sempre estes:
 | Baixo 1 | 1 | horizontal | 0 |
 | Baixo 2 | 2 | horizontal | 0 |
 
+**1 tira** tem três espaços, fotos 1, 2 e 3, sem guia de corte. O seed abaixo cobre a folha e está pendente de validação.
+
 O painel do espaço selecionado edita a foto (1, 2 ou 3), Left, Top, Width, Height e Angle. No preview, o espaço selecionado tem borda vermelha tracejada, 8 alças de redimensionar e uma alça de rotação abaixo do centro inferior. Left, Top e Angle mudam ao vivo durante o arraste e o giro. Width e Height mudam ao vivo durante o redimensionamento.
 
-O editor do app atual trava nesse gesto. O novo mantém o ponteiro fluido e encosta o espaço nas bordas e nos centros (tela, margens, linha de corte e os outros espaços).
+O editor do app atual trava nesse gesto. O novo mantém o ponteiro fluido e encosta o espaço nas bordas e nos centros (tela, margens, os outros espaços e, só no layout de 2 tiras, a linha de corte).
 
-As posições salvam no computador e valem para todos os eventos. Trocar o template não zera o layout. O operador ajusta de novo se os quadrados cinzas de um tema não coincidirem com o layout salvo.
+Cada layout salva no computador e vale para todos os eventos daquele modo. Trocar o template não zera o layout. O operador ajusta de novo se os quadrados cinzas de um tema não coincidirem com o layout salvo.
 
 ![Figura 4 — Editor atual: espaços 1, 2 e 3 na tira de cima e 1 e 2 na de baixo](assets/briefing/image4.png)
 
@@ -131,7 +137,7 @@ O app atual guarda uma grade de passo 331: colunas em Left 72, 403, 734 e 1065, 
 | Baixo 1 | 1 | 72 | 670 | 500 | 281 | 0 | Cruza o Baixo 2 |
 | Baixo 2 | 2 | 403 | 670 | 500 | 281 | 0 | Cruza o Baixo 1 |
 
-Seed da primeira execução, já sem o ângulo errado e sem a sobreposição de baixo:
+Seed de 2 tiras na primeira execução, já sem o ângulo errado e sem a sobreposição de baixo:
 
 | Espaço | Foto | Left | Top | Width | Height | Angle |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -141,7 +147,19 @@ Seed da primeira execução, já sem o ângulo errado e sem a sobreposição de 
 | Baixo 1 | 1 | 72 | 670 | 500 | 281 | 0 |
 | Baixo 2 | 2 | 620 | 670 | 500 | 281 | 0 |
 
-Esse seed é a suposição de trabalho. As medidas dos quadrados cinzas estão pendentes do cliente; até lá o app grava estes números e o operador ainda pode arrastar cada espaço. 620 existe para a largura 500 não cruzar o espaço que começa em 72. A linha de corte usada junto com esse seed é y = 620, também pendente do cliente.
+Esse seed de 2 tiras é a suposição de trabalho. As medidas dos quadrados cinzas estão pendentes do cliente; até lá o app grava estes números e o operador ainda pode arrastar cada espaço. 620 existe para a largura 500 não cruzar o espaço que começa em 72. A linha de corte usada junto com esse seed é y = 620, também pendente do cliente.
+
+#### Seed do modo 1 tira
+
+Três retratos lado a lado, Angle 0, para a folha inteira ficar ocupada. As margens de 42 px nas laterais e 40 px em cima e embaixo ficam dentro da área de impressão (22 e 20). O vão entre espaços é 40 px. Left e Top são o canto visível, porque o ângulo é 0.
+
+| Espaço | Foto | Left | Top | Width | Height | Angle |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 1 | 42 | 40 | 560 | 1160 | 0 |
+| 2 | 2 | 642 | 40 | 560 | 1160 | 0 |
+| 3 | 3 | 1242 | 40 | 560 | 1160 | 0 |
+
+42 + 560 = 602, e o próximo começa em 642. 1242 + 560 = 1802, e sobram 42 px até 1844. 40 + 1160 = 1200, e sobram 40 px até 1240. Nenhum espaço deixa uma metade da folha vazia. Estes números não foram medidos numa arte: estão pendentes de validação.
 
 ### 6.3 Evento no notebook
 
@@ -149,7 +167,7 @@ Enquanto a festa roda, o notebook mostra:
 
 - A prévia da montagem da rodada, preenchida conforme as fotos entram
 - O enquadramento de cada espaço: mover, girar e zoom da foto dentro do espaço, sem mover o espaço
-- A câmera ao vivo, sem a moldura de iPhone, no retrato que a TV mostra, com a máscara do corte horizontal que vai para a tira de baixo
+- A câmera ao vivo, sem a moldura de iPhone, no retrato que a TV mostra. No modo 2 tiras, uma máscara mostra o corte horizontal da tira de baixo. No modo 1 tira a máscara segue o espaço retrato da próxima foto
 - Um botão de tirar foto, equivalente ao botão branco da TV
 - A galeria das montagens da pasta do evento
 - O estado da impressora
@@ -175,7 +193,7 @@ Abre em tela cheia no monitor da TV assim que o evento começa. O visual segue a
 
 ### 6.5 Impressão (TV)
 
-Depois da terceira foto a TV mostra a prévia da folha, Imprimir, Cancelar, Mais e Menos. As cópias começam em 1 e param em 10. Uma cópia é sempre uma folha 6×4. Com as duas tiras, a faca corta essa folha em duas. Com uma tira só, a folha sai inteira, a metade escolhida impressa e a outra em branco.
+Depois da terceira foto a TV mostra a prévia da folha, Imprimir, Cancelar, Mais e Menos. As cópias começam em 1 e param em 10. Uma cópia é sempre uma folha 6×4. No modo 2 tiras a faca corta essa folha em duas. No modo 1 tira a folha sai inteira, sem corte, com as três fotos no layout desse modo.
 
 Cancelar descarta a rodada e volta à câmera, sem arquivo. Imprimir grava o JPG e envia à DS-RX1. Em seguida a TV oferece Imprimir novamente e Nova rodada.
 
@@ -199,7 +217,7 @@ Cada critério é verificável por teste de unidade, teste de componente ou E2E 
 
 ### RF01 — Criar evento com nome e template
 
-Dado um nome válido e um PNG ou JPG de 1844×1240, quando o operador confirma o arquivo, a prévia mostra esse fundo e Iniciar evento fica disponível.
+Dado um nome válido, o modo 2 tiras ou 1 tira, e um PNG ou JPG de 1844×1240 importado nesse modo, a prévia mostra esse fundo e Iniciar evento fica disponível. O template do outro modo não muda.
 
 Dado um arquivo de outro tamanho, a tela mostra as dimensões lidas e 1844×1240, e Iniciar evento permanece desligado. Não existe pasta no Desktop.
 
@@ -213,17 +231,19 @@ Dado que a pasta já existe e contém `21-45-08.jpg`, iniciar de novo um evento 
 
 A pasta, depois de uma impressão, contém somente arquivos `HH-mm-ss.jpg` produzidos pelo app. O template e o JSON do evento ficam fora dela.
 
-### RF03 — Editor dos cinco espaços
+### RF03 — Editor dos dois layouts
 
-Dado o seed, os cinco espaços têm os valores da tabela de seed, Cima 3 está em Angle 270, e os retângulos de Baixo 1 e Baixo 2 não se intersectam.
+Dado o seed de 2 tiras, os cinco espaços têm os valores dessa tabela, Cima 3 está em Angle 270, e os retângulos de Baixo 1 e Baixo 2 não se intersectam.
+
+Dado o seed de 1 tira, existem três espaços, com fotos 1, 2 e 3 e Angle 0, nos números da tabela da seção 6.2. Eles ocupam a folha inteira, com os vãos dessa tabela, e não deixam uma metade em branco. Os números estão pendentes de validação.
 
 Dado um arraste com o botão preso, Left e Top do painel mudam antes de soltar. Dado um giro, Angle muda antes de soltar. Dado um redimensionamento, Width e Height mudam antes de soltar. Durante o gesto não há escrita em disco.
 
-Dado o espaço a 6 px de uma borda da folha, de um centro, da margem (22 / 1822 na horizontal, 20 / 1220 na vertical), da linha de corte de trabalho (y = 620, pendente do cliente) ou da borda de outro espaço, o painel mostra o valor encostado ainda com o botão preso. A 9 px, permanece onde o ponteiro deixou. A tolerância de 8 px está no DESIGN. Com Alt preso, o mesmo gesto a 6 px não encosta. O giro a 3° de 0, 90, 180 ou 270 encosta nesse ângulo; a 5° não encosta.
+Dado o espaço a 6 px de uma borda da folha, de um centro, da margem (22 / 1822 na horizontal, 20 / 1220 na vertical) ou da borda de outro espaço, o painel mostra o valor encostado ainda com o botão preso. No layout de 2 tiras, o mesmo vale para a linha de corte de trabalho (y = 620, pendente do cliente). No layout de 1 tira essa linha não é alvo. A 9 px, permanece onde o ponteiro deixou. A tolerância de 8 px está no DESIGN. Com Alt preso, o mesmo gesto a 6 px não encosta. O giro a 3° de 0, 90, 180 ou 270 encosta nesse ângulo; a 5° não encosta.
 
-Dado o layout salvo e o app reaberto, os cinco espaços voltam com os mesmos números. Um segundo evento usa esses números sem novo ajuste.
+Dado os dois layouts salvos e o app reaberto, cada um volta com os seus números. Um evento em 2 tiras usa o layout de 2 tiras. Um evento em 1 tira usa o de 1 tira. Editar um não grava o outro.
 
-Dado o painel, trocar a foto de um espaço para 1, 2 ou 3 persiste. O padrão continua 1, 2, 3, 1, 2.
+Dado o painel, trocar a foto de um espaço para 1, 2 ou 3 persiste. O padrão de 2 tiras continua 1, 2, 3, 1, 2. O padrão de 1 tira continua 1, 2, 3.
 
 ### RF04 — Janela da câmera na TV
 
@@ -255,9 +275,11 @@ Trocar o timer na TV troca o valor que o notebook mostra, e o inverso.
 
 ### RF08 — Encaixe automático
 
-Dado o layout padrão, a foto 1 preenche Cima 1 e Baixo 1, a foto 2 preenche Cima 2 e Baixo 2, a foto 3 preenche Cima 3.
+Dado o layout de 2 tiras, a foto 1 preenche Cima 1 e Baixo 1, a foto 2 preenche Cima 2 e Baixo 2, a foto 3 preenche Cima 3.
 
-Na montagem de teste, uma barra clara no topo do quadro de fixture aparece no topo de cada espaço. Nas três de cima o espaço é vertical. Nas duas de baixo o espaço é horizontal e, com pan e zoom padrão, a barra continua no topo e as sobras cortadas são as do centro do retrato, em partes iguais acima e abaixo do que coube.
+Dado o layout de 1 tira, a foto 1 preenche o espaço 1, a foto 2 o espaço 2 e a foto 3 o espaço 3. Não há segunda cópia da foto 1 nem da foto 2. A folha composta não tem uma metade branca.
+
+Na montagem de teste, uma barra clara no topo do quadro de fixture aparece no topo de cada espaço. Nas três de cima do modo 2 tiras, e nos três espaços do modo 1 tira, o espaço é vertical. Nas duas de baixo do modo 2 tiras o espaço é horizontal e, com pan e zoom padrão, a barra continua no topo e as sobras cortadas são as do centro do retrato, em partes iguais acima e abaixo do que coube.
 
 ### RF09 — Enquadramento pelo operador
 
@@ -265,7 +287,7 @@ Dado um espaço já preenchido, no notebook o operador desloca, gira e dá zoom 
 
 O zoom mínimo é 1 (a foto continua cobrindo o espaço) e o máximo é 3. O pan não revela a borda do quadro: o espaço permanece coberto.
 
-Cima 1 e Baixo 1 usam a mesma captura e guardam enquadramentos independentes. Ajustar um não move o outro.
+No modo 2 tiras, Cima 1 e Baixo 1 usam a mesma captura e guardam enquadramentos independentes. Ajustar um não move o outro. No modo 1 tira cada foto tem um espaço só.
 
 A TV atualiza a prévia da impressão com esse enquadramento.
 
@@ -279,11 +301,11 @@ Cancelar volta à câmera com o contador em 1/3 e não cria arquivo na pasta do 
 
 Dado o modo das duas tiras, Imprimir envia o JPG à impressora cujo nome contém `DS-RX1`, sem diálogo, com corte de 2" pedido ao driver, orientação retrato, 300 DPI e uma folha por cópia.
 
-Dado “só a de cima” ou “só a de baixo” escolhido antes do evento, o JPEG continua 1844×1240. A metade não escolhida é branca. O pedido é a folha 6×4 com o corte de 2" desligado. O ticket simulado registra a tira e que a outra metade está em branco. O app não exige papel 6×2.
+Dado o modo 1 tira, o JPEG é 1844×1240, com as três fotos compostas no layout desse modo e sem uma metade branca. O pedido é a folha 6×4 com o corte de 2" desligado. O ticket simulado registra `one-strip` e corte desligado. O modo 2 tiras registra `two-strips` e corte ligado.
 
-Dado o modo simulado, Imprimir não abre diálogo e grava um ticket com o caminho do JPG, as cópias, a tira e o corte pedido.
+Dado o modo simulado, Imprimir não abre diálogo e grava um ticket com o caminho do JPG, as cópias, o modo e o corte pedido.
 
-Se o driver não expuser o corte de 2", Imprimir não segue calado: a TV e o notebook mostram que o corte não pôde ser ligado, e a folha não é dada como impressa.
+Se o driver não aceitar o corte pedido (ligado nas 2 tiras, desligado na 1 tira), Imprimir não segue calado: a TV e o notebook mostram que o corte não pôde ser ajustado, e a folha não é dada como impressa.
 
 ### RF12 — Só a montagem, com a hora no nome
 
@@ -385,7 +407,7 @@ O ícone do instalador, do atalho, da barra de tarefas e da janela é o símbolo
 - Conta de usuário, nuvem, pagamento, moldura animada, compartilhamento
 - Matiz, gama e “ativar cor” da webcam
 - Listar ou reabrir eventos antigos na tela inicial. Os JPG continuam na pasta do Desktop e o sistema de arquivos do Windows serve para isso
-- Papel nativo 6×2. A v1 imprime a folha 6×4 com a metade não usada em branco. Se o driver expuser 6×2, isso entra depois, validado no hardware
+- Papel 6×2 e meia folha em branco. O modo 1 tira é a folha 6×4 inteira, sem corte, com três fotos
 - macOS e Linux como alvo de produção. O CI pode exercitar lógica pura em Linux; o instalador é Windows
 
 ![Figura 12 — Configurações do app atual. Esta tela não volta](assets/briefing/image11.png)
@@ -404,8 +426,10 @@ O arquivo de trabalho transparente está em `assets/brand/logo.png`. O símbolo 
 
 O app segue com a suposição atual até esses dados chegarem. Não bloqueiam a implementação.
 
-1. **Quadrados cinzas.** Não há coordenada medida da arte. O seed da seção 6.2 é o que o app grava na primeira execução. O operador ainda arrasta cada espaço até cobrir o quadrado.
-2. **Linha de corte.** A faca de 2" é tratada como y = 620 na folha de 1240 px. Um espaço que cruza essa linha gera aviso no editor. O valor troca quando o cliente passar a medida.
+1. **Quadrados cinzas do modo 2 tiras.** Não há coordenada medida da arte. O seed de cinco espaços da seção 6.2 é o que o app grava na primeira execução. O operador ainda arrasta cada espaço até cobrir o quadrado.
+2. **Linha de corte.** A faca de 2" é tratada como y = 620 na folha de 1240 px, só no layout de 2 tiras. Um espaço que cruza essa linha gera aviso no editor. O valor troca quando o cliente passar a medida.
+3. **Seed do modo 1 tira.** Os três espaços (42, 642 e 1242 por 560×1160, Angle 0) são um ponto de partida para cobrir a folha. Estão pendentes de validação. Não há arte medida para eles.
+4. **Template por modo.** Suposição em vigor: cada modo guarda o seu fundo de 1844×1240, importado na tela de criar evento com aquele modo selecionado. Cai se o cliente disser que um único arquivo serve aos dois.
 
 ### Ainda em aberto
 

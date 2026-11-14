@@ -73,10 +73,10 @@ Teste de regra pura fica ao lado do arquivo (`snap.test.ts`).
 
 - A pasta do evento é `app.getPath('desktop') + '\\' + nome`. Dentro dela só entra a montagem `HH-mm-ss.jpg`. Nem foto original, nem template, nem JSON
 - A Logitech fica montada na horizontal. A foto salva é a imagem que a pessoa viu. Preview e arquivo usam a mesma função: girar `CAMERA_ROTATION_DEG` (inicial 90) e depois espelhar na horizontal. Sem segundo caminho “parecido”, e sem girar a câmera no hardware
-- São 5 espaços, num layout global, o mesmo para todos os eventos. Cima 1, 2 e 3 usam as fotos 1, 2 e 3 com Angle 270. Baixo 1 e 2 usam as fotos 1 e 2 com Angle 0. O fundo muda por evento; a posição, não
-- A tabela do briefing é aproximada. O Cima 3 com Angle 0 e Top 194 é sobra da demonstração. Os espaços ficam dentro dos quadrados cinzas e não se sobrepõem. Baixo 1 e Baixo 2 com Left 72 e 403 e largura 500 se cruzam: o seed do app já separa o de baixo. As medidas dos quadrados e a linha de corte (y = 620) estão pendentes do cliente; até lá vale o seed
+- Há dois layouts salvos, editáveis e independentes. O de 2 tiras tem 5 espaços: cima 1, 2 e 3 com Angle 270, baixo 1 e 2 com Angle 0. O de 1 tira tem 3 espaços, fotos 1, 2 e 3, cobrindo a folha inteira, sem corte. O evento usa o layout do modo escolhido antes de iniciar. A posição não muda por evento; o fundo muda
+- A tabela do briefing é aproximada e vale só para o layout de 2 tiras. O Cima 3 com Angle 0 e Top 194 é sobra da demonstração. Os espaços ficam dentro dos quadrados cinzas e não se sobrepõem. Baixo 1 e Baixo 2 com Left 72 e 403 e largura 500 se cruzam: o seed já separa o de baixo. As medidas dos quadrados e a linha de corte (y = 620) estão pendentes do cliente. O seed de 1 tira também está pendente de validação
 - Nos espaços horizontais o encaixe padrão é `cover` com pan zero, o que corta o centro do retrato. O operador ajusta cada espaço da rodada (mover, girar, zoom) sem recapturar
-- O corte de 2 polegadas começa ligado nas duas tiras. Imprimir só uma tira é uma escolha feita antes de iniciar o evento, e a escolha diz qual tira. A saída dessa escolha é a folha 6×4 com a outra metade em branco e o corte desligado. Não peça papel 6×2. Quem fala com o driver é só `src/main/print/`. O modo simulado existe desde o primeiro PR que imprimir
+- O corte de 2 polegadas liga no modo 2 tiras e desliga no modo 1 tira. O modo 1 tira preenche a folha 1844×1240 com as três fotos. Não deixe metade em branco e não peça papel 6×2. Quem fala com o driver é só `src/main/print/`. O modo simulado existe desde o primeiro PR que imprimir
 - Impressão silenciosa, na DS-RX1, sem diálogo do Windows
 - Se a webcam ou a impressora cair no meio da rodada, a rodada fica na memória. A janela da TV continua respondendo
 - A tela inicial só cria evento. Não lista eventos antigos
@@ -92,7 +92,7 @@ Teste de regra pura fica ao lado do arquivo (`snap.test.ts`).
 - Não criar conta, backend, galeria na nuvem nem salvar as três fotos soltas
 - Não reabrir o diálogo de impressão “só desta vez”
 - Não fixar o índice do monitor. A TV é escolhida pela API `screen`
-- Não tratar os números da demo como medida dos quadrados cinzas
+- Não tratar os números da demo, nem o seed de 1 tira, como medida de uma arte já aprovada
 - Não chamar o driver a partir de um componente React
 - Não acrescentar ESLint ao lado do oxlint
 - Não fazer layout de celular. O notebook é a janela principal; a TV é 1080×1920 em retrato

@@ -103,9 +103,9 @@ O preload expõe `window.fotomagica`. Cada método valida a entrada e a saída c
 
 | Direção | Canal | Papel |
 | --- | --- | --- |
-| invoke | `event:start` | Nome, caminho do template, tira (`both`, `top`, `bottom`). Devolve o monitor escolhido ou o erro |
+| invoke | `event:start` | Nome, modo (`two-strips` ou `one-strip`) e o caminho do template desse modo. Devolve o monitor escolhido ou o erro |
 | invoke | `event:end` | Fecha a TV e esquece a rodada não impressa |
-| invoke | `layout:get` / `layout:save` | Lê e grava os cinco espaços |
+| invoke | `layout:get` / `layout:save` | Lê e grava os dois layouts: cinco espaços em `two-strips`, três em `one-strip` |
 | send | `session:request-shutter` | O notebook pede a captura. O main encaminha à TV |
 | send | `session:photo` | A TV entrega o JPEG já girado e espelhado |
 | invoke | `session:set-framing` | Pan, zoom e rotação de um espaço da rodada |
@@ -167,14 +167,15 @@ Para cada espaço, nessa ordem:
 1. A captura da foto indicada (1, 2 ou 3), já em pé e espelhada
 2. Encaixe `cover` no retângulo não rotacionado (`width` × `height`), com o pan, o zoom (1 a 3) e a rotação de enquadramento daquele espaço. Zoom 1 e pan 0 cortam o centro: num espaço horizontal, o retrato perde topo e base em partes iguais
 3. Rotação do resultado pelo `angle` do espaço, em torno do centro
-4. Composição sobre o template em `left`, `top`
-5. Se a festa imprime só uma tira, a metade não escolhida (corte de trabalho em y = 620) é preenchida de branco. As duas tiras mantêm a folha inteira
+4. Composição sobre o template daquele modo em `left`, `top`
 
-O teste de ouro não depende de adivinhar o pivô: um quadro com uma barra clara no topo tem de mostrar essa barra no topo de cada um dos cinco espaços, as três de cima em pé (verticais) e as duas de baixo em pé (horizontais). Se um ângulo de 270 deitar a pessoa, o sinal da rotação do espaço está errado e o teste falha.
+O modo escolhido só muda qual layout e qual template entram. Os dois preenchem os 1844×1240. O modo 1 tira não pinta uma metade de branco.
 
-Depois dos cinco espaços, o `sharp` grava JPEG qualidade 95, densidade 300, 1844×1240. Esse é o arquivo `HH-mm-ss.jpg`.
+O teste de ouro não depende de adivinhar o pivô: um quadro com uma barra clara no topo tem de mostrar essa barra no topo de cada espaço. No modo 2 tiras, as três de cima ficam verticais e as duas de baixo horizontais. No modo 1 tira, os três espaços do seed ficam verticais e a folha não tem metade vazia. Se um ângulo de 270 deitar a pessoa, o sinal da rotação do espaço está errado e o teste falha.
 
-A linha de corte usada pelo editor é y = 620. É suposição de trabalho, pendente do cliente, junto com as medidas dos quadrados cinzas. Até esses dados chegarem, o espaço que cruza essa linha não impede salvar, e o editor mostra aviso.
+Depois dos espaços do modo, o `sharp` grava JPEG qualidade 95, densidade 300, 1844×1240. Esse é o arquivo `HH-mm-ss.jpg`.
+
+A linha de corte usada pelo editor, só no layout de 2 tiras, é y = 620. É suposição de trabalho, pendente do cliente, junto com as medidas dos quadrados cinzas. Até esses dados chegarem, o espaço que cruza essa linha não impede salvar, e o editor mostra aviso. O layout de 1 tira não desenha essa linha.
 
 ### Modelo do editor
 
@@ -186,12 +187,12 @@ No app atual, Angle 270 com 500×281 desenha um espaço alto, e Angle 0 desenha 
 
 ## 7. Editor fluido e snap
 
-O travamento do Webcam Photobooth vem de refazer o layout inteiro, ou de falar com o processo, a cada movimento do mouse. O editor novo trata o gesto assim:
+O editor tem um seletor de modo. `two-strips` mostra os cinco espaços e a linha de corte. `one-strip` mostra os três. Os gestos abaixo valem para os dois. O travamento do Webcam Photobooth vem de refazer o layout inteiro, ou de falar com o processo, a cada movimento do mouse. O editor novo trata o gesto assim:
 
 - `pointerdown` no espaço ou na alça guarda a origem
 - `pointermove` atualiza um ref e escreve direto no transform do DOM e no `value` dos campos Left, Top, Angle, Width e Height, no mesmo frame
 - Não há `invoke` nem escrita em disco enquanto o botão está preso
-- `pointerup` commita o estado React e chama `layout:save` uma vez
+- `pointerup` commita o estado React e chama `layout:save` uma vez, gravando só o layout que está na tela (`two-strips` ou `one-strip`)
 
 Alças: noroeste, norte, nordeste, leste, sudeste, sul, sudoeste, oeste, nos cantos e nos meios das arestas do retângulo já rotacionado. A alça de rotação fica para fora do meio da aresta inferior, ligada ao centro por uma haste tracejada. No vídeo do editor atual, com o espaço em pé, essa haste aponta para baixo e o número gira junto com o espaço.
 
@@ -201,7 +202,7 @@ O snap é função pura `snap(draft, others, modifiers) -> draft`:
 | --- | --- |
 | Folha | x = 0 e 1844, y = 0 e 1240, centro x = 922, y = 620 |
 | Margem de impressão | x = 22 e 1822, y = 20 e 1220 |
-| Corte | y = 620 |
+| Corte | y = 620, somente no layout de 2 tiras |
 | Outros espaços | arestas e centro do retângulo já rotacionado |
 
 A tolerância é 8 px no espaço da folha, não em pixels da tela. O giro também encosta em 0, 90, 180 e 270 dentro de 4°. Alt preso devolve o draft sem alteração. O teste de unidade cobre encostar, não encostar e o Alt.
@@ -212,14 +213,14 @@ Tamanho mínimo do espaço: 40×40 px, para a alça não inverter o retângulo.
 
 Isto não é o editor de espaços. Com a festa aberta, o espaço fica parado. O gesto na prévia do notebook mexe na foto dentro dele: arrastar move, a roda dá zoom, uma alça pequena (cor de tinta, não o vermelho do editor) gira a foto. Cada espaço da rodada tem o seu pan, zoom e rotação, inclusive quando dois espaços usam a mesma captura.
 
-O notebook mostra, ao lado, a câmera sem cromado de iPhone, no retrato inteiro, com um retângulo guia da faixa horizontal que a tira de baixo vai usar.
+O notebook mostra, ao lado, a câmera sem cromado de iPhone, no retrato inteiro. No modo 2 tiras, um retângulo guia marca a faixa horizontal da tira de baixo. No modo 1 tira, o guia segue o espaço retrato da próxima foto.
 
 ## 9. Persistência
 
 | Dado | Lugar |
 | --- | --- |
-| Layout, webcam, nome da impressora | `app.getPath('userData')/config.json` |
-| Template copiado e meta do evento aberto (nome, tira, id) | `app.getPath('userData')/events/<id>/` |
+| Os dois layouts, os dois templates, webcam, nome da impressora | `app.getPath('userData')/config.json` |
+| Cópia do template do modo e meta do evento aberto (nome, modo, id) | `app.getPath('userData')/events/<id>/` |
 | Montagem JPG | `app.getPath('desktop')/<nome do evento>/HH-mm-ss.jpg` |
 
 O nome da pasta passa por uma função pura: trim, recusa vazio, recusa caracteres `\ / : * ? " < > |`, recusa nome reservado do Windows, recusa ponto ou espaço no fim. O teste lista esses casos.
@@ -228,14 +229,14 @@ Hora do arquivo: hora local, 24 h, `HH-mm-ss.jpg`. Colisão no mesmo segundo acr
 
 A rodada (três JPEG e os enquadramentos) fica na memória do main. Não há rascunho. Fechar o processo antes do Imprimir perde a rodada.
 
-O JSON é lido com Zod. Arquivo ausente ou inválido volta ao seed do PRD e a webcam vazia, sem derrubar a abertura.
+O JSON é lido com Zod. Arquivo ausente ou inválido volta aos dois seeds do PRD e a webcam vazia, sem derrubar a abertura. Um layout inválido não apaga o outro.
 
 ## 10. Impressão
 
 Só `src/main/print/` conhece driver, diálogo ou simulação. React pede `printer:status` e `session:print`.
 
 ```ts
-type StripMode = 'both' | 'top' | 'bottom'
+type PrintMode = 'two-strips' | 'one-strip'
 
 type PrinterStatus =
   | { kind: 'ready' }
@@ -247,7 +248,7 @@ type PrinterStatus =
 type PrintTicket = {
   jpegPath: string
   copies: number
-  strip: StripMode
+  mode: PrintMode
   cut: boolean
 }
 
@@ -265,9 +266,8 @@ A impressão real é silenciosa (`silent: true`, `deviceName` da fila). O diálo
 
 O corte de 2" é a flag que o driver mostra como `2inch cut`: `Disable` ou `Enable (Printer V.1.10 or later)`.
 
-- Nas duas tiras o main pede `Enable` e compõe as duas metades. Se o driver não expuser o corte, o resultado é `cut-unavailable` e a UI não trata a folha como impressa.
-- Numa tira só o JPEG continua 1844×1240. A metade não escolhida é branca (acima ou abaixo de y = 620, a linha de trabalho). O pedido é a mesma folha 6×4, com `2inch cut` em `Disable`. Isso vale em qualquer driver, sem papel 6×2.
-- Um modo 6×2 nativo, se o driver expuser a mídia, fica para uma melhoria depois. A v1 não o usa. A validação é no hardware, quando essa melhoria entrar.
+- Em `two-strips` o main pede `Enable` e compõe os cinco espaços sobre o template desse modo. Se o driver não aceitar ligar o corte, o resultado é `cut-unavailable` e a UI não trata a folha como impressa.
+- Em `one-strip` o main pede `Disable` e compõe os três espaços sobre o template desse modo, preenchendo a folha 1844×1240. Não há metade em branco e não há papel 6×2. Se o driver não aceitar desligar o corte, o resultado também é `cut-unavailable`: a folha não sai cortada por engano.
 
 ![Figura 11 — 2inch cut no driver da DS-RX1](assets/briefing/image2.png)
 
@@ -284,7 +284,7 @@ Outras opções visíveis no driver (borda, overcoat glossy, print re-try, layou
 
 Ordem do Imprimir: compor, gravar o JPG na pasta do evento, então enviar. Se o envio falha, o arquivo fica e a rodada continua na tela de impressão. Se a gravação falha, não há impressão e a tela não anuncia sucesso.
 
-Cópias: o ticket leva de 1 a 10, teto aprovado pelo dono. Cada cópia é uma folha 6×4. Em `both` a faca divide a folha. Em `top` ou `bottom` a folha sai inteira, com a outra metade em branco.
+Cópias: o ticket leva de 1 a 10, teto aprovado pelo dono. Cada cópia é uma folha 6×4. Em `two-strips` a faca divide a folha. Em `one-strip` a folha sai inteira, com as três fotos.
 
 ## 11. Atualização e assinatura
 
@@ -337,14 +337,14 @@ Regra pura, ao lado do arquivo, em Vitest:
 - nome de pasta e nome `HH-mm-ss`
 - tamanho do template
 - encaixe `cover` com barra no topo (RF08)
-- mapeamento do ticket de impressão a partir do modo da tira
+- mapeamento do ticket: `two-strips` pede corte ligado, `one-strip` pede corte desligado e compõe três espaços na folha inteira
 
 E2E, em `e2e/`, um spec por fluxo, no Electron de verdade:
 
 | Spec | Fluxo |
 | --- | --- |
 | `create-event.spec.ts` | Nome, template certo e errado, pasta |
-| `layout-editor.spec.ts` | Arraste com painel ao vivo, snap, uma gravação no soltar |
+| `layout-editor.spec.ts` | Arraste com painel ao vivo, snap, uma gravação no soltar, os dois layouts independentes |
 | `capture-round.spec.ts` | Três fotos, contador, timer, cancelar |
 | `print.spec.ts` | Ticket simulado, cópias, falha de status, arquivo único |
 | `gallery.spec.ts` | Lista, tela cheia, reimprimir |
@@ -382,7 +382,7 @@ src/
     guest.html
     app/                 rotas do notebook e casca da TV
     features/
-      events/            criar evento, nome, template, escolha da tira
+      events/            criar evento, nome, template do modo, 2 tiras ou 1 tira
       layout/            editor e alças
       session/           prévia da montagem e enquadramento no notebook
       camera/            TV: ao vivo, obturador, timer, grade
@@ -447,7 +447,7 @@ Inter, pesos 400, 500 e 600, arquivos locais. A palavra FOTO MÁGICA na interfac
 
 Fundo `--bg`, cartões `--bg-raised`, borda de 1 px `--line`, raio 12 px nos cartões e 8 px nos campos. Botão primário é preto com texto claro. Botão secundário é fantasma, borda `--line`. Foco visível: anel de 2 px `--ink`, offset 2 px.
 
-Cabeçalho com o símbolo e o nome do evento quando houver. A tela inicial centraliza a logo completa, o nome, o arquivo e a escolha da tira. Uma coluna só, largura máxima 720 px, porque é um formulário curto e não um dashboard.
+Cabeçalho com o símbolo e o nome do evento quando houver. A tela inicial centraliza a logo completa, o nome, o modo (2 tiras ou 1 tira) e o arquivo daquele modo. Uma coluna só, largura máxima 720 px, porque é um formulário curto e não um dashboard.
 
 O editor é a exceção de largura: a folha 1844×1240 escala para caber na janela, com o painel de números numa coluna fixa de 320 px à esquerda, na mesma ordem do app atual (foto, Left, Top, Width, Height, Angle).
 
