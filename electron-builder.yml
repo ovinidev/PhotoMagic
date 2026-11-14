@@ -1,0 +1,39 @@
+# Windows installer (DESIGN §11). `pnpm dist` builds with electron-vite first.
+appId: com.fotomagica.desktop
+productName: Foto Mágica
+copyright: Copyright © Foto Mágica
+
+directories:
+  output: release
+  buildResources: assets/brand
+
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+
+asar: true
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  # Source of the .ico (16, 32, 48, 256): the symbol on a light tile, never the full logo.
+  icon: assets/brand/icon.png
+  # Signing happens only when CSC_LINK and CSC_KEY_PASSWORD are set; otherwise the installer is unsigned.
+
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Foto Mágica
+  # Stable asset name: releases/latest/download/FotoMagica-Setup.exe
+  artifactName: FotoMagica-Setup.${ext}
+
+publish:
+  provider: github
+  owner: ovinidev
+  repo: PhotoMagic
+  releaseType: release
