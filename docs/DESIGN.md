@@ -354,7 +354,7 @@ E2E, in `e2e/`, one spec per flow, on real Electron:
 
 A PRD scenario whose screen does not exist yet stays as `test.fixme`, with the requirement id in the title, and becomes a test in the PR that builds the screen. E2E does not point at the DS-RX1 or the MX Brio.
 
-Husky `pre-push` hook: typecheck, lint, `pnpm test`, `pnpm test:e2e`. Same role as the hook in PilatePay.
+The project uses Husky with a `pre-push` hook that runs oxlint, typecheck, unit tests (`pnpm test`) and Playwright (`pnpm test:e2e`). Setup comes with the first implementation, in the same role as the hook in PilatePay. While iterating, run only the files or specs you touched, with summarized output (see CLAUDE.md); do not run the full suite yourself. Tail only failures; never paste long test or build logs.
 
 oxlint, expected minimal configuration: plugins `react`, `typescript` and `import`; category `correctness` as error; React hooks rule as error; ignore `dist`, `out`, `release`, `coverage`, `playwright-report`. No ESLint file alongside.
 

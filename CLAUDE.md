@@ -21,6 +21,7 @@ This repository does not have the app yet. The commands below are the contract f
 - oxlint. No ESLint, no `eslint.config.js`, no `eslint` dependency
 - pnpm. No npm, yarn, or `package-lock.json`
 - Node `>=22`, `packageManager` field in `package.json`
+- Husky with a `pre-push` hook (oxlint, typecheck, unit tests and Playwright). Setup comes with the first implementation
 
 ## Language details
 
@@ -44,7 +45,14 @@ pnpm build               # electron-vite build
 pnpm dist                # build + electron-builder --win
 ```
 
-While iterating, run only the test for the file you touched, with short output, and report failures. Do not run the whole suite on every attempt. Lint, typecheck, unit and E2E go in the husky `pre-push` hook and in GitHub Actions (DESIGN §12).
+While iterating, run only the tests or specs you touched, with summarized output:
+
+```bash
+pnpm vitest run <files> --reporter=dot
+pnpm playwright test <specs> --reporter=dot
+```
+
+Do not run the full lint, build, unit or Playwright suite yourself. The Husky `pre-push` hook runs oxlint, typecheck, unit tests and Playwright; GitHub Actions runs the same contract (DESIGN §12). Husky setup comes with the first implementation. Tail only failures; never paste long test or build logs.
 
 E2E does not use the webcam or the DS-RX1. It starts with `FOTOMAGICA_E2E=1` and `FOTOMAGICA_PRINTER=simulated`.
 
