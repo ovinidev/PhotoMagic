@@ -15,6 +15,7 @@ export const IPC_CHANNELS = {
   sessionGetPreview: 'session:get-preview',
   sessionSetTimer: 'session:set-timer',
   sessionSetCopies: 'session:set-copies',
+  sessionSetFraming: 'session:set-framing',
   sessionCancel: 'session:cancel',
   sessionPrint: 'session:print',
   sessionReprint: 'session:reprint',

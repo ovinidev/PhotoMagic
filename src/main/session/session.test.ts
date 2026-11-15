@@ -148,6 +148,49 @@ describe('session', () => {
     expect(phase(await session.print())).toMatchObject({ kind: 'print-failed', reason: 'cut-unavailable' })
   })
 
+  it('frames one slot without touching its rectangle or the other slot of the same capture (RF09)', async () => {
+    const { session, render } = setup()
+    session.start(EVENT)
+    // A slot whose photo is not taken yet cannot be framed.
+    expect(session.setFraming('bottom-1', { zoom: 2, panX: 0, panY: 0, rotation: 0 })).toMatchObject({ framings: {} })
+    session.addPhoto(1, jpeg(1))
+    const state = session.setFraming('bottom-1', { zoom: 2, panX: 0.5, panY: -9, rotation: 190 })
+    expect(state).toMatchObject({ framings: { 'bottom-1': { zoom: 2, panX: 0.5, panY: -1, rotation: -170 } } })
+    if (state.kind !== 'event') throw new Error('expected an event')
+    expect(state.framings['top-1']).toBeUndefined()
+    expect(state.slots).toEqual(TWO_STRIPS_SEED)
+    await session.settled()
+    const last = render.mock.calls.at(-1)![0] as { framings: Record<string, unknown> }
+    expect(last.framings).toEqual({ 'bottom-1': { zoom: 2, panX: 0.5, panY: -1, rotation: -170 } })
+    // Back to the default framing drops the entry; an unknown slot changes nothing.
+    expect(session.setFraming('bottom-1', { zoom: 1, panX: 0, panY: 0, rotation: 0 })).toMatchObject({ framings: {} })
+    expect(session.setFraming('nope', { zoom: 2, panX: 0, panY: 0, rotation: 0 })).toMatchObject({ framings: {} })
+  })
+
+  it('uses the framing in the montage and refuses it once the file is saved; a new round resets it (RF09)', async () => {
+    const { session, render } = setup()
+    session.start(EVENT)
+    capture3(session)
+    session.setFraming('top-2', { zoom: 1.5, panX: 0, panY: 0, rotation: 0 })
+    await session.print()
+    const montage = render.mock.calls.find(([, output]) => output.kind === 'montage')![0] as { framings: Record<string, unknown> }
+    expect(montage.framings).toEqual({ 'top-2': { zoom: 1.5, panX: 0, panY: 0, rotation: 0 } })
+    expect(session.setFraming('top-2', { zoom: 3, panX: 0, panY: 0, rotation: 0 })).toMatchObject({ framings: { 'top-2': { zoom: 1.5 } } })
+    expect(session.newRound()).toMatchObject({ framings: {}, taken: 0 })
+  })
+
+  it('composes one preview for a burst of framing changes', async () => {
+    const { session, render } = setup()
+    session.start(EVENT)
+    session.addPhoto(1, jpeg(1))
+    await session.settled()
+    const before = render.mock.calls.length
+    for (let step = 1; step <= 10; step++) session.setFraming('bottom-1', { zoom: 1 + step / 10, panX: 0, panY: 0, rotation: 0 })
+    await session.settled()
+    expect(render.mock.calls.length - before).toBeLessThanOrEqual(2)
+    expect((render.mock.calls.at(-1)![0] as { framings: Record<string, { zoom: number }> }).framings['bottom-1']!.zoom).toBe(2)
+  })
+
   it('Encerrar evento forgets the unprinted round (RF16)', () => {
     const { session, states } = setup()
     session.start(EVENT)

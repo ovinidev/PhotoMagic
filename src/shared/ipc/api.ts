@@ -11,6 +11,7 @@ import type {
   SessionPhoto,
   SessionPreview,
   SessionState,
+  SetFramingInput,
   TemplateImportInput,
   TemplateImportResult,
   Templates,
@@ -68,6 +69,8 @@ export type FotomagicaApi = {
     getPreview: () => Promise<SessionPreview>
     setTimer: (timer: Timer) => Promise<SessionState>
     setCopies: (copies: number) => Promise<SessionState>
+    /** Pan, zoom and rotation of one filled slot of the round, before the montage is saved (RF09). */
+    setFraming: (input: SetFramingInput) => Promise<SessionState>
     /** `Cancelar`: discards the round, no file (RF10). */
     cancel: () => Promise<SessionState>
     /** `Imprimir`: composes, writes `HH-mm-ss.jpg`, sends it to the printer (RF11, RF12). */

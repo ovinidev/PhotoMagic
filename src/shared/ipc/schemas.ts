@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { COPIES } from '../constants'
 import type { DisplayInfo, GuestChoice } from '../displays'
 import { EVENT_NAME_MAX_LENGTH } from '../files'
-import { PRINT_MODES } from '../layout'
+import { FRAMING_ROTATION_RANGE, PRINT_MODES, ZOOM_RANGE, type Framing } from '../layout'
 
 /** `app:get-version` takes no input. */
 export const appGetVersionInputSchema = z.undefined()
@@ -244,6 +244,14 @@ export const roundPhaseSchema = z.discriminatedUnion('kind', [
   }),
 ])
 
+/** How the operator framed the photo inside one slot of the round (RF09, DESIGN §8). */
+export const framingSchema = z.strictObject({
+  zoom: z.number().finite().min(ZOOM_RANGE.min).max(ZOOM_RANGE.max),
+  panX: z.number().finite().min(-1).max(1),
+  panY: z.number().finite().min(-1).max(1),
+  rotation: z.number().finite().min(FRAMING_ROTATION_RANGE.min).max(FRAMING_ROTATION_RANGE.max),
+}) satisfies z.ZodType<Framing>
+
 /** Main is the source of truth for the event and its round; both windows render this (DESIGN §2). */
 export const sessionStateSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('idle') }),
@@ -259,6 +267,8 @@ export const sessionStateSchema = z.discriminatedUnion('kind', [
     previewRevision: z.number().int().nonnegative(),
     /** The slots of the event's mode, for the laptop guide. */
     slots: slotListSchema,
+    /** The round's framing per slot id; a slot missing here has the default framing (RF09). */
+    framings: z.record(z.string().min(1).max(32), framingSchema),
     phase: roundPhaseSchema,
   }),
 ])
@@ -279,6 +289,8 @@ export const eventStartResultSchema = z.discriminatedUnion('ok', [
 
 export const setTimerInputSchema = z.strictObject({ timer: timerSchema })
 export const setCopiesInputSchema = z.strictObject({ copies: copiesSchema })
+/** `session:set-framing`: pan, zoom and rotation of one slot of the round (RF09). */
+export const setFramingInputSchema = z.strictObject({ slotId: z.string().min(1).max(32), framing: framingSchema })
 
 /** `session:photo`: the TV's capture for photo `index`, already rotated and mirrored. */
 export const sessionPhotoSchema = z.strictObject({
@@ -304,4 +316,5 @@ export type EventStartInput = z.infer<typeof eventStartInputSchema>
 export type EventStartError = z.infer<typeof eventStartErrorSchema>
 export type EventStartResult = z.infer<typeof eventStartResultSchema>
 export type SessionPhoto = z.infer<typeof sessionPhotoSchema>
+export type SetFramingInput = z.infer<typeof setFramingInputSchema>
 export type SessionPreview = z.infer<typeof sessionPreviewSchema>

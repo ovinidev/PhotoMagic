@@ -85,6 +85,7 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
       getPreview: vi.fn(o.session?.getPreview ?? (() => Promise.resolve({ revision: 0, jpeg: null }))),
       setTimer: vi.fn(o.session?.setTimer ?? (() => Promise.resolve(IDLE))),
       setCopies: vi.fn(o.session?.setCopies ?? (() => Promise.resolve(IDLE))),
+      setFraming: vi.fn(o.session?.setFraming ?? (() => Promise.resolve(IDLE))),
       cancel: vi.fn(o.session?.cancel ?? (() => Promise.resolve(IDLE))),
       print: vi.fn(o.session?.print ?? (() => Promise.resolve(IDLE))),
       reprint: vi.fn(o.session?.reprint ?? (() => Promise.resolve(IDLE))),
@@ -113,6 +114,7 @@ export function eventState(overrides: Partial<Extract<SessionState, { kind: 'eve
     copies: 1,
     taken: 0,
     previewRevision: 1,
+    framings: {},
     slots: [
       { id: 'top-1', photo: 1, left: 72, top: 70, width: 500, height: 281, angle: 270 },
       { id: 'bottom-1', photo: 1, left: 72, top: 670, width: 500, height: 281, angle: 0 },
