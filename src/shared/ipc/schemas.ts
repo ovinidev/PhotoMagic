@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { COPIES } from '../constants'
 import type { DisplayInfo, GuestChoice } from '../displays'
+import { WEBCAM_CONTROL_IDS, WHITE_BALANCE_MODES, type WebcamCapabilities, type WebcamValues } from '../webcam'
 import { EVENT_NAME_MAX_LENGTH, isMontageFileName } from '../files'
 import { FRAMING_ROTATION_RANGE, PRINT_MODES, ZOOM_RANGE, type Framing } from '../layout'
 
@@ -305,6 +306,45 @@ export const sessionPreviewSchema = z.strictObject({
 
 /** Payload of `session:shutter`, main → TV. Empty: the TV runs its own timer and capture. */
 export const shutterSchema = z.strictObject({})
+
+// ── Webcam adjustments (PRD §6.7, RF15; DESIGN §5) ───────────────────────────
+
+const webcamControlIdSchema = z.enum(WEBCAM_CONTROL_IDS)
+const whiteBalanceModeSchema = z.enum(WHITE_BALANCE_MODES)
+
+export const webcamRangeSchema = z
+  .strictObject({ key: z.string().min(1).max(64), min: z.number().finite(), max: z.number().finite(), step: z.number().finite().positive() })
+  .refine((range) => range.max > range.min, 'Expected max > min')
+
+export const webcamCapabilitiesSchema = z.strictObject({
+  controls: z.partialRecord(webcamControlIdSchema, webcamRangeSchema),
+  whiteBalanceModes: z.array(whiteBalanceModeSchema).max(2),
+  powerLineFrequency: z.boolean(),
+}) satisfies z.ZodType<WebcamCapabilities>
+
+export const webcamValuesSchema = z.strictObject({
+  controls: z.partialRecord(webcamControlIdSchema, z.number().finite()),
+  whiteBalanceMode: whiteBalanceModeSchema.optional(),
+}) satisfies z.ZodType<WebcamValues>
+
+/**
+ * `webcam:get` output and `webcam:state` payload. `capabilities` is what the camera last advertised
+ * (persisted, so the panel opens with the saved controls even with no camera, RF15); `live` says
+ * whether the TV has the camera open right now.
+ */
+export const webcamStateSchema = z.strictObject({
+  values: webcamValuesSchema,
+  capabilities: webcamCapabilitiesSchema.nullable(),
+  live: z.boolean(),
+})
+
+export const webcamSetInputSchema = z.strictObject({ values: webcamValuesSchema })
+
+/** `webcam:report`, TV → main: the open camera's capabilities, or `null` when it is not open. */
+export const webcamReportSchema = z.strictObject({ capabilities: webcamCapabilitiesSchema.nullable() })
+
+export type WebcamState = z.infer<typeof webcamStateSchema>
+export type WebcamReport = z.infer<typeof webcamReportSchema>
 
 // ── Gallery (PRD §6.6, RF14) ─────────────────────────────────────────────────
 

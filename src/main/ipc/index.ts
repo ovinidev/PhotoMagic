@@ -8,6 +8,7 @@ import { registerDisplayHandlers } from './display'
 import { registerEventHandlers, type EventDeps } from './event'
 import { registerGalleryHandlers } from './gallery'
 import { registerPrinterHandlers } from './printer'
+import { registerWebcamHandlers } from './webcam'
 
 export { broadcastSession } from './event'
 export { broadcastPrinterStatus } from './printer'
@@ -29,4 +30,5 @@ export function registerIpcHandlers(
   registerEventHandlers(deps)
   registerPrinterHandlers(deps)
   registerGalleryHandlers(deps)
+  registerWebcamHandlers(deps)
 }

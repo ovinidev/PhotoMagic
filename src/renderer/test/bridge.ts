@@ -1,6 +1,6 @@
 import { vi, type Mock } from 'vitest'
 import { SEED_LAYOUTS } from '@shared/layout'
-import type { CameraStatus, DisplayState, FotomagicaApi, PrinterStatus, SessionState, Templates } from '@shared/ipc'
+import type { CameraStatus, DisplayState, FotomagicaApi, PrinterStatus, SessionState, Templates, WebcamState } from '@shared/ipc'
 
 type Listener<T> = (value: T) => void
 
@@ -23,11 +23,13 @@ export type BridgeStub = {
   pushShutter: () => void
   pushPrinter: (status: PrinterStatus) => void
   pushGallery: () => void
+  pushWebcam: (state: WebcamState) => void
 }
 
 const CLOSED: DisplayState = { guest: { kind: 'missing' }, tv: { kind: 'closed' } }
 const NO_TEMPLATES: Templates = { 'two-strips': null, 'one-strip': null }
 const IDLE: SessionState = { kind: 'idle' }
+const NO_WEBCAM: WebcamState = { values: { controls: {} }, capabilities: null, live: false }
 
 function listeners<T>() {
   const set = new Set<Listener<T>>()
@@ -51,6 +53,7 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
   const shutter = listeners<void>()
   const printer = listeners<PrinterStatus>()
   const gallery = listeners<void>()
+  const webcam = listeners<WebcamState>()
   const o = overrides
 
   const api: MockedBridge = {
@@ -96,6 +99,12 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
       onShutter: vi.fn(o.session?.onShutter ?? ((listener: () => void) => shutter.add(listener))),
       sendPhoto: vi.fn(o.session?.sendPhoto ?? (() => {})),
     },
+    webcam: {
+      getState: vi.fn(o.webcam?.getState ?? (() => Promise.resolve(NO_WEBCAM))),
+      set: vi.fn<FotomagicaApi['webcam']['set']>(o.webcam?.set ?? ((values) => Promise.resolve({ ...NO_WEBCAM, values }))),
+      report: vi.fn(o.webcam?.report ?? (() => {})),
+      onState: vi.fn(o.webcam?.onState ?? webcam.add),
+    },
     gallery: {
       list: vi.fn(o.gallery?.list ?? (() => Promise.resolve({ fileNames: [] }))),
       get: vi.fn(o.gallery?.get ?? (() => Promise.resolve({ jpeg: null }))),
@@ -109,7 +118,7 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
   }
 
   window.fotomagica = api
-  return { api, pushDisplay: display.push, pushCamera: camera.push, pushSession: session.push, pushShutter: () => shutter.push(), pushPrinter: printer.push, pushGallery: () => gallery.push() }
+  return { api, pushDisplay: display.push, pushCamera: camera.push, pushSession: session.push, pushShutter: () => shutter.push(), pushPrinter: printer.push, pushGallery: () => gallery.push(), pushWebcam: webcam.push }
 }
 
 /** An open event in 2 tiras, capturing, for renderer tests. */

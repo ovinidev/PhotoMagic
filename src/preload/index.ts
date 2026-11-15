@@ -84,6 +84,12 @@ const api: FotomagicaApi = {
     onShutter: (listener) => subscribe(IPC_CHANNELS.sessionShutter, () => listener()),
     sendPhoto: (photo) => send(IPC_CHANNELS.sessionPhoto, photo),
   },
+  webcam: {
+    getState: () => invoke(IPC_CHANNELS.webcamGet, undefined),
+    set: (values) => invoke(IPC_CHANNELS.webcamSet, { values }),
+    report: (report) => send(IPC_CHANNELS.webcamReport, report),
+    onState: (listener) => subscribe(IPC_CHANNELS.webcamState, listener),
+  },
   gallery: {
     list: () => invoke(IPC_CHANNELS.galleryList, undefined),
     get: (input) => invoke(IPC_CHANNELS.galleryGet, input),

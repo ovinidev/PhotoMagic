@@ -1,11 +1,12 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
-import { slotListSchema } from '@shared/ipc'
+import { slotListSchema, webcamCapabilitiesSchema, webcamValuesSchema } from '@shared/ipc'
 import { SEED_LAYOUTS, type Layouts, type PrintMode, type Slot } from '@shared/layout'
+import { NO_WEBCAM_VALUES, type WebcamCapabilities, type WebcamValues } from '@shared/webcam'
 
 /**
- * `userData/config.json` (DESIGN §9): both layouts and both templates. Read with Zod; a missing or
+ * `userData/config.json` (DESIGN §9): both layouts, both templates and the webcam adjustments. Read with Zod; a missing or
  * invalid file falls back to the PRD seeds and no templates, and an invalid part does not erase
  * the others (each layout and each template falls back on its own).
  */
@@ -22,7 +23,11 @@ export type TemplateRef = z.infer<typeof templateRefSchema>
 export type Config = {
   layouts: Layouts
   templates: Partial<Record<PrintMode, TemplateRef>>
+  /** The operator's webcam values and the controls the camera last advertised (RF15, RNF11). */
+  webcam: { values: WebcamValues; capabilities: WebcamCapabilities | null }
 }
+
+const noWebcam = (): Config['webcam'] => ({ values: { controls: {} }, capabilities: null })
 
 const configSchema = z.object({
   layouts: z
@@ -37,13 +42,19 @@ const configSchema = z.object({
       'one-strip': templateRefSchema.optional().catch(undefined),
     })
     .catch(() => ({})),
+  webcam: z
+    .object({
+      values: webcamValuesSchema.catch(() => ({ ...NO_WEBCAM_VALUES, controls: {} })),
+      capabilities: webcamCapabilitiesSchema.nullable().catch(null),
+    })
+    .catch(noWebcam),
 })
 
 export const CONFIG_FILE = 'config.json'
 export const TEMPLATES_DIR = 'templates'
 
 export function defaultConfig(): Config {
-  return { layouts: { ...SEED_LAYOUTS }, templates: {} }
+  return { layouts: { ...SEED_LAYOUTS }, templates: {}, webcam: noWebcam() }
 }
 
 /** Parses whatever is on disk; never throws. */
@@ -55,7 +66,7 @@ export function parseConfig(raw: unknown): Config {
     const ref = parsed.data.templates[mode]
     if (ref) templates[mode] = ref
   }
-  return { layouts: parsed.data.layouts, templates }
+  return { layouts: parsed.data.layouts, templates, webcam: parsed.data.webcam as Config['webcam'] }
 }
 
 export async function readConfig(userData: string): Promise<Config> {
@@ -89,6 +100,11 @@ export function updateConfig(userData: string, change: (config: Config) => Confi
   })
   queue = next.catch(() => undefined)
   return next
+}
+
+/** Writes the webcam adjustments and leaves the layouts and templates as they are (RF15). */
+export function saveWebcam(userData: string, webcam: Partial<Config['webcam']>): Promise<Config> {
+  return updateConfig(userData, (config) => ({ ...config, webcam: { ...config.webcam, ...webcam } }))
 }
 
 /** Writes one mode's layout and leaves the other one, and the templates, as they are (RF03). */

@@ -28,6 +28,9 @@ import {
   templateImportInputSchema,
   templateImportResultSchema,
   templatesSchema,
+  webcamReportSchema,
+  webcamSetInputSchema,
+  webcamStateSchema,
 } from './schemas'
 
 /**
@@ -57,6 +60,8 @@ export const INVOKE_CONTRACT = {
   [IPC_CHANNELS.printerStatus]: { input: noInputSchema, output: printerStatusSchema },
   [IPC_CHANNELS.galleryList]: { input: noInputSchema, output: galleryListSchema },
   [IPC_CHANNELS.galleryGet]: { input: galleryGetInputSchema, output: galleryImageSchema },
+  [IPC_CHANNELS.webcamGet]: { input: noInputSchema, output: webcamStateSchema },
+  [IPC_CHANNELS.webcamSet]: { input: webcamSetInputSchema, output: webcamStateSchema },
   [IPC_CHANNELS.galleryReprint]: { input: galleryReprintInputSchema, output: galleryReprintResultSchema },
 } as const satisfies Record<string, { input: z.ZodType; output: z.ZodType }>
 
@@ -66,6 +71,7 @@ export const SEND_CONTRACT = {
   [IPC_CHANNELS.cameraRequestPreviewPort]: noInputSchema,
   [IPC_CHANNELS.sessionRequestShutter]: noInputSchema,
   [IPC_CHANNELS.sessionPhoto]: sessionPhotoSchema,
+  [IPC_CHANNELS.webcamReport]: webcamReportSchema,
 } as const satisfies Record<string, z.ZodType>
 
 /** Main → renderer pushes. Main validates before sending, the preload again before the listener. */
@@ -76,6 +82,7 @@ export const EVENT_CONTRACT = {
   [IPC_CHANNELS.sessionShutter]: shutterSchema,
   [IPC_CHANNELS.printerStatusChanged]: printerStatusSchema,
   [IPC_CHANNELS.galleryChanged]: galleryChangedSchema,
+  [IPC_CHANNELS.webcamState]: webcamStateSchema,
 } as const satisfies Record<string, z.ZodType>
 
 export type InvokeChannel = keyof typeof INVOKE_CONTRACT

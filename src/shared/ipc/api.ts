@@ -1,4 +1,5 @@
 import type { Layouts } from '../layout'
+import type { WebcamValues } from '../webcam'
 import type {
   AppVersion,
   CameraStatus,
@@ -20,6 +21,8 @@ import type {
   TemplateImportResult,
   Templates,
   Timer,
+  WebcamReport,
+  WebcamState,
 } from './schemas'
 
 /** Stops a subscription made with one of the `on…` methods. */
@@ -89,6 +92,16 @@ export type FotomagicaApi = {
     onShutter: (listener: () => void) => Unsubscribe
     /** TV only: delivers photo `index`, already rotated and mirrored. Main ignores other windows. */
     sendPhoto: (photo: SessionPhoto) => void
+  }
+  webcam: {
+    /** Saved values, the camera's last advertised controls, and whether the TV has it open (RF15). */
+    getState: () => Promise<WebcamState>
+    /** Saves the values (both windows write the same state); the TV applies them to the camera. */
+    set: (values: WebcamValues) => Promise<WebcamState>
+    /** TV only: the open camera's capabilities, or `null` when it is not open. */
+    report: (report: WebcamReport) => void
+    /** Pushed to both windows on every change. */
+    onState: (listener: (state: WebcamState) => void) => Unsubscribe
   }
   gallery: {
     /** The event folder's montages, newest first; only the app's `HH-mm-ss.jpg` files (RF14). */

@@ -31,6 +31,11 @@ export {
   galleryReprintInputSchema,
   galleryReprintResultSchema,
   montageFileNameSchema,
+  webcamCapabilitiesSchema,
+  webcamReportSchema,
+  webcamSetInputSchema,
+  webcamStateSchema,
+  webcamValuesSchema,
   guestChoiceSchema,
   layoutSaveInputSchema,
   layoutSaveResultSchema,
@@ -89,5 +94,7 @@ export {
   type TvOpenResult,
   type TvUnavailableReason,
   type TvWindowState,
+  type WebcamReport,
+  type WebcamState,
 } from './schemas'
 export type { FotomagicaApi, Unsubscribe } from './api'
