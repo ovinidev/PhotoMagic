@@ -217,7 +217,7 @@ For each slot, in this order:
 1. The capture of the indicated photo (1, 2 or 3), already upright and mirrored
 2. Pre-rotation of the photo by minus the quarter turn nearest to the slot's `angle` (Angle 270 turns the photo 90° clockwise first). Step 4 turns it back, so the person stays upright while the slot's frame turns: a 500×281 slot at Angle 270 shows a tall, upright portrait
 3. `cover` fit into the unrotated rectangle (`width` × `height`), with that slot's pan (-1 to 1 on each axis) and zoom (1 to 3). Zoom 1 and pan 0 crop the center: in a horizontal slot, the portrait loses top and bottom in equal parts. With a framing rotation, the photo covers the bounds of the box turned by that rotation (plus 2 px), is turned clockwise by it, and the centered `width` × `height` is kept, so no corner of the slot ever shows the template (RF09)
-4. Rotation of the result by the slot's `angle`, clockwise around the center
+4. If the slot has a `radius`, the tile is clipped to a rounded rectangle of that radius (a `dest-in` SVG mask), in the box's own axes; a rounded rectangle turns into itself, so this works at any angle. Then rotation of the result by the slot's `angle`, clockwise around the center
 5. Composition over that mode's template, centered on the slot's center and clipped to the sheet. A slot dragged partly off the sheet is cut there (the client seed sits fully inside)
 
 The plan is pure (`planSlot`, `clipToSheet` in `src/shared/layout/geometry.ts`) and `src/main/compose/renderSheet.ts` runs it with sharp, one materialized step at a time (sharp otherwise reorders rotate, resize and extract). The preview the laptop and the TV show is the same composition scaled to 922 px wide, recomposed after each photo; the round state carries a `previewRevision` and both windows fetch the JPEG with `session:get-preview`.
@@ -237,6 +237,8 @@ Left and Top are the top-left corner of the rectangle before rotation. Width and
 In the current app, Angle 270 with 500×281 draws a tall slot, and Angle 0 draws a lying-down slot. The new renderer reproduces this. The photo number is drawn in the slot's local space, so it rotates with it, as in the demonstration: vertically the "3" is sideways. This is the current app's behavior, and the editor keeps it.
 
 A slot's `photo` is 1, 2, 3 or `null` (`Nenhuma` in the panel). The montage skips a `null` slot, so the template shows there.
+
+A slot may carry `radius` (sheet pixels, default 0): the corner radius of the artwork's photo box. The client's 2 tiras boxes are black rounded rectangles of about 33 px (31.1 to 35.3 px, measured from the anti-aliased coverage of all 20 corners), and the seed uses 30 px (`CLIENT_BOX_RADIUS`). Clipping 1 px under the tightest corner keeps the photo's anti-aliased edge past the black curve everywhere. A render test over the client artwork counts zero dark pixels in every box and white paper at each box's corner pixel. The alternative, a square photo covering the box, would put square photo corners on the white paper outside the rounded box. The panel does not show the radius; editing a slot keeps it, and `Restaurar padrão` brings it back. A layout saved before the client seed has no radius and stays square.
 
 ![Figure 4 — Selected slot with dashed red border](assets/briefing/image4.png)
 

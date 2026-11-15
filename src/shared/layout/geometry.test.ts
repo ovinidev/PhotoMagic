@@ -106,6 +106,12 @@ describe('planSlot', () => {
     expect(plan.angle).toBe(0)
   })
 
+  it('carries the box corner radius, at most half the box', () => {
+    expect(planSlot(slot({}), PORTRAIT).radius).toBe(0)
+    expect(planSlot(slot({ radius: 31 }), PORTRAIT).radius).toBe(31)
+    expect(planSlot(slot({ width: 60, height: 50, radius: 99 }), PORTRAIT).radius).toBe(25)
+  })
+
   it('never resizes below the slot box', () => {
     const plan = planSlot(slot({ width: 501, height: 281 }), { width: 1001, height: 563 })
     expect(plan.resize.width).toBeGreaterThanOrEqual(501)

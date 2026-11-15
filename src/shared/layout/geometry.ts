@@ -76,6 +76,7 @@ export function slotBounds(slot: Slot): Rect {
  *    framing rotation, it covers the bounds of the box turned by that rotation, so no corner shows);
  * 3. extract `extract` (that box, moved by the framing's pan; pan 0 crops the center in equal parts);
  * 4. with a framing rotation, rotate the tile clockwise by `rotate` and keep the centered `box`;
+ *    then clip it to a rounded rectangle of `radius` (the artwork's rounded photo box);
  * 5. rotate that tile clockwise by `angle` around its center and place the center at `center`.
  */
 export type SlotPlan = {
@@ -86,6 +87,8 @@ export type SlotPlan = {
   rotate: number
   /** The slot's unrotated box, the tile size after step 4. */
   box: Size
+  /** Corner radius the tile is clipped to before step 5 (0: square); never more than half the box. */
+  radius: number
   angle: number
   center: { x: number; y: number }
 }
@@ -112,7 +115,8 @@ export function planSlot(slot: Slot, photo: Size, framing: Framing = DEFAULT_FRA
     width: need.width,
     height: need.height,
   }
-  return { preRotate, resize, extract, rotate: rotation, box, angle: normalizeAngle(slot.angle), center: slotCenter(slot) }
+  const radius = Math.max(0, Math.min(slot.radius ?? 0, box.width / 2, box.height / 2))
+  return { preRotate, resize, extract, rotate: rotation, box, radius, angle: normalizeAngle(slot.angle), center: slotCenter(slot) }
 }
 
 /**

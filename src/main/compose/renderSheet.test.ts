@@ -1,6 +1,8 @@
+import { readFile } from 'node:fs/promises'
+import { resolve } from 'node:path'
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
-import { ONE_STRIP_SEED, TWO_STRIPS_SEED, clipToSheet, slotBounds, type PhotoIndex, type Slot } from '@shared/layout'
+import { ONE_STRIP_SEED, TWO_STRIPS_CLIENT_BOXES, TWO_STRIPS_SEED, clipToSheet, slotBounds, type PhotoIndex, type Slot } from '@shared/layout'
 import { PREVIEW_WIDTH, renderSheet } from './renderSheet'
 
 type Rgb = [number, number, number]
@@ -128,11 +130,12 @@ describe('renderSheet (RF08, RF12)', () => {
     const bottom1 = TWO_STRIPS_SEED[3]!
     const framings = { 'bottom-1': { zoom: 1, panX: 0, panY: 0, rotation: 15 } }
     const at = await pixels(await renderSheet({ template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos(), framings }, { kind: 'montage' }))
+    // Probed just inside the seed's rounded corner (radius 30: the arc is 9 px in along the diagonal).
     for (const [x, y] of [
-      [bottom1.left + 3, bottom1.top + 3],
-      [bottom1.left + bottom1.width - 4, bottom1.top + 3],
-      [bottom1.left + 3, bottom1.top + bottom1.height - 4],
-      [bottom1.left + bottom1.width - 4, bottom1.top + bottom1.height - 4],
+      [bottom1.left + 12, bottom1.top + 12],
+      [bottom1.left + bottom1.width - 13, bottom1.top + 12],
+      [bottom1.left + 12, bottom1.top + bottom1.height - 13],
+      [bottom1.left + bottom1.width - 13, bottom1.top + bottom1.height - 13],
     ] as const) {
       expect(near(at(x, y), GRAY), `corner ${x},${y}`).toBe(false)
     }
@@ -144,5 +147,36 @@ describe('renderSheet (RF08, RF12)', () => {
     const preview = await renderSheet({ template: null, slots: ONE_STRIP_SEED, photos: await allPhotos() }, { kind: 'preview' })
     const meta = await sharp(preview).metadata()
     expect(meta).toMatchObject({ format: 'jpeg', width: PREVIEW_WIDTH, height: Math.round((PREVIEW_WIDTH * 1240) / 1844) })
+  })
+})
+
+describe('renderSheet over the client 2 tiras artwork', () => {
+  const CLIENT = resolve(import.meta.dirname, '../../../e2e/fixtures/client-2tiras-1844x1240.png')
+  const dark = ([r, g, b]: Rgb) => r < 60 && g < 60 && b < 60
+
+  it('fills every black photo box: no black corner or edge shows, the art around stays', async () => {
+    const jpeg = await renderSheet({ template: await readFile(CLIENT), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
+    const { data, info } = await sharp(jpeg).raw().toBuffer({ resolveWithObject: true })
+    const at = (x: number, y: number): Rgb => {
+      const i = (y * info.width + x) * info.channels
+      return [data[i]!, data[i + 1]!, data[i + 2]!]
+    }
+    for (const box of TWO_STRIPS_CLIENT_BOXES) {
+      // Not one dark pixel left anywhere inside the box, rounded corners included.
+      let black = 0
+      for (let y = box.top; y < box.top + box.height; y++) for (let x = box.left; x < box.left + box.width; x++) if (dark(at(x, y))) black++
+      expect(black, `black pixels in the box at ${box.left},${box.top}`).toBe(0)
+      // The photo is clipped to the rounded corner: the very corner pixel is the white paper, not photo.
+      for (const [x, y] of [
+        [box.left + 1, box.top + 1],
+        [box.left + box.width - 2, box.top + 1],
+        [box.left + 1, box.top + box.height - 2],
+        [box.left + box.width - 2, box.top + box.height - 2],
+      ] as const) {
+        expect(near(at(x, y), [255, 255, 255]), `corner ${x},${y}`).toBe(true)
+      }
+      // Just outside the box the artwork is untouched (white paper there).
+      expect(near(at(box.left + box.width / 2, box.top + box.height + 6), [255, 255, 255])).toBe(true)
+    }
   })
 })

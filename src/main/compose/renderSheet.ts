@@ -82,6 +82,13 @@ async function renderSlot(photo: Uint8Array, plan: ReturnType<typeof planSlot>):
     const top = Math.max(0, Math.floor((turned.info.height - plan.box.height) / 2))
     tile = sharp(await sharp(turned.data).extract({ left, top, width: plan.box.width, height: plan.box.height }).png().toBuffer()).ensureAlpha()
   }
+  if (plan.radius > 0) {
+    // The artwork's rounded photo box: keep the tile inside a rounded rectangle of the same radius.
+    // Done before the slot's turn, in the box's own axes; a rounded rectangle turns into itself.
+    const { width, height } = plan.box
+    const mask = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" rx="${plan.radius}" ry="${plan.radius}" fill="#fff"/></svg>`)
+    tile = sharp(await tile.composite([{ input: mask, blend: 'dest-in' }]).png().toBuffer()).ensureAlpha()
+  }
   const rotated: Raw =
     plan.angle === 0
       ? await tile.raw().toBuffer({ resolveWithObject: true })

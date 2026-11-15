@@ -161,13 +161,13 @@ The editor's Left/Top/Width/Height are the box before rotation, turned around it
 
 | Slot | Photo | Left | Top | Width | Height | Angle | Corner radius |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Cima 1 | 1 | 33 | 132 | 532 | 356 | 270 | 31 |
-| Cima 2 | 2 | 445 | 132 | 532 | 356 | 270 | 31 |
-| Cima 3 | 3 | 856 | 132 | 532 | 356 | 270 | 31 |
-| Baixo 1 | 1 | 63 | 733 | 600 | 402 | 0 | 31 |
-| Baixo 2 | 2 | 709 | 733 | 600 | 402 | 0 | 31 |
+| Cima 1 | 1 | 33 | 132 | 532 | 356 | 270 | 30 |
+| Cima 2 | 2 | 445 | 132 | 532 | 356 | 270 | 30 |
+| Cima 3 | 3 | 856 | 132 | 532 | 356 | 270 | 30 |
+| Baixo 1 | 1 | 63 | 733 | 600 | 402 | 0 | 30 |
+| Baixo 2 | 2 | 709 | 733 | 600 | 402 | 0 | 30 |
 
-The photos are clipped to the box's rounded corners, so no black corner of the artwork shows (DESIGN §6). The top strip ends at y = 576 and the bottom one starts at 733: the working cut line y = 620 falls in that gap, so no seed slot crosses it. A computer that already saved a 2-strip layout keeps it; `Restaurar padrão` brings this seed.
+The black boxes have rounded corners of about 33 px (31 to 35 measured). The photos are clipped to a rounded rectangle of 30 px, just under the tightest corner, so no black of the artwork shows and the photo corner reaches past the black by at most about 2 px of white (DESIGN §6). The top strip ends at y = 576 and the bottom one starts at 733: the working cut line y = 620 falls in that gap, so no seed slot crosses it. A computer that already saved a 2-strip layout keeps it; `Restaurar padrão` brings this seed.
 
 #### One-strip mode seed
 

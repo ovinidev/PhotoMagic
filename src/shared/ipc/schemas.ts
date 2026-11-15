@@ -124,6 +124,7 @@ export const slotSchema = z.strictObject({
   width: z.number().finite().min(40),
   height: z.number().finite().min(40),
   angle: z.number().finite(),
+  radius: z.number().finite().min(0).max(500).optional(),
 })
 
 export const slotListSchema = z.array(slotSchema).min(1).max(12)
