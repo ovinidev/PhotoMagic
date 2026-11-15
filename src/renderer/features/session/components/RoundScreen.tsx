@@ -1,5 +1,6 @@
 import type { EventSession } from '@shared/ipc'
 import { CameraStatusLine, TvStatus, useDisplayState } from '@renderer/features/camera'
+import { GalleryPanel } from '@renderer/features/gallery'
 import { PrinterStatusLine } from '@renderer/features/print'
 import { useFramingEditor } from './FramingEditor'
 import { LivePreview } from './LivePreview'
@@ -26,6 +27,7 @@ export function RoundScreen({ session }: { session: EventSession }) {
           <CameraStatusLine />
           <PrinterStatusLine />
         </section>
+        <GalleryPanel />
       </div>
     </div>
   )
