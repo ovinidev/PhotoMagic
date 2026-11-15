@@ -1,3 +1,4 @@
+import logoUrl from '@brand/logo.png'
 import markUrl from '@brand/mark.png'
 import { EndEventButton, RoundScreen, SESSION_COPY } from '@renderer/features/session'
 import { useSessionState } from '@renderer/shared/hooks/useSessionState'
@@ -13,6 +14,15 @@ function VersionLabel({ state }: { state: AppVersionState }) {
     case 'ready':
       return <span className="tabular-nums">Versão {state.value.version}</span>
   }
+}
+
+/** Startup (RNF12): the full logo, centered, until main says whether an event is open. */
+function Splash() {
+  return (
+    <div data-testid="startup-splash" className="flex flex-1 items-center justify-center">
+      <img src={logoUrl} alt="Foto Mágica" className="h-56 w-auto" draggable={false} />
+    </div>
+  )
 }
 
 /**
@@ -41,7 +51,9 @@ export function OperatorApp() {
           </>
         ) : null}
       </header>
-      <main className="flex flex-1 justify-center">{session ? <RoundScreen session={session} /> : <HomePage />}</main>
+      <main className="flex flex-1 justify-center">
+        {sessionView.status === 'loading' ? <Splash /> : session ? <RoundScreen session={session} /> : <HomePage />}
+      </main>
       <footer className="px-6 py-3 text-right text-xs text-ink-soft" data-testid="app-version">
         <VersionLabel state={version} />
       </footer>
