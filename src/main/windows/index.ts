@@ -1,2 +1,5 @@
 export { createOperatorWindow } from './operatorWindow'
 export { closeGuestWindow, createGuestWindow } from './guestWindow'
+export { createGuestWindowController, type GuestWindowController, type GuestWindowHandle } from './guestWindowController'
+export { createScreenDisplaySource, type DisplaySource } from './displaySource'
+export { createFixtureDisplaySource, DISPLAY_FIXTURES, type FixtureDisplaySource } from './displayFixtures'
