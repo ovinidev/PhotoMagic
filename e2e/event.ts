@@ -25,6 +25,20 @@ export async function fillEvent(operatorWindow: Page, options: { name: string; m
   await operatorWindow.getByLabel('Nome do evento').fill(options.name)
   await operatorWindow.getByRole('radio', { name: new RegExp(MODE_LABEL[mode]) }).check()
   await operatorWindow.getByTestId('template-input').setInputFiles(options.template ?? (await validTemplate()))
+  // An accepted template opens the slot editor over the form; a rejected one shows why.
+  const editor = layoutEditor(operatorWindow)
+  await expect(editor.or(operatorWindow.getByRole('alert')).first()).toBeVisible()
+  if (await editor.isVisible()) await closeLayoutEditor(operatorWindow)
+}
+
+/** The slot editor dialog (PRD §6.2). */
+export const layoutEditor = (operatorWindow: Page) => operatorWindow.getByRole('dialog', { name: 'Posições das fotos' })
+
+/** `Concluir`: every change is already saved, this only closes the editor. */
+export async function closeLayoutEditor(operatorWindow: Page): Promise<void> {
+  const editor = layoutEditor(operatorWindow)
+  await editor.getByRole('button', { name: 'Concluir' }).click()
+  await expect(editor).toBeHidden()
 }
 
 /** Fills the form, clicks `Iniciar evento` and returns the TV page, live and at 1/3. */
