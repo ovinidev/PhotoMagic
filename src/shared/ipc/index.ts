@@ -1,4 +1,35 @@
 export { IPC_CHANNELS, type IpcChannel } from './channels'
-export { INVOKE_CONTRACT, type InvokeChannel, type InvokeInput, type InvokeOutput } from './contract'
-export { appGetVersionInputSchema, appVersionSchema, type AppVersion } from './schemas'
-export type { FotomagicaApi } from './api'
+export {
+  EVENT_CONTRACT,
+  INVOKE_CONTRACT,
+  SEND_CONTRACT,
+  type EventChannel,
+  type EventPayload,
+  type InvokeChannel,
+  type InvokeInput,
+  type InvokeOutput,
+  type SendChannel,
+  type SendPayload,
+} from './contract'
+export {
+  appGetVersionInputSchema,
+  appVersionSchema,
+  cameraErrorReasonSchema,
+  cameraStatusSchema,
+  displayInfoSchema,
+  displayStateSchema,
+  guestChoiceSchema,
+  noInputSchema,
+  tvOpenInputSchema,
+  tvOpenResultSchema,
+  tvWindowStateSchema,
+  type AppVersion,
+  type CameraErrorReason,
+  type CameraStatus,
+  type DisplayState,
+  type TvOpenInput,
+  type TvOpenResult,
+  type TvUnavailableReason,
+  type TvWindowState,
+} from './schemas'
+export type { FotomagicaApi, Unsubscribe } from './api'
