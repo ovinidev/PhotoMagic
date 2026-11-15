@@ -8,7 +8,41 @@ import { PHOTO_TIMEOUT, startEvent, takePhotos } from './event'
 import { writeY4m } from './y4m'
 
 test.describe('capture round', () => {
-  test.fixme('RF09 frames a slot without moving it and keeps shared captures independent', async () => {})
+  test('RF09 frames a slot without moving it and keeps shared captures independent', async ({ app, operatorWindow }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
+    await takePhotos(tv, 3)
+    const state = () => operatorWindow.evaluate(() => window.fotomagica.session.getState())
+    const before = await state()
+    if (before.kind !== 'event') throw new Error('expected an event')
+    const tvPreview = tv.getByTestId('print-preview')
+    await expect(tvPreview).toBeVisible()
+    const tvSrc = await tvPreview.getAttribute('src')
+
+    // Zoom with the button, then drag the photo down inside Baixo 1.
+    const bottom1 = operatorWindow.getByRole('button', { name: 'Enquadrar Baixo 1' })
+    await bottom1.click()
+    await operatorWindow.getByRole('button', { name: 'Aproximar' }).click()
+    await expect(operatorWindow.getByTestId('framing-readout')).toHaveText('Baixo 1: zoom 1,25× · giro 0°')
+    const box = (await bottom1.boundingBox())!
+    await operatorWindow.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await operatorWindow.mouse.down()
+    await operatorWindow.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 15, { steps: 5 })
+    await operatorWindow.mouse.up()
+
+    await expect.poll(async () => {
+      const current = await state()
+      return current.kind === 'event' ? current.framings['bottom-1']?.panY ?? 0 : 0
+    }).toBeLessThan(0)
+    const after = await state()
+    if (after.kind !== 'event') throw new Error('expected an event')
+    expect(after.framings['bottom-1']?.zoom).toBe(1.25)
+    // Cima 1 uses the same capture and keeps its own, default framing; no slot rectangle moved.
+    expect(after.framings['top-1']).toBeUndefined()
+    expect(after.slots).toEqual(before.slots)
+    // The TV print screen shows the recomposed preview.
+    await expect.poll(() => tvPreview.getAttribute('src')).not.toBe(tvSrc)
+    expect(after.previewRevision).toBeGreaterThan(before.previewRevision)
+  })
 
   test('RF06 advances the counter 1/3, 2/3, 3/3 and moves to printing', async ({ app, operatorWindow }) => {
     const tv = await startEvent(app, operatorWindow, { name: 'Festa' })

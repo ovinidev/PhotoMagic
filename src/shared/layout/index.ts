@@ -42,3 +42,4 @@ export {
   type ResizeHandle,
 } from './gesture'
 export { ANGLE_SNAP_TOLERANCE, SNAP_TOLERANCE, snapAngle, snapMove, snapResize, snapTargets, type SnapOptions, type SnapTargets } from './snap'
+export { ASSUMED_PHOTO, FRAMING_ROTATION_SNAP, panFraming, rotateFraming, turnFraming, wheelZoomFactor, zoomFraming } from './framing'
