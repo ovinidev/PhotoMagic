@@ -79,8 +79,12 @@ describe('renderSheet (RF08, RF12)', () => {
     const jpeg = await renderSheet({ template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
     const at = await pixels(jpeg)
     const bottom1 = TWO_STRIPS_SEED[3]!
-    // Visible: 31.6% of the portrait height, from 34.2% to 65.8%. The bar (top 40%) fills its top 18%.
-    const barRows = 281 * ((BAR_FRACTION - 0.342) / 0.316)
+    // Cover fit: the portrait is scaled to the slot width, so the slot shows a centered band of it.
+    const shown = bottom1.height / ((PHOTO.height * bottom1.width) / PHOTO.width)
+    const hidden = (1 - shown) / 2
+    expect(hidden).toBeGreaterThan(0)
+    // The bar (top 40% of the portrait) fills only the top part of the slot.
+    const barRows = bottom1.height * ((BAR_FRACTION - hidden) / shown)
     expect(near(at(bottom1.left + 250, bottom1.top + barRows - 12), BAR)).toBe(true)
     expect(near(at(bottom1.left + 250, bottom1.top + barRows + 12), BODY[1])).toBe(true)
   })

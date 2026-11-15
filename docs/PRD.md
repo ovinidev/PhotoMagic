@@ -47,7 +47,7 @@ The TV label and the printer's current dialog are in figures 3 and 10, in [DESIG
 
 These decisions came from the product owner. The implementation follows them, without reopening.
 
-1. **Two-strip template.** The top strip carries photos 1, 2 and 3 vertically (Angle 270). The bottom strip carries photos 1 and 2 horizontally (Angle 0). The numbers in the briefing table are approximate: they were moved around in the demonstration and do not measure the gray squares. Cima 3 with Angle 0 and Top 194 is a leftover of that demo. The slots stay inside the gray squares and remain adjustable in the editor. This is the layout of the cut mode.
+1. **Two-strip template.** The top strip carries photos 1, 2 and 3 vertically (Angle 270). The bottom strip carries photos 1 and 2 horizontally (Angle 0). The numbers in the briefing table are approximate: they were moved around in the demonstration and do not measure the photo boxes. Cima 3 with Angle 0 and Top 194 is a leftover of that demo. The seed is the client's measured 2 tiras artwork (section 6.2): the owner confirmed that the photo boxes are always in those positions and only the background art changes between events. The slots remain adjustable in the editor. This is the layout of the cut mode.
 2. **Camera.** The Logitech is mounted horizontally, on top of the TV, with no physical rotation. The 90° rotation to portrait is done in software, as in Webcam Photobooth. The direction lives in the constant `CAMERA_ROTATION_DEG`, initial value 90. The working image is portrait. In horizontal slots the default fit crops the center. The operator adjusts the framing (move, rotate, zoom) on the laptop.
 3. **Printing.** Before starting the event the operator chooses the mode. **2 tiras** (two strips) is the default: 2" cut on and the five-slot layout. **1 tira** (one strip) turns the cut off and uses its own three-slot layout, photos 1, 2 and 3, covering the whole 6×4 sheet (1844×1240). It is not a half blank sheet and not 6×2 paper. Both layouts are saved and both are edited in the editor.
 4. **Driver.** The 2" cut and the out-of-paper, out-of-ribbon and powered-off states use whatever the Windows driver exposes. Testing on the device is up to the owner. The print code is isolated, with a simulated mode that tests use in place of the hardware.
@@ -133,7 +133,7 @@ Each layout is saved on the computer and applies to all events of that mode. Cha
 
 ![Figure 5 — Image, Left, Top, Width, Height, Angle panel the approximate numbers came from](assets/briefing/image1.png)
 
-#### Demonstration numbers, and the seed
+#### Demonstration numbers (history)
 
 The current app stores a grid with a step of 331: columns at Left 72, 403, 734 and 1065, rows at Top 70 and 670. Several cells were `None`. Cima 3 was dragged out of the third column.
 
@@ -145,17 +145,29 @@ The current app stores a grid with a step of 331: columns at Left 72, 403, 734 a
 | Baixo 1 | 1 | 72 | 670 | 500 | 281 | 0 | Overlaps Baixo 2 |
 | Baixo 2 | 2 | 403 | 670 | 500 | 281 | 0 | Overlaps Baixo 1 |
 
-Two-strip seed on first run, without the wrong angle and without the bottom overlap:
+#### Two-strip seed: the client's photo boxes
 
-| Slot | Photo | Left | Top | Width | Height | Angle |
-| --- | --- | --- | --- | --- | --- | --- |
-| Cima 1 | 1 | 72 | 70 | 500 | 281 | 270 |
-| Cima 2 | 2 | 403 | 70 | 500 | 281 | 270 |
-| Cima 3 | 3 | 734 | 70 | 500 | 281 | 270 |
-| Baixo 1 | 1 | 72 | 670 | 500 | 281 | 0 |
-| Baixo 2 | 2 | 620 | 670 | 500 | 281 | 0 |
+The client sent the real 2 tiras artwork (Canva PDF "Layout . 21.11.26", rendered at 1844×1240). Its photo boxes are black rounded rectangles. The owner fixed them: **the boxes are always in these positions; only the background art changes between events.** Measured visible rectangles on the sheet:
 
-This two-strip seed is the working assumption. The measurements of the gray squares are pending from the client; until then the app stores these numbers and the operator can still drag each slot. 620 exists so that width 500 does not overlap the slot that starts at 72. The cut line used together with this seed is y = 620, also pending from the client.
+| Box | Photo | Visible left | Visible top | Visible width | Visible height |
+| --- | --- | --- | --- | --- | --- |
+| Cima 1 | 1 | 121 | 44 | 356 | 532 |
+| Cima 2 | 2 | 533 | 44 | 356 | 532 |
+| Cima 3 | 3 | 944 | 44 | 356 | 532 |
+| Baixo 1 | 1 | 63 | 733 | 600 | 402 |
+| Baixo 2 | 2 | 709 | 733 | 600 | 402 |
+
+The editor's Left/Top/Width/Height are the box before rotation, turned around its center (DESIGN §6). A top box at Angle 270 is therefore Width 532 × Height 356 around the same center: Left = 121 + 178 − 266 = 33, Top = 44 + 266 − 178 = 132. The two-strip seed on first run and after `Restaurar padrão`:
+
+| Slot | Photo | Left | Top | Width | Height | Angle | Corner radius |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Cima 1 | 1 | 33 | 132 | 532 | 356 | 270 | 31 |
+| Cima 2 | 2 | 445 | 132 | 532 | 356 | 270 | 31 |
+| Cima 3 | 3 | 856 | 132 | 532 | 356 | 270 | 31 |
+| Baixo 1 | 1 | 63 | 733 | 600 | 402 | 0 | 31 |
+| Baixo 2 | 2 | 709 | 733 | 600 | 402 | 0 | 31 |
+
+The photos are clipped to the box's rounded corners, so no black corner of the artwork shows (DESIGN §6). The top strip ends at y = 576 and the bottom one starts at 733: the working cut line y = 620 falls in that gap, so no seed slot crosses it. A computer that already saved a 2-strip layout keeps it; `Restaurar padrão` brings this seed.
 
 #### One-strip mode seed
 
@@ -243,7 +255,7 @@ After a print, the folder contains only `HH-mm-ss.jpg` files produced by the app
 
 ### RF03 — Editor for both layouts
 
-Given the 2-strip seed, the five slots have the values of that table, Cima 3 is at Angle 270, and the rectangles of Baixo 1 and Baixo 2 do not intersect.
+Given the 2-strip seed, the five slots have the values of that table, Cima 3 is at Angle 270, the visible rectangles land exactly on the client's photo boxes, and no two of them intersect.
 
 Given the 1-strip seed, there are three slots, with photos 1, 2 and 3 and Angle 0, at the numbers of the table in section 6.2. They occupy the whole sheet, with the gaps of that table, and do not leave half blank. The numbers are pending validation.
 
@@ -436,8 +448,8 @@ The transparent working file is at `assets/brand/logo.png`. The symbol without t
 
 The app proceeds with the current assumption until this data arrives. They do not block the implementation.
 
-1. **Gray squares of the 2 tiras mode.** There is no measured coordinate from the artwork. The five-slot seed in section 6.2 is what the app stores on first run. The operator can still drag each slot until it covers the square.
-2. **Cut line.** The 2" blade is treated as y = 620 on the 1240 px sheet, only in the 2-strip layout. A slot that crosses this line raises a warning in the editor. The value changes when the client provides the measurement.
+1. ~~**Gray squares of the 2 tiras mode.**~~ Resolved on 2026-11-15: the client's artwork was measured and is the seed (section 6.2). The boxes are fixed; only the background changes.
+2. **Cut line.** The 2" blade is treated as y = 620 on the 1240 px sheet, only in the 2-strip layout. It falls in the 576–733 gap between the client's two strips, so it is kept. A slot that crosses this line raises a warning in the editor. The value changes if a test sheet on the DS-RX1 shows the blade elsewhere.
 3. **1 tira mode seed.** The three slots (42, 642 and 1242 by 560×1160, Angle 0) are a starting point to cover the sheet. They are pending validation. There is no measured artwork for them.
 4. **Template per mode.** Assumption in force: each mode stores its own 1844×1240 background, imported on the create-event screen with that mode selected. It falls if the client says a single file serves both.
 

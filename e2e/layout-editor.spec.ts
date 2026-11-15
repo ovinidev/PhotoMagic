@@ -36,7 +36,7 @@ test.describe('layout editor (RF03)', () => {
     const cards = editor.getByRole('button', { name: /^(Cima|Baixo) \d, foto \d$/ })
     await expect(cards).toHaveText(['1', '2', '3', '1', '2'])
     await expect(editor.getByLabel('Angle de Cima 3')).toHaveValue('270')
-    await expect(editor.getByLabel('Left de Baixo 2')).toHaveValue('620')
+    await expect(editor.getByLabel('Left de Baixo 2')).toHaveValue('709')
     await expect(editor.getByTestId('cut-line')).toBeVisible()
     // Cima 1 at Angle 270 is drawn tall, Baixo 1 at Angle 0 lying down.
     const top1 = (await editor.getByTestId('slot-card-top-1').boundingBox())!
@@ -59,11 +59,11 @@ test.describe('layout editor (RF03)', () => {
 
     await operatorWindow.mouse.move(start.x, start.y)
     await operatorWindow.mouse.down()
-    // 30 px right and 40 px up on the sheet, in a few steps: Left ≈ 102, Top ≈ 630, clear of snap targets.
+    // 30 px right and 40 px up on the sheet, in a few steps: Left ≈ 93, Top ≈ 693, clear of snap targets.
     await operatorWindow.mouse.move(start.x + 30 * scale, start.y - 40 * scale, { steps: 8 })
-    await expect.poll(() => numberOf(left)).toBeGreaterThan(96)
-    expect(Math.abs((await numberOf(left)) - 102)).toBeLessThanOrEqual(3)
-    expect(Math.abs((await numberOf(top)) - 630)).toBeLessThanOrEqual(3)
+    await expect.poll(() => numberOf(left)).toBeGreaterThan(87)
+    expect(Math.abs((await numberOf(left)) - 93)).toBeLessThanOrEqual(3)
+    expect(Math.abs((await numberOf(top)) - 693)).toBeLessThanOrEqual(3)
     expect(readConfig(dirs.userData)).toBe(before)
 
     await operatorWindow.mouse.up()
@@ -80,11 +80,11 @@ test.describe('layout editor (RF03)', () => {
     const start = await center(editor.getByTestId('slot-card-bottom-1'))
     await operatorWindow.mouse.move(start.x, start.y)
     await operatorWindow.mouse.down()
-    // Baixo 1 starts at Left 72: 66 px left puts it 6 px from the sheet edge.
-    await operatorWindow.mouse.move(start.x - 66 * scale, start.y, { steps: 6 })
+    // Baixo 1 starts at Left 63: 57 px left puts it 6 px from the sheet edge.
+    await operatorWindow.mouse.move(start.x - 57 * scale, start.y, { steps: 6 })
     await expect(left).toHaveValue('0')
     await operatorWindow.keyboard.down('Alt')
-    await operatorWindow.mouse.move(start.x - 66 * scale, start.y + 1)
+    await operatorWindow.mouse.move(start.x - 57 * scale, start.y + 1)
     await expect.poll(() => numberOf(left)).toBeGreaterThan(2)
     expect(Math.abs((await numberOf(left)) - 6)).toBeLessThanOrEqual(3)
     await operatorWindow.mouse.up()
@@ -112,8 +112,8 @@ test.describe('layout editor (RF03)', () => {
     await operatorWindow.mouse.move(corner.x, corner.y)
     await operatorWindow.mouse.down()
     await operatorWindow.mouse.move(corner.x - 30 * scale, corner.y - 30 * scale, { steps: 6 })
-    await expect.poll(() => numberOf(editor.getByLabel('Width de Baixo 1'))).toBeLessThan(490)
-    expect(await numberOf(editor.getByLabel('Height de Baixo 1'))).toBeLessThan(271)
+    await expect.poll(() => numberOf(editor.getByLabel('Width de Baixo 1'))).toBeLessThan(590)
+    expect(await numberOf(editor.getByLabel('Height de Baixo 1'))).toBeLessThan(392)
     await operatorWindow.mouse.up()
   })
 

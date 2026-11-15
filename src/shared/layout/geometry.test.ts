@@ -35,8 +35,10 @@ describe('angles', () => {
 
 describe('slotBounds', () => {
   it('rotates around the center without swapping width and height in the model', () => {
-    // Cima 1: center (322, 210.5); 270 makes it 281 wide and 500 tall, sticking out above the sheet.
-    expect(slotBounds(TWO_STRIPS_SEED[0]!)).toEqual({ left: 181.5, top: -39.5, width: 281, height: 500 })
+    // Cima 1: model 532×356 around (299, 310); 270 makes it the client's 356 wide and 532 tall box.
+    expect(slotBounds(TWO_STRIPS_SEED[0]!)).toEqual({ left: 121, top: 44, width: 356, height: 532 })
+    // A slot that sticks out above the sheet is still allowed by the model.
+    expect(slotBounds(slot({ left: 72, top: 70, width: 500, height: 281, angle: 270 }))).toEqual({ left: 181.5, top: -39.5, width: 281, height: 500 })
   })
 
   it('grows to the bounding box of a tilted slot', () => {
@@ -162,16 +164,18 @@ describe('slotCrop and guideCrop', () => {
 
   it('shows the bottom strip band for photo 1 in 2 tiras', () => {
     const guide = guideCrop(TWO_STRIPS_SEED, 1, FRAME)
-    // Cima 1 (281:500) is a hair narrower than 9:16; the band is the bottom slot's height.
-    expect(guide?.width).toBeCloseTo(1, 2)
-    expect(guide?.height).toBeCloseTo((281 / 500) * (9 / 16), 6)
+    // Cima 1 (356:532) is wider than 9:16, so it keeps the whole width; the band is the bottom slot's height.
+    expect(guide?.width).toBeCloseTo(1, 6)
+    expect(guide?.height).toBeCloseTo((402 / 600) * (9 / 16), 6)
     expect(guide!.top).toBeCloseTo((1 - guide!.height) / 2, 6)
   })
 
   it('follows the only, vertical slot of photo 3 in 2 tiras', () => {
     const guide = guideCrop(TWO_STRIPS_SEED, 3, FRAME)
     expect(guide).toEqual(slotCrop(TWO_STRIPS_SEED[2]!, FRAME))
-    expect(guide!.height).toBe(1)
+    // The client's portrait box is wider than 9:16: it keeps the whole width and crops a little height.
+    expect(guide!.width).toBe(1)
+    expect(guide!.height).toBeCloseTo((532 / 356) * (9 / 16), 6)
   })
 
   it('is null when no slot uses the photo', () => {

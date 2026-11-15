@@ -218,7 +218,7 @@ For each slot, in this order:
 2. Pre-rotation of the photo by minus the quarter turn nearest to the slot's `angle` (Angle 270 turns the photo 90° clockwise first). Step 4 turns it back, so the person stays upright while the slot's frame turns: a 500×281 slot at Angle 270 shows a tall, upright portrait
 3. `cover` fit into the unrotated rectangle (`width` × `height`), with that slot's pan (-1 to 1 on each axis) and zoom (1 to 3). Zoom 1 and pan 0 crop the center: in a horizontal slot, the portrait loses top and bottom in equal parts. With a framing rotation, the photo covers the bounds of the box turned by that rotation (plus 2 px), is turned clockwise by it, and the centered `width` × `height` is kept, so no corner of the slot ever shows the template (RF09)
 4. Rotation of the result by the slot's `angle`, clockwise around the center
-5. Composition over that mode's template, centered on the slot's center and clipped to the sheet. The seed's top slots at Angle 270 stick out about 40 px above y = 0; that part is cut
+5. Composition over that mode's template, centered on the slot's center and clipped to the sheet. A slot dragged partly off the sheet is cut there (the client seed sits fully inside)
 
 The plan is pure (`planSlot`, `clipToSheet` in `src/shared/layout/geometry.ts`) and `src/main/compose/renderSheet.ts` runs it with sharp, one materialized step at a time (sharp otherwise reorders rotate, resize and extract). The preview the laptop and the TV show is the same composition scaled to 922 px wide, recomposed after each photo; the round state carries a `previewRevision` and both windows fetch the JPEG with `session:get-preview`.
 
@@ -228,7 +228,7 @@ The golden test does not depend on guessing the pivot: a frame with a light bar 
 
 After the mode's slots, `sharp` writes a quality-95 JPEG, density 300, 1844×1240. This is the `HH-mm-ss.jpg` file.
 
-The cut line used by the editor, only in the 2-strip layout, is y = 620. It is a working assumption, pending from the client, along with the measurements of the gray squares. Until that data arrives, a slot that crosses this line does not prevent saving, and the editor shows a warning. The 1-strip layout does not draw this line.
+The cut line used by the editor, only in the 2-strip layout, is y = 620. It falls in the 576–733 gap of the client's 2 tiras artwork and is to be confirmed on a test sheet. A slot that crosses this line does not prevent saving, and the editor shows a warning. The 1-strip layout does not draw this line.
 
 ### Editor model
 

@@ -10,7 +10,7 @@ export {
   type PrintMode,
   type Slot,
 } from './types'
-export { ONE_STRIP_SEED, SEED_LAYOUTS, TWO_STRIPS_SEED } from './seed'
+export { ONE_STRIP_SEED, SEED_LAYOUTS, TWO_STRIPS_CLIENT_BOXES, TWO_STRIPS_SEED } from './seed'
 export {
   DEFAULT_FRAMING,
   FRAMING_ROTATION_RANGE,
