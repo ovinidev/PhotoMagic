@@ -13,8 +13,11 @@ import { TemplatePicker } from './TemplatePicker'
  * Create event (PRD §6.1, RF01, RF02, RF04): name, mode chosen before starting, that mode's template
  * and the TV. `Iniciar evento` stays disabled until all of them are valid; main checks them again,
  * opens the TV and creates or reuses `Desktop\<name>`.
+ *
+ * `onEditLayout` opens the slot editor (PRD §5, "Slot editor, optional"): right after a template is
+ * accepted, and from the button below the template. The home page owns the editor.
  */
-export function CreateEventForm() {
+export function CreateEventForm({ onEditLayout }: { onEditLayout?: (mode: PrintMode) => void } = {}) {
   const nameId = useId()
   const nameHintId = useId()
   const [name, setName] = useState('')
@@ -120,8 +123,20 @@ export function CreateEventForm() {
           templates={templates}
           template={template}
           importState={imports[mode]}
-          onFile={(file) => void importFile(mode, file)}
+          onFile={(file) =>
+            void importFile(mode, file).then((ok) => {
+              if (ok) onEditLayout?.(mode)
+            })
+          }
         />
+
+        {onEditLayout ? (
+          <div className="-mt-4 flex justify-end">
+            <Button variant="ghost" onClick={() => onEditLayout(mode)}>
+              {EVENTS_COPY.editLayout(modeLabel)}
+            </Button>
+          </div>
+        ) : null}
 
         <div className="flex flex-col gap-3 border-t border-line pt-6">
           <h2 className="text-sm font-medium text-ink">{EVENTS_COPY.tv}</h2>

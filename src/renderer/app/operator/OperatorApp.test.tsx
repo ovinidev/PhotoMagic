@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 import { describe, expect, it } from 'vitest'
 import { eventState, stubBridge } from '@renderer/test/bridge'
@@ -36,5 +37,17 @@ describe('OperatorApp', () => {
     expect(api.event.end).toHaveBeenCalled()
     act(() => pushSession({ kind: 'idle' }))
     expect(await screen.findByRole('heading', { name: 'Novo evento' })).toBeInTheDocument()
+  })
+
+  it('opens the slot editor over the form and closes it with Concluir, keeping the typed name', async () => {
+    stubBridge()
+    render(<OperatorApp />)
+    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Festa')
+    await userEvent.click(screen.getByRole('button', { name: 'Editar posições das fotos (2 tiras)' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Posições das fotos' })
+    expect(await within(dialog).findAllByRole('button', { name: /^(Cima|Baixo) \d, foto \d$/ })).toHaveLength(5)
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Concluir' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Nome do evento')).toHaveValue('Festa')
   })
 })
