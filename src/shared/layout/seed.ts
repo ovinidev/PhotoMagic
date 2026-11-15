@@ -9,6 +9,9 @@ import type { Layouts, Slot } from './types'
  */
 export const CLIENT_BOX_RADIUS = 30
 
+/** Bleed of the seed past each side edge of the client's boxes, in sheet pixels (see below). */
+export const CLIENT_BOX_BLEED = 1
+
 /**
  * Two-strip seed (PRD §6.2): the client's measured photo boxes (the black rounded rectangles of the
  * 2 tiras artwork, 2026-11-15). The owner fixed them: only the background art changes between events.
@@ -17,18 +20,21 @@ export const CLIENT_BOX_RADIUS = 30
  * - top row, portrait, photos 1, 2, 3: left 121 / 533 / 944, top 44, 356 wide × 532 tall;
  * - bottom row, landscape, photos 1, 2: left 63 / 709, top 733, 600 wide × 402 tall.
  *
- * Left/Top/Width/Height are the box before rotation (DESIGN §6, editor model). The top slots turn by
- * 270°, so their unrotated box is 532 × 356 around the same center: Left = 121 + 178 − 266 = 33,
- * Top = 44 + 266 − 178 = 132 (and 445, 856 for the next two). The bottom slots have Angle 0, so their
- * numbers are the visible rectangle itself. The cut line y = 620 falls in the 576–733 gap. The
+ * Left/Top/Width/Height are the box before rotation (DESIGN §6, editor model). The boxes' right edge
+ * is anti-aliased (a 35% black column just past the measured width, so they are about 356.35 px
+ * wide), so the seed bleeds 1 px left and right (`CLIENT_BOX_BLEED`): no gray hairline shows, the
+ * centers do not move and the numbers stay integers. The top slots turn by 270°, so their unrotated
+ * box is 532 × 358 around the same center: Left = 121 + 178 − 266 = 33, Top = 44 + 266 − 179 = 131
+ * (and 445, 856 for the next two). The bottom slots have Angle 0: the visible rectangle widened by
+ * 1 px each side. The cut line y = 620 falls in the 576–733 gap. The
  * photos are clipped to the boxes' rounded corners (`radius`, see `CLIENT_BOX_RADIUS`).
  */
 export const TWO_STRIPS_SEED: readonly Slot[] = [
-  { id: 'top-1', photo: 1, left: 33, top: 132, width: 532, height: 356, angle: 270, radius: CLIENT_BOX_RADIUS },
-  { id: 'top-2', photo: 2, left: 445, top: 132, width: 532, height: 356, angle: 270, radius: CLIENT_BOX_RADIUS },
-  { id: 'top-3', photo: 3, left: 856, top: 132, width: 532, height: 356, angle: 270, radius: CLIENT_BOX_RADIUS },
-  { id: 'bottom-1', photo: 1, left: 63, top: 733, width: 600, height: 402, angle: 0, radius: CLIENT_BOX_RADIUS },
-  { id: 'bottom-2', photo: 2, left: 709, top: 733, width: 600, height: 402, angle: 0, radius: CLIENT_BOX_RADIUS },
+  { id: 'top-1', photo: 1, left: 33, top: 131, width: 532, height: 358, angle: 270, radius: CLIENT_BOX_RADIUS },
+  { id: 'top-2', photo: 2, left: 445, top: 131, width: 532, height: 358, angle: 270, radius: CLIENT_BOX_RADIUS },
+  { id: 'top-3', photo: 3, left: 856, top: 131, width: 532, height: 358, angle: 270, radius: CLIENT_BOX_RADIUS },
+  { id: 'bottom-1', photo: 1, left: 62, top: 733, width: 602, height: 402, angle: 0, radius: CLIENT_BOX_RADIUS },
+  { id: 'bottom-2', photo: 2, left: 708, top: 733, width: 602, height: 402, angle: 0, radius: CLIENT_BOX_RADIUS },
 ]
 
 

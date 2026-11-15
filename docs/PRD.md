@@ -157,15 +157,15 @@ The client sent the real 2 tiras artwork (Canva PDF "Layout . 21.11.26", rendere
 | Baixo 1 | 1 | 63 | 733 | 600 | 402 |
 | Baixo 2 | 2 | 709 | 733 | 600 | 402 |
 
-The editor's Left/Top/Width/Height are the box before rotation, turned around its center (DESIGN §6). A top box at Angle 270 is therefore Width 532 × Height 356 around the same center: Left = 121 + 178 − 266 = 33, Top = 44 + 266 − 178 = 132. The two-strip seed on first run and after `Restaurar padrão`:
+The boxes' right edge is anti-aliased: one column just past the measured width is about 35% black, so the boxes are really about 356.35 px (and 600.35 px) wide. The seed therefore bleeds 1 px past the left and right edges; the centers do not move and the numbers stay integers. The editor's Left/Top/Width/Height are the box before rotation, turned around its center (DESIGN §6). A top box at Angle 270 is therefore Width 532 × Height 358 around the same center: Left = 121 + 178 − 266 = 33, Top = 44 + 266 − 179 = 131. The two-strip seed on first run and after `Restaurar padrão`:
 
 | Slot | Photo | Left | Top | Width | Height | Angle | Corner radius |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Cima 1 | 1 | 33 | 132 | 532 | 356 | 270 | 30 |
-| Cima 2 | 2 | 445 | 132 | 532 | 356 | 270 | 30 |
-| Cima 3 | 3 | 856 | 132 | 532 | 356 | 270 | 30 |
-| Baixo 1 | 1 | 63 | 733 | 600 | 402 | 0 | 30 |
-| Baixo 2 | 2 | 709 | 733 | 600 | 402 | 0 | 30 |
+| Cima 1 | 1 | 33 | 131 | 532 | 358 | 270 | 30 |
+| Cima 2 | 2 | 445 | 131 | 532 | 358 | 270 | 30 |
+| Cima 3 | 3 | 856 | 131 | 532 | 358 | 270 | 30 |
+| Baixo 1 | 1 | 62 | 733 | 602 | 402 | 0 | 30 |
+| Baixo 2 | 2 | 708 | 733 | 602 | 402 | 0 | 30 |
 
 The black boxes have rounded corners of about 33 px (31 to 35 measured). The photos are clipped to a rounded rectangle of 30 px, just under the tightest corner, so no black of the artwork shows and the photo corner reaches past the black by at most about 2 px of white (DESIGN §6). The top strip ends at y = 576 and the bottom one starts at 733: the working cut line y = 620 falls in that gap, so no seed slot crosses it. A computer that already saved a 2-strip layout keeps it; `Restaurar padrão` brings this seed.
 
@@ -255,7 +255,7 @@ After a print, the folder contains only `HH-mm-ss.jpg` files produced by the app
 
 ### RF03 — Editor for both layouts
 
-Given the 2-strip seed, the five slots have the values of that table, Cima 3 is at Angle 270, the visible rectangles land exactly on the client's photo boxes, and no two of them intersect.
+Given the 2-strip seed, the five slots have the values of that table, Cima 3 is at Angle 270, the visible rectangles land exactly on the client's photo boxes (with the 1 px side bleed), and no two of them intersect. Composed over the client artwork, no black and no gray edge of a box shows.
 
 Given the 1-strip seed, there are three slots, with photos 1, 2 and 3 and Angle 0, at the numbers of the table in section 6.2. They occupy the whole sheet, with the gaps of that table, and do not leave half blank. The numbers are pending validation.
 
@@ -455,10 +455,10 @@ The app proceeds with the current assumption until this data arrives. They do no
 
 ### Still open
 
-0. **PDF templates.** The client sends artwork as a Canva PDF. sharp's bundled libvips has no PDF loader, so importing PDF would need pdf.js in a hidden renderer window (a new dependency and a third renderer entry) and a check of Canva's soft masks and CMYK output intent. Until the owner asks for it, the operator exports a 1844×1240 PNG or JPG.
+1. **PDF templates.** The client sends artwork as a Canva PDF. sharp's bundled libvips has no PDF loader, so importing PDF would need pdf.js in a hidden renderer window (a new dependency and a third renderer entry) and a check of Canva's soft masks and CMYK output intent. Until the owner asks for it, the operator exports a 1844×1240 PNG or JPG.
 
-1. **Ribbon and paper.** Only the statuses the spooler or the driver expose are included. A missing status becomes "the driver did not report", not a guess.
-2. **Portrait orientation.** The current dialog marks Portrait for a 1844×1240 bitmap, which is wider than tall. The app does the same and does not rotate the bitmap again. A test sheet confirms that the strip comes out upright.
-3. **File time.** It is the Windows local time, not a fixed time zone.
-4. **Logo.** The transparent PNG was obtained by removing the 242 background from the raster. It is not a vector. A client SVG replaces `logo.png` and `mark.png`.
+2. **Ribbon and paper.** Only the statuses the spooler or the driver expose are included. A missing status becomes "the driver did not report", not a guess.
+3. **Portrait orientation.** The current dialog marks Portrait for a 1844×1240 bitmap, which is wider than tall. The app does the same and does not rotate the bitmap again. A test sheet confirms that the strip comes out upright.
+4. **File time.** It is the Windows local time, not a fixed time zone.
+5. **Logo.** The transparent PNG was obtained by removing the 242 background from the raster. It is not a vector. A client SVG replaces `logo.png` and `mark.png`.
 5. **Camera when there are several.** Prefers the device whose name contains `MX Brio`. Without it, uses the first and, if there is more than one, shows the choice in create-event.

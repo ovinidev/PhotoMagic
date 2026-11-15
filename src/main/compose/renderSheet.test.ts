@@ -153,6 +153,8 @@ describe('renderSheet (RF08, RF12)', () => {
 describe('renderSheet over the client 2 tiras artwork', () => {
   const CLIENT = resolve(import.meta.dirname, '../../../e2e/fixtures/client-2tiras-1844x1240.png')
   const dark = ([r, g, b]: Rgb) => r < 60 && g < 60 && b < 60
+  /** The artwork's black, or its anti-aliased gray edge: a neutral pixel that is not paper white. */
+  const ink = ([r, g, b]: Rgb) => Math.abs(r - g) < 14 && Math.abs(g - b) < 14 && r < 225
 
   it('fills every black photo box: no black corner or edge shows, the art around stays', async () => {
     const jpeg = await renderSheet({ template: await readFile(CLIENT), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
@@ -166,6 +168,21 @@ describe('renderSheet over the client 2 tiras artwork', () => {
       let black = 0
       for (let y = box.top; y < box.top + box.height; y++) for (let x = box.left; x < box.left + box.width; x++) if (dark(at(x, y))) black++
       expect(black, `black pixels in the box at ${box.left},${box.top}`).toBe(0)
+      // No gray hairline on any straight edge: the columns and rows just inside and outside each edge.
+      const midX = box.left + Math.floor(box.width / 2)
+      const midY = box.top + Math.floor(box.height / 2)
+      for (const [x, y] of [
+        [box.left - 1, midY],
+        [box.left, midY],
+        [box.left + box.width - 1, midY],
+        [box.left + box.width, midY],
+        [midX, box.top - 1],
+        [midX, box.top],
+        [midX, box.top + box.height - 1],
+        [midX, box.top + box.height],
+      ] as const) {
+        expect(ink(at(x, y)), `edge ${x},${y} = ${at(x, y).join(',')}`).toBe(false)
+      }
       // The photo is clipped to the rounded corner: the very corner pixel is the white paper, not photo.
       for (const [x, y] of [
         [box.left + 1, box.top + 1],
