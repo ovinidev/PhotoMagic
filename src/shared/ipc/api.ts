@@ -4,6 +4,7 @@ import type {
   DisplayState,
   EventStartInput,
   EventStartResult,
+  PrinterStatus,
   SessionPhoto,
   SessionPreview,
   SessionState,
@@ -72,5 +73,11 @@ export type FotomagicaApi = {
     onShutter: (listener: () => void) => Unsubscribe
     /** TV only: delivers photo `index`, already rotated and mirrored. Main ignores other windows. */
     sendPhoto: (photo: SessionPhoto) => void
+  }
+  printer: {
+    /** The DS-RX1 as the spooler reports it now (DESIGN §10). */
+    getStatus: () => Promise<PrinterStatus>
+    /** Pushed to both windows whenever the reported state changes. */
+    onStatus: (listener: (status: PrinterStatus) => void) => Unsubscribe
   }
 }

@@ -8,6 +8,7 @@ import {
   eventStartInputSchema,
   eventStartResultSchema,
   noInputSchema,
+  printerStatusSchema,
   sessionPhotoSchema,
   sessionPreviewSchema,
   sessionStateSchema,
@@ -40,6 +41,7 @@ export const INVOKE_CONTRACT = {
   [IPC_CHANNELS.sessionPrint]: { input: noInputSchema, output: sessionStateSchema },
   [IPC_CHANNELS.sessionReprint]: { input: noInputSchema, output: sessionStateSchema },
   [IPC_CHANNELS.sessionNewRound]: { input: noInputSchema, output: sessionStateSchema },
+  [IPC_CHANNELS.printerStatus]: { input: noInputSchema, output: printerStatusSchema },
 } as const satisfies Record<string, { input: z.ZodType; output: z.ZodType }>
 
 /** Renderer → main, fire and forget. The preload validates before sending, main again on arrival. */
@@ -56,6 +58,7 @@ export const EVENT_CONTRACT = {
   [IPC_CHANNELS.cameraStatus]: cameraStatusSchema,
   [IPC_CHANNELS.sessionState]: sessionStateSchema,
   [IPC_CHANNELS.sessionShutter]: shutterSchema,
+  [IPC_CHANNELS.printerStatusChanged]: printerStatusSchema,
 } as const satisfies Record<string, z.ZodType>
 
 export type InvokeChannel = keyof typeof INVOKE_CONTRACT
