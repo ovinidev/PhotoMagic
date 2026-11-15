@@ -62,3 +62,12 @@ export async function simulatedTickets(userData: string): Promise<Array<{ jpegPa
   const names = (await readdir(folder).catch(() => [] as string[])).filter((name) => name.endsWith('.json')).sort()
   return Promise.all(names.map(async (name) => JSON.parse(await readFile(join(folder, name), 'utf8'))))
 }
+
+/** Changes what the simulated printer reports, at runtime (test hook installed by main under E2E). */
+export function setSimulatedPrinter(app: ElectronApplication, next: { status?: 'ready' | 'offline' | 'no-paper' | 'no-ribbon'; cut?: 'supported' | 'unsupported' }): Promise<void> {
+  return app.evaluate((_electron, flags) => {
+    const hook = (globalThis as { __fotomagicaE2E?: { setPrinter: (flags: unknown) => void } }).__fotomagicaE2E
+    if (!hook) throw new Error('E2E hook missing: is FOTOMAGICA_E2E=1 set?')
+    hook.setPrinter(flags)
+  }, next)
+}

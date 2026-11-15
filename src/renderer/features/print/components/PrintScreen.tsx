@@ -6,6 +6,7 @@ import { useMontagePreview } from '@renderer/shared/hooks/useMontagePreview'
 import { cn } from '@renderer/shared/utils/cn'
 import { GLASS } from '@renderer/shared/utils/glass'
 import { PRINT_COPY, copiesLabel } from '../copy'
+import { usePrinterStatus } from '../hooks/usePrinterStatus'
 
 function TvAction({ label, icon, onClick, disabled, primary }: { label: string; icon: ReactNode; onClick: () => void; disabled?: boolean; primary?: boolean }) {
   return (
@@ -27,10 +28,12 @@ function TvAction({ label, icon, onClick, disabled, primary }: { label: string; 
  * The TV print screen (PRD §6.5, DESIGN §14, figure 9): over the darkened camera, `Imprimir` and
  * `Cancelar` on one side, `Mais` and `Menos` on the other, the copies in the middle and the sheet
  * preview below. After a print, `Imprimir novamente` and `Nova rodada`; a failure keeps the round
- * and offers to try again. Every action is an invoke; main owns the round.
+ * and offers to try again. A printer that is not ready shows its state before anyone taps
+ * `Imprimir`. Every action is an invoke; main owns the round.
  */
 export function PrintScreen({ session }: { session: EventSession }) {
   const preview = useMontagePreview(session.previewRevision)
+  const printer = usePrinterStatus()
   const { phase, copies } = session
   const run = (action: () => Promise<SessionState>) => void action().catch(() => {})
   const api = window.fotomagica.session
@@ -71,6 +74,11 @@ export function PrintScreen({ session }: { session: EventSession }) {
       </div>
 
       <div role="status" aria-live="polite" className="min-h-24 text-center text-white">
+        {printer && printer.kind !== 'ready' && (phase.kind === 'review' || phase.kind === 'printed') ? (
+          <p data-testid="tv-printer-status" className="text-3xl font-semibold text-white/90">
+            {PRINT_COPY.status[printer.kind]}
+          </p>
+        ) : null}
         {phase.kind === 'printing' ? <p className="text-4xl font-semibold">{PRINT_COPY.printing}</p> : null}
         {phase.kind === 'printed' ? <p className="text-4xl font-semibold">{PRINT_COPY.printed}</p> : null}
         {phase.kind === 'print-failed' ? (

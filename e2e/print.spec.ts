@@ -2,7 +2,7 @@ import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import sharp from 'sharp'
 import { expect, test } from './fixtures'
-import { simulatedTickets, startEvent, takePhotos } from './event'
+import { setSimulatedPrinter, simulatedTickets, startEvent, takePhotos } from './event'
 
 const MONTAGE = /^\d{2}-\d{2}-\d{2}(-\d+)?\.jpg$/
 
@@ -99,6 +99,50 @@ test.describe('print', () => {
     })
   })
 
+  test.describe('when the driver refuses the cut, then accepts it', () => {
+    test.use({ appEnv: { FOTOMAGICA_PRINTER_CUT: 'unsupported' } })
+
+    test('RF11 Tentar novamente resends the saved JPG with the cut on', async ({ app, operatorWindow, dirs }) => {
+      const tv = await startEvent(app, operatorWindow, { name: 'Festa', mode: 'two-strips' })
+      await takePhotos(tv, 3)
+      await tv.getByRole('button', { name: 'Imprimir' }).click()
+      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed')
+      await expect(operatorWindow.getByTestId('round-status-detail')).toContainText('Detalhe técnico:')
+      const files = readdirSync(join(dirs.desktop, 'Festa'))
+      await setSimulatedPrinter(app, { cut: 'supported' })
+      await tv.getByRole('button', { name: 'Tentar novamente' }).click()
+      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed')
+      expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(dirs.desktop, 'Festa', files[0]!), copies: 1, mode: 'two-strips', cut: true }])
+      expect(readdirSync(join(dirs.desktop, 'Festa'))).toEqual(files)
+    })
+  })
+
+  test.describe('with the printer out of paper, then refilled', () => {
+    test.use({ appEnv: { FOTOMAGICA_PRINTER_STATUS: 'no-paper' } })
+
+    test('RNF10 laptop and TV show the state; RF13 Tentar novamente prints the same JPG once the paper is back', async ({ app, operatorWindow, dirs }) => {
+      const tv = await startEvent(app, operatorWindow, { name: 'Festa', mode: 'one-strip' })
+      await expect(operatorWindow.getByTestId('printer-status')).toHaveAttribute('data-kind', 'no-paper')
+      await expect(operatorWindow.getByTestId('printer-status')).toContainText('Impressora sem papel')
+      await takePhotos(tv, 3)
+      // The TV warns before anyone taps Imprimir.
+      await expect(tv.getByTestId('tv-printer-status')).toHaveText('Impressora sem papel')
+      await tv.getByRole('button', { name: 'Imprimir' }).click()
+      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed')
+      await expect(operatorWindow.getByTestId('round-status')).toHaveText('Impressora sem papel')
+      const files = readdirSync(join(dirs.desktop, 'Festa'))
+      expect(files).toHaveLength(1)
+
+      await setSimulatedPrinter(app, { status: 'ready' })
+      await expect(operatorWindow.getByTestId('printer-status')).toHaveAttribute('data-kind', 'ready')
+      await tv.getByRole('button', { name: 'Tentar novamente' }).click()
+      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed')
+      await expect(operatorWindow.getByTestId('round-status')).toHaveText(`Impresso: ${files[0]}`)
+      expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(dirs.desktop, 'Festa', files[0]!), copies: 1, mode: 'one-strip', cut: false }])
+      expect(readdirSync(join(dirs.desktop, 'Festa'))).toEqual(files)
+    })
+  })
+
   test.describe('with the printer out of paper', () => {
     test.use({ appEnv: { FOTOMAGICA_PRINTER_STATUS: 'no-paper' } })
 
@@ -106,12 +150,15 @@ test.describe('print', () => {
       const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
       await takePhotos(tv, 3)
       await tv.getByRole('button', { name: 'Imprimir' }).click()
+      // The TV already warns before Imprimir, so wait for the failure itself, not only the words.
+      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed')
       await expect(tv.getByText('Impressora sem papel')).toBeVisible()
       // The JPG is written before sending and stays; trying again resends that same file.
       const files = readdirSync(join(dirs.desktop, 'Festa'))
       expect(files).toHaveLength(1)
       await expect(tv.getByText(`A montagem ${files[0]} ficou salva na pasta do evento.`)).toBeVisible()
       await tv.getByRole('button', { name: 'Tentar novamente' }).click()
+      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed')
       await expect(tv.getByText('Impressora sem papel')).toBeVisible()
       expect(readdirSync(join(dirs.desktop, 'Festa'))).toEqual(files)
     })

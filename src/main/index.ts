@@ -1,10 +1,10 @@
 import { app, BrowserWindow, type WebContents } from 'electron'
-import type { DisplayFixture } from '@shared/runtime'
+import type { DisplayFixture, SimulatedPrinterFlags } from '@shared/runtime'
 import { readRuntimeFlags } from '@shared/runtime'
 import { renderSheet } from './compose/renderSheet'
-import { broadcastSession, registerIpcHandlers } from './ipc'
+import { broadcastPrinterStatus, broadcastSession, registerIpcHandlers } from './ipc'
 import { applyCameraFixture, restrictPermissions } from './media'
-import { createPrinter } from './print'
+import { createPrinter, createPrinterMonitor, type Printer } from './print'
 import { createSession, saveMontage } from './session'
 import { scheduleUpdateCheck } from './updater'
 import {
@@ -18,9 +18,14 @@ import {
 
 const flags = readRuntimeFlags(process.env)
 
-/** Test hook, only under E2E: Playwright plugs, unplugs or rotates the fixture TV through `app.evaluate`. */
+/**
+ * Test hook, only under E2E, through `app.evaluate`: Playwright plugs, unplugs or rotates the
+ * fixture TV, and changes what the simulated printer reports (paper back in before a retry).
+ */
 declare global {
-  var __fotomagicaE2E: { setDisplays: (fixture: DisplayFixture) => void } | undefined
+  var __fotomagicaE2E:
+    | { setDisplays: (fixture: DisplayFixture) => void; setPrinter: (next: Partial<SimulatedPrinterFlags>) => void }
+    | undefined
 }
 
 // Chromium switches and the userData path must be set before `ready`.
@@ -49,10 +54,33 @@ if (!app.requestSingleInstanceLock()) {
   void app.whenReady().then(() => {
     app.setAppUserModelId('com.fotomagica.desktop')
 
+    const userData = app.getPath('userData')
+    const printerHandle = createPrinter(flags, userData)
+    const printerMonitor = createPrinterMonitor({ printer: printerHandle.printer, intervalMs: printerHandle.pollMs, onChange: broadcastPrinterStatus })
+    // After every send the line on both screens shows what the spooler says now, not 5 s later.
+    const printer: Printer = {
+      status: printerMonitor.refresh,
+      print: async (ticket) => {
+        const result = await printerHandle.printer.print(ticket)
+        void printerMonitor.refresh()
+        return result
+      },
+    }
+    app.on('will-quit', () => {
+      printerMonitor.stop()
+      printerHandle.dispose()
+    })
+
     let displays: DisplaySource
     if (flags.e2e) {
       const fixture = createFixtureDisplaySource(flags.fixtures.displays)
-      globalThis.__fotomagicaE2E = { setDisplays: fixture.set }
+      globalThis.__fotomagicaE2E = {
+        setDisplays: fixture.set,
+        setPrinter: (next) => {
+          printerHandle.setSimulated?.(next)
+          void printerMonitor.refresh()
+        },
+      }
       displays = fixture
     } else {
       displays = createScreenDisplaySource()
@@ -67,12 +95,11 @@ if (!app.requestSingleInstanceLock()) {
       },
     })
 
-    const userData = app.getPath('userData')
     const desktop = (flags.e2e && flags.fixtures.paths.desktop) || app.getPath('desktop')
     const session = createSession({
       render: renderSheet,
       saveMontage: (folder, jpeg) => saveMontage(folder, jpeg),
-      printer: createPrinter(flags, userData),
+      printer,
       onChange: broadcastSession,
       onError: (error) => console.error('[session] preview failed', error),
     })
@@ -82,6 +109,7 @@ if (!app.requestSingleInstanceLock()) {
       flags,
       tv,
       session,
+      printerMonitor,
       userData,
       desktop,
       isGuestWindow,

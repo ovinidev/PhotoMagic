@@ -1,13 +1,14 @@
 import type { EventSession } from '@shared/ipc'
 import { CameraStatusLine, TvStatus, useDisplayState } from '@renderer/features/camera'
+import { PrinterStatusLine } from '@renderer/features/print'
 import { LivePreview } from './LivePreview'
 import { MontagePreview } from './MontagePreview'
 import { RoundControls } from './RoundControls'
 
 /**
  * The laptop during the party (PRD §6.3): the live camera with the crop guide, the round's montage
- * and its controls, and the TV and camera state. Framing, gallery and printer status land with
- * their milestones.
+ * and its controls, and the TV, camera and printer state. Framing and the gallery land with their
+ * milestones.
  */
 export function RoundScreen({ session }: { session: EventSession }) {
   const [display] = useDisplayState()
@@ -22,6 +23,7 @@ export function RoundScreen({ session }: { session: EventSession }) {
         <section className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-line bg-bg-raised p-6">
           <TvStatus view={display} />
           <CameraStatusLine />
+          <PrinterStatusLine />
         </section>
       </div>
     </div>

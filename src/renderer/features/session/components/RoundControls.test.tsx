@@ -30,4 +30,11 @@ describe('RoundControls', () => {
     render(<RoundControls session={eventState({ taken: 3, phase: { kind: 'print-failed', reason: 'cut-unavailable', detail: '', fileName: null } })} />)
     expect(screen.getByTestId('round-status')).toHaveTextContent('Não foi possível ajustar o corte da impressora')
   })
+
+  it('shows the driver detail under a failure, on the laptop only', () => {
+    stubBridge()
+    render(<RoundControls session={eventState({ taken: 3, phase: { kind: 'print-failed', reason: 'unreported', detail: 'Win32Exception 0x6BA', fileName: '21-45-08.jpg' } })} />)
+    expect(screen.getByTestId('round-status')).toHaveTextContent('Não foi possível imprimir. O driver não informou papel nem ribbon')
+    expect(screen.getByTestId('round-status-detail')).toHaveTextContent('Detalhe técnico: Win32Exception 0x6BA')
+  })
 })

@@ -1,5 +1,5 @@
 import { vi, type Mock } from 'vitest'
-import type { CameraStatus, DisplayState, FotomagicaApi, SessionState, Templates } from '@shared/ipc'
+import type { CameraStatus, DisplayState, FotomagicaApi, PrinterStatus, SessionState, Templates } from '@shared/ipc'
 
 type Listener<T> = (value: T) => void
 
@@ -20,6 +20,7 @@ export type BridgeStub = {
   pushCamera: (status: CameraStatus) => void
   pushSession: (state: SessionState) => void
   pushShutter: () => void
+  pushPrinter: (status: PrinterStatus) => void
 }
 
 const CLOSED: DisplayState = { guest: { kind: 'missing' }, tv: { kind: 'closed' } }
@@ -39,13 +40,14 @@ function listeners<T>() {
 
 /**
  * Installs a `window.fotomagica` stand-in for renderer tests. Defaults: version 0.1.0, no TV, camera
- * idle, no templates, no event. `push…` emit the main → renderer events.
+ * idle, no templates, no event, printer ready. `push…` emit the main → renderer events.
  */
 export function stubBridge(overrides: Overrides = {}): BridgeStub {
   const display = listeners<DisplayState>()
   const camera = listeners<CameraStatus>()
   const session = listeners<SessionState>()
   const shutter = listeners<void>()
+  const printer = listeners<PrinterStatus>()
   const o = overrides
 
   const api: MockedBridge = {
@@ -84,10 +86,14 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
       onShutter: vi.fn(o.session?.onShutter ?? ((listener: () => void) => shutter.add(listener))),
       sendPhoto: vi.fn(o.session?.sendPhoto ?? (() => {})),
     },
+    printer: {
+      getStatus: vi.fn(o.printer?.getStatus ?? (() => Promise.resolve<PrinterStatus>({ kind: 'ready' }))),
+      onStatus: vi.fn(o.printer?.onStatus ?? printer.add),
+    },
   }
 
   window.fotomagica = api
-  return { api, pushDisplay: display.push, pushCamera: camera.push, pushSession: session.push, pushShutter: () => shutter.push() }
+  return { api, pushDisplay: display.push, pushCamera: camera.push, pushSession: session.push, pushShutter: () => shutter.push(), pushPrinter: printer.push }
 }
 
 /** An open event in 2 tiras, capturing, for renderer tests. */

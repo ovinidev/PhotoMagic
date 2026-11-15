@@ -8,6 +8,8 @@ import {
   appVersionSchema,
   cameraStatusSchema,
   displayStateSchema,
+  printerStatusSchema,
+  roundPhaseSchema,
   tvOpenInputSchema,
   tvOpenResultSchema,
   sessionPhotoSchema,
@@ -105,5 +107,22 @@ describe('event and round payloads', () => {
 
   it('rejects a slot smaller than 40×40', () => {
     expect(slotSchema.safeParse({ ...session.slots[0], width: 39 }).success).toBe(false)
+  })
+
+  it('printer status carries a detail only where the UI needs one', () => {
+    expect(printerStatusSchema.safeParse({ kind: 'no-ribbon' }).success).toBe(true)
+    expect(printerStatusSchema.safeParse({ kind: 'unknown', detail: 'helper did not answer' }).success).toBe(true)
+    expect(printerStatusSchema.safeParse({ kind: 'unknown' }).success).toBe(false)
+    expect(printerStatusSchema.safeParse({ kind: 'jammed' }).success).toBe(false)
+  })
+
+  it('a failed print keeps the saved file name and says why', () => {
+    expect(roundPhaseSchema.safeParse({ kind: 'print-failed', reason: 'unreported', detail: 'x', fileName: '21-45-08.jpg' }).success).toBe(true)
+    expect(roundPhaseSchema.safeParse({ kind: 'print-failed', reason: 'jam', detail: 'x', fileName: null }).success).toBe(false)
+  })
+
+  it('has printer:status and printer:status-changed in the contract', () => {
+    expect(INVOKE_CONTRACT[IPC_CHANNELS.printerStatus].output).toBe(printerStatusSchema)
+    expect(EVENT_CONTRACT[IPC_CHANNELS.printerStatusChanged]).toBe(printerStatusSchema)
   })
 })

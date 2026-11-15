@@ -57,4 +57,17 @@ describe('PrintScreen (RF10, RF13)', () => {
     expect(screen.getByText('Imprimindo…')).toBeInTheDocument()
     for (const name of ['Imprimir', 'Cancelar', 'Mais', 'Menos']) expect(screen.getByRole('button', { name })).toBeDisabled()
   })
+
+  it('warns on the TV when the printer is not ready, before Imprimir', async () => {
+    stubBridge({ printer: { getStatus: () => Promise.resolve({ kind: 'no-paper' as const }) } })
+    render(<PrintScreen session={review()} />)
+    expect(await screen.findByTestId('tv-printer-status')).toHaveTextContent('Impressora sem papel')
+  })
+
+  it('shows no printer warning when it is ready', async () => {
+    const { api } = stubBridge()
+    render(<PrintScreen session={review()} />)
+    await vi.waitFor(() => expect(api.printer.getStatus).toHaveBeenCalled())
+    expect(screen.queryByTestId('tv-printer-status')).toBeNull()
+  })
 })

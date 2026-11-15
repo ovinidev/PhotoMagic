@@ -1,13 +1,9 @@
+import type { PrintFailureReason, PrinterStatus } from '@shared/ipc'
 import { cutFor, type PrintMode } from '@shared/layout'
 
 /** Printer interface (DESIGN §10). Only `src/main/print/` knows the driver, the spooler or the simulation. */
 
-export type PrinterStatus =
-  | { kind: 'ready' }
-  | { kind: 'offline' }
-  | { kind: 'no-paper' }
-  | { kind: 'no-ribbon' }
-  | { kind: 'unknown'; detail: string }
+export type { PrinterStatus }
 
 export type PrintTicket = {
   jpegPath: string
@@ -18,7 +14,10 @@ export type PrintTicket = {
 
 export type PrintResult =
   | { ok: true }
-  | { ok: false; reason: 'offline' | 'no-paper' | 'no-ribbon' | 'cut-unavailable' | 'failed'; detail: string }
+  | { ok: false; reason: PrintFailure; detail: string }
+
+/** Every failure reason except `save-failed`, which belongs to the session (the JPG was not written). */
+export type PrintFailure = Exclude<PrintFailureReason, 'save-failed'>
 
 export type Printer = {
   status: () => Promise<PrinterStatus>
