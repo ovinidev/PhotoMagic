@@ -71,7 +71,17 @@ export async function renderSheet(input: SheetInput, output: SheetOutput): Promi
 async function renderSlot(photo: Uint8Array, plan: ReturnType<typeof planSlot>): Promise<OverlayOptions | null> {
   const turned = plan.preRotate === 0 ? photo : await sharp(photo).rotate(plan.preRotate).toBuffer()
   const resized = await sharp(turned).resize(plan.resize.width, plan.resize.height, { fit: 'fill' }).toBuffer()
-  const tile = sharp(resized).extract(plan.extract).ensureAlpha()
+  let tile = sharp(resized).extract(plan.extract).ensureAlpha()
+  if (plan.rotate !== 0) {
+    // The framing rotation (RF09): turn the oversized tile, then keep the slot box from its center.
+    const turned = await sharp(await tile.png().toBuffer())
+      .rotate(plan.rotate, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer({ resolveWithObject: true })
+    const left = Math.max(0, Math.floor((turned.info.width - plan.box.width) / 2))
+    const top = Math.max(0, Math.floor((turned.info.height - plan.box.height) / 2))
+    tile = sharp(await sharp(turned.data).extract({ left, top, width: plan.box.width, height: plan.box.height }).png().toBuffer()).ensureAlpha()
+  }
   const rotated: Raw =
     plan.angle === 0
       ? await tile.raw().toBuffer({ resolveWithObject: true })

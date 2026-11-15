@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { Slot } from './types'
 import {
+  DEFAULT_FRAMING,
   clampFraming,
+  isDefaultFraming,
   clipToSheet,
   guideCrop,
   nearestQuarterTurn,
@@ -77,14 +79,29 @@ describe('planSlot', () => {
   })
 
   it('zooms and pans without uncovering the slot (RF09)', () => {
-    const zoomed = planSlot(slot({}), PORTRAIT, { zoom: 2, panX: -1, panY: 1 })
+    const zoomed = planSlot(slot({}), PORTRAIT, { zoom: 2, panX: -1, panY: 1, rotation: 0 })
     expect(zoomed.resize).toEqual({ width: 1000, height: 1778 })
     expect(zoomed.extract).toEqual({ left: 0, top: 1778 - 281, width: 500, height: 281 })
 
-    const past = planSlot(slot({}), PORTRAIT, { zoom: 9, panX: 5, panY: -5 })
+    const past = planSlot(slot({}), PORTRAIT, { zoom: 9, panX: 5, panY: -5, rotation: 0 })
     expect(past.resize.width).toBe(1500)
     expect(past.extract.left + past.extract.width).toBe(past.resize.width)
     expect(past.extract.top).toBe(0)
+  })
+
+  it('rotates the photo inside the still slot and still covers it (RF09)', () => {
+    const plan = planSlot(slot({}), PORTRAIT, { zoom: 1, panX: 0, panY: 0, rotation: 10 })
+    expect(plan.rotate).toBe(10)
+    expect(plan.box).toEqual({ width: 500, height: 281 })
+    // The tile turned by 10° covers the 500×281 box: it is at least the box's turned bounds.
+    const rad = (10 * Math.PI) / 180
+    expect(plan.extract.width).toBeGreaterThanOrEqual(500 * Math.cos(rad) + 281 * Math.sin(rad))
+    expect(plan.extract.height).toBeGreaterThanOrEqual(500 * Math.sin(rad) + 281 * Math.cos(rad))
+    expect(plan.extract.left + plan.extract.width).toBeLessThanOrEqual(plan.resize.width)
+    expect(plan.extract.top + plan.extract.height).toBeLessThanOrEqual(plan.resize.height)
+    // The slot itself does not move.
+    expect(plan.center).toEqual({ x: 350, y: 240.5 })
+    expect(plan.angle).toBe(0)
   })
 
   it('never resizes below the slot box', () => {
@@ -96,8 +113,15 @@ describe('planSlot', () => {
 
 describe('clampFraming', () => {
   it('keeps zoom in 1..3 and pan in -1..1, and repairs non-numbers', () => {
-    expect(clampFraming({ zoom: 0.5, panX: -2, panY: 2 })).toEqual({ zoom: 1, panX: -1, panY: 1 })
-    expect(clampFraming({ zoom: 4, panX: 0.25, panY: Number.NaN })).toEqual({ zoom: 3, panX: 0.25, panY: 0 })
+    expect(clampFraming({ zoom: 0.5, panX: -2, panY: 2, rotation: 0 })).toEqual({ zoom: 1, panX: -1, panY: 1, rotation: 0 })
+    expect(clampFraming({ zoom: 4, panX: 0.25, panY: Number.NaN, rotation: Number.NaN })).toEqual({ zoom: 3, panX: 0.25, panY: 0, rotation: 0 })
+  })
+
+  it('folds the rotation into -180..180', () => {
+    expect(clampFraming({ ...DEFAULT_FRAMING, rotation: 190 }).rotation).toBe(-170)
+    expect(clampFraming({ ...DEFAULT_FRAMING, rotation: -30 }).rotation).toBe(-30)
+    expect(isDefaultFraming(DEFAULT_FRAMING)).toBe(true)
+    expect(isDefaultFraming({ ...DEFAULT_FRAMING, zoom: 1.5 })).toBe(false)
   })
 })
 

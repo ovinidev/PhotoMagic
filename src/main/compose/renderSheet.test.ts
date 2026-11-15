@@ -108,6 +108,34 @@ describe('renderSheet (RF08, RF12)', () => {
     for (const x of [322, 922, 1522]) expect(near(at(x, 1000), [255, 255, 255])).toBe(false)
   })
 
+  it('frames one slot without moving it or the other slot of the same capture (RF09)', async () => {
+    const photos = await allPhotos()
+    const bottom1 = TWO_STRIPS_SEED[3]!
+    // Pan to the top of the portrait: the bar now fills Baixo 1 down to its middle.
+    const framings = { 'bottom-1': { zoom: 1, panX: 0, panY: -1, rotation: 0 } }
+    const at = await pixels(await renderSheet({ template: await template(), slots: TWO_STRIPS_SEED, photos, framings }, { kind: 'montage' }))
+    expect(near(at(bottom1.left + 250, bottom1.top + 140), BAR)).toBe(true)
+    // Cima 1 uses the same capture and keeps its default framing: bar on top, body below.
+    const top1 = visible(TWO_STRIPS_SEED[0]!)
+    expect(near(at(top1.left + top1.width / 2, top1.top - top1.hiddenTop + top1.fullHeight * 0.8), BODY[1])).toBe(true)
+  })
+
+  it('rotates the photo inside the slot and leaves no template corner showing (RF09)', async () => {
+    const bottom1 = TWO_STRIPS_SEED[3]!
+    const framings = { 'bottom-1': { zoom: 1, panX: 0, panY: 0, rotation: 15 } }
+    const at = await pixels(await renderSheet({ template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos(), framings }, { kind: 'montage' }))
+    for (const [x, y] of [
+      [bottom1.left + 3, bottom1.top + 3],
+      [bottom1.left + bottom1.width - 4, bottom1.top + 3],
+      [bottom1.left + 3, bottom1.top + bottom1.height - 4],
+      [bottom1.left + bottom1.width - 4, bottom1.top + bottom1.height - 4],
+    ] as const) {
+      expect(near(at(x, y), GRAY), `corner ${x},${y}`).toBe(false)
+    }
+    // Outside the slot the template is untouched.
+    expect(near(at(bottom1.left + bottom1.width + 20, bottom1.top + 140), GRAY)).toBe(true)
+  })
+
   it('renders the preview from the same composition, scaled down', async () => {
     const preview = await renderSheet({ template: null, slots: ONE_STRIP_SEED, photos: await allPhotos() }, { kind: 'preview' })
     const meta = await sharp(preview).metadata()

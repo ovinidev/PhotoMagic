@@ -13,8 +13,10 @@ export {
 export { ONE_STRIP_SEED, SEED_LAYOUTS, TWO_STRIPS_SEED } from './seed'
 export {
   DEFAULT_FRAMING,
+  FRAMING_ROTATION_RANGE,
   ZOOM_RANGE,
   clampFraming,
+  isDefaultFraming,
   clipToSheet,
   guideCrop,
   nearestQuarterTurn,
