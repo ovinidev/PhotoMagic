@@ -41,7 +41,10 @@ test.describe('capture round', () => {
     expect(after.slots).toEqual(before.slots)
     // The TV print screen shows the recomposed preview.
     await expect.poll(() => tvPreview.getAttribute('src')).not.toBe(tvSrc)
-    expect(after.previewRevision).toBeGreaterThan(before.previewRevision)
+    await expect.poll(async () => {
+      const latest = await state()
+      return latest.kind === 'event' ? latest.previewRevision : 0
+    }).toBeGreaterThan(before.previewRevision)
   })
 
   test('RF06 advances the counter 1/3, 2/3, 3/3 and moves to printing', async ({ app, operatorWindow }) => {
