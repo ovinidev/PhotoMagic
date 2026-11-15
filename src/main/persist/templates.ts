@@ -4,7 +4,7 @@ import sharp, { type Metadata } from 'sharp'
 import type { TemplateImportResult, TemplateInfo, Templates } from '@shared/ipc'
 import { PRINT_MODES, type PrintMode } from '@shared/layout'
 import { checkTemplate } from '@shared/template'
-import { TEMPLATES_DIR, readConfig, writeConfig } from './config'
+import { TEMPLATES_DIR, readConfig, updateConfig } from './config'
 
 /**
  * Each mode's background (PRD §6.1): a 1844×1240 PNG or JPEG copied into `userData/templates/`, never
@@ -35,8 +35,7 @@ export async function importTemplate(userData: string, mode: PrintMode, fileName
   const file = `${mode}.${meta.format === 'png' ? 'png' : 'jpg'}`
   await mkdir(join(userData, TEMPLATES_DIR), { recursive: true })
   await writeFile(join(userData, TEMPLATES_DIR, file), bytes)
-  const config = await readConfig(userData)
-  await writeConfig(userData, { ...config, templates: { ...config.templates, [mode]: { file, fileName } } })
+  await updateConfig(userData, (config) => ({ ...config, templates: { ...config.templates, [mode]: { file, fileName } } }))
   return { ok: true, template: await info(mode, fileName, bytes) }
 }
 

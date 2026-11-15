@@ -32,6 +32,7 @@ export async function renderSheet(input: SheetInput, output: SheetOutput): Promi
   const sizes = new Map<PhotoIndex, { width: number; height: number }>()
 
   for (const slot of input.slots) {
+    if (slot.photo === null) continue
     const photo = input.photos[slot.photo]
     if (!photo) continue
     let size = sizes.get(slot.photo)

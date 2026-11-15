@@ -34,6 +34,7 @@ export const EVENTS_COPY = {
     format: 'Use um arquivo PNG ou JPG.',
     unreadable: 'Não foi possível ler o arquivo.',
   },
+  editLayout: (mode: string) => `Editar posições das fotos (${mode})`,
   tv: 'Tela da TV',
   landscapeConfirm: 'Abrir a câmera na TV mesmo na horizontal',
   start: 'Iniciar evento',

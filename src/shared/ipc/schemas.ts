@@ -117,7 +117,7 @@ export const photoIndexSchema = z.union([z.literal(1), z.literal(2), z.literal(3
 /** One slot of a layout. Minimum size 40×40 (DESIGN §7). */
 export const slotSchema = z.strictObject({
   id: z.string().min(1).max(32),
-  photo: photoIndexSchema,
+  photo: photoIndexSchema.nullable(),
   left: z.number().finite(),
   top: z.number().finite(),
   width: z.number().finite().min(40),
@@ -126,6 +126,27 @@ export const slotSchema = z.strictObject({
 })
 
 export const slotListSchema = z.array(slotSchema).min(1).max(12)
+
+/** `layout:get` output: both layouts (RF03). */
+export const layoutsSchema = z.strictObject({
+  'two-strips': slotListSchema,
+  'one-strip': slotListSchema,
+})
+
+/** `layout:save` input: only the layout on screen; the other mode is not written (DESIGN §7). */
+export const layoutSaveInputSchema = z.strictObject({
+  mode: printModeSchema,
+  slots: slotListSchema,
+})
+
+/** `layout:save` output. `event-open`: the editor does not write while an event runs (PRD §6.3). */
+export const layoutSaveResultSchema = z.discriminatedUnion('ok', [
+  z.strictObject({ ok: z.literal(true), layouts: layoutsSchema }),
+  z.strictObject({ ok: z.literal(false), reason: z.enum(['event-open', 'failed']) }),
+])
+
+export type LayoutSaveInput = z.infer<typeof layoutSaveInputSchema>
+export type LayoutSaveResult = z.infer<typeof layoutSaveResultSchema>
 
 /** A template stored for one mode. `preview` is a small JPEG of it for the create-event screen. */
 export const templateInfoSchema = z.strictObject({

@@ -7,6 +7,9 @@ import {
   displayStateSchema,
   eventStartInputSchema,
   eventStartResultSchema,
+  layoutSaveInputSchema,
+  layoutSaveResultSchema,
+  layoutsSchema,
   noInputSchema,
   printerStatusSchema,
   sessionPhotoSchema,
@@ -41,6 +44,8 @@ export const INVOKE_CONTRACT = {
   [IPC_CHANNELS.sessionPrint]: { input: noInputSchema, output: sessionStateSchema },
   [IPC_CHANNELS.sessionReprint]: { input: noInputSchema, output: sessionStateSchema },
   [IPC_CHANNELS.sessionNewRound]: { input: noInputSchema, output: sessionStateSchema },
+  [IPC_CHANNELS.layoutGet]: { input: noInputSchema, output: layoutsSchema },
+  [IPC_CHANNELS.layoutSave]: { input: layoutSaveInputSchema, output: layoutSaveResultSchema },
   [IPC_CHANNELS.printerStatus]: { input: noInputSchema, output: printerStatusSchema },
 } as const satisfies Record<string, { input: z.ZodType; output: z.ZodType }>
 

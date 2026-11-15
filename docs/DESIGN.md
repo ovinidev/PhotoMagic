@@ -122,7 +122,7 @@ The preload exposes `window.fotomagica`. Each method validates input and output 
 | invoke | `session:get-preview` | The current montage preview JPEG and its revision |
 | invoke | `session:set-timer` / `session:set-copies` | Timer (0, 5, 10) and copies (1 to 10), shared by both windows |
 | invoke | `session:new-round` | `Nova rodada`, after a print |
-| invoke | `layout:get` / `layout:save` | Reads and writes both layouts: five slots in `two-strips`, three in `one-strip` |
+| invoke | `layout:get` / `layout:save` | Reads both layouts (five slots in `two-strips`, three in `one-strip`) and writes one mode's layout. `layout:save` returns both layouts, or `event-open` (refused while an event runs) or `failed` |
 | send | `session:request-shutter` | The laptop requests the capture. Main forwards it to the TV |
 | send | `session:photo` | The TV delivers the already rotated and mirrored JPEG |
 | invoke | `session:set-framing` | Pan, zoom and rotation of one slot of the round |
@@ -229,6 +229,8 @@ Left and Top are the top-left corner of the rectangle before rotation. Width and
 
 In the current app, Angle 270 with 500×281 draws a tall slot, and Angle 0 draws a lying-down slot. The new renderer reproduces this. The photo number is drawn in the slot's local space, so it rotates with it, as in the demonstration: vertically the "3" is sideways. This is the current app's behavior, and the editor keeps it.
 
+A slot's `photo` is 1, 2, 3 or `null` (`Nenhuma` in the panel). The montage skips a `null` slot, so the template shows there.
+
 ![Figure 4 — Selected slot with dashed red border](assets/briefing/image4.png)
 
 ## 7. Fluid editor and snap
@@ -236,13 +238,13 @@ In the current app, Angle 270 with 500×281 draws a tall slot, and Angle 0 draws
 The editor has a mode selector. `two-strips` shows the five slots and the cut line. `one-strip` shows the three. The gestures below apply to both. Webcam Photobooth's freezing comes from redoing the whole layout, or from talking to the process, on every mouse move. The new editor handles the gesture like this:
 
 - `pointerdown` on the slot or the handle stores the origin
-- `pointermove` updates a ref and writes directly to the DOM transform and to the `value` of the Left, Top, Angle, Width and Height fields, in the same frame
+- `pointermove` updates a ref and writes directly to the DOM transform and to the `value` of the Left, Top, Angle, Width and Height fields, in the same frame (`paintSlot` in `features/layout/utils/livePaint.ts`). Typing in a number field moves the card through the same path; Enter or blur commits
 - There is no `invoke` and no disk write while the button is held
 - `pointerup` commits the React state and calls `layout:save` once, writing only the layout that is on screen (`two-strips` or `one-strip`)
 
 Handles: northwest, north, northeast, east, southeast, south, southwest, west, at the corners and at the midpoints of the edges of the already rotated rectangle. The rotation handle sits outside the middle of the bottom edge, connected to the center by a dashed rod. In the current editor's video, with the slot upright, this rod points down and the number rotates with the slot.
 
-Snap is a pure function `snap(draft, others, modifiers) -> draft`:
+Snap is pure, in `src/shared/layout/snap.ts`: `snapMove(draft, others, { mode, alt })`, `snapResize(draft, handle, others, { mode, alt })` and `snapAngle(angle, { alt })`, each returning the draft to show. The gesture math (move, resize from a handle read in the slot's rotated axes with the opposite edge fixed, rotation from the handle) is in `gesture.ts`. Targets:
 
 | Target | Where |
 | --- | --- |
@@ -251,9 +253,15 @@ Snap is a pure function `snap(draft, others, modifiers) -> draft`:
 | Cut | y = 620, only in the 2-strip layout |
 | Other slots | edges and center of the already rotated rectangle |
 
+The slot's edges (of its rotated bounds) snap to edge targets: sheet edges, margins, the cut line and the other slots' edges. Its center snaps to center targets: the sheet center and the other slots' centers. That is why, in 1 tira, a slot edge at y = 620 does not snap (the cut line is not a target there) while a slot centered on the sheet still does. A resize snaps only the dragged edges, and only when the angle is a quarter turn; a tilted slot resizes freely.
+
 The tolerance is 8 px in sheet space, not screen pixels. Rotation also snaps to 0, 90, 180 and 270 within 4°. Alt held returns the draft unchanged. The unit test covers snapping, not snapping and Alt.
 
 Minimum slot size: 40×40 px, so the handle does not invert the rectangle.
+
+Every commit (a released gesture, a confirmed number, a photo choice, `Restaurar padrão`, Undo, Redo) is one history step of the layout on screen and one `layout:save`. The history lives in the editor only (up to 100 steps) and is not saved. The operator window has no menu (`removeMenu`): with Electron's default menu, releasing Alt would reveal the menu bar and shift the editor in the middle of a gesture.
+
+The editor is a full-window dialog over the home page (the form underneath keeps its state). It opens after a template is accepted and from `Editar posições das fotos`. With an event open the home page is not rendered, so the editor is unreachable; main also refuses `layout:save` while the session is open.
 
 ## 8. Round framing
 
@@ -426,7 +434,7 @@ E2E, in `e2e/`, one spec per flow, on real Electron:
 | Spec | Flow |
 | --- | --- |
 | `create-event.spec.ts` | Name, correct and wrong template, folder |
-| `layout-editor.spec.ts` | Drag with live panel, snap, one write on release, the two independent layouts |
+| `layout-editor.spec.ts` | Editor after import with the five cards, drag with live panel and one write on release, snap and Alt, rotation and resize, numeric edit, the two independent layouts across a relaunch, and the event using its layout |
 | `capture-round.spec.ts` | Three photos, counter, timer, cancel |
 | `print.spec.ts` | Simulated ticket, copies, status failure, printer line and TV warning, `Tentar novamente` after the paper or the cut is fixed, single file |
 | `gallery.spec.ts` | List, fullscreen, reprint |
@@ -444,7 +452,7 @@ oxlint, minimal configuration: plugins `react`, `typescript` and `import`; categ
 src/
   shared/                no React and no Electron
     ipc/                 channel names, Zod schemas and the invoke contract
-    layout/              modes, seeds, slot geometry (snap lands with the editor)
+    layout/              modes, seeds, slot geometry, editor gestures and snap
     capture/             rotation, mirror, cover
     files/               folder name and HH-mm-ss
     round.ts             timer options and copies
@@ -538,7 +546,7 @@ Background `--bg`, cards `--bg-raised`, 1 px `--line` border, 12 px radius on ca
 
 Header with the symbol and the event name when there is one. The home screen centers the full logo, the name, the mode (2 tiras or 1 tira) and the file for that mode. A single column, maximum width 720 px, because it is a short form and not a dashboard.
 
-The editor is the exception to width: the 1844×1240 sheet scales to fit the window, with the numbers panel in a fixed 320 px column on the left, in the same order as the current app (photo, Left, Top, Width, Height, Angle).
+The editor is the exception to width: the 1844×1240 sheet scales to fit the window, with the numbers panel in a fixed 520 px column on the left: a table with one row per slot, in the same order as the current app (Image, Left, Top, Width, Height, Angle), so all the slots of the layout are visible at once, as in the current app's dialog.
 
 Empty, error and loading states exist on every laptop screen. Empty gallery: "Nenhuma montagem ainda". Template error: the dimensions read and the expected ones. Loading the file: the button shows waiting and does not fire twice.
 

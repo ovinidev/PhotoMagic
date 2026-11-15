@@ -82,6 +82,32 @@ describe('CreateEventForm (RF01, RF04)', () => {
     expect(screen.getByText('Festa.png · 1844 × 1240 px')).toBeInTheDocument()
   })
 
+  it('opens the slot editor for the mode right after a template is accepted, and from its button', async () => {
+    stubBridge({
+      template: { import: () => Promise.resolve({ ok: true as const, template: info('one-strip', 'Inteira.png') }) },
+    })
+    const onEditLayout = vi.fn()
+    render(<CreateEventForm onEditLayout={onEditLayout} />)
+    await screen.findByText(/Nenhum template para 2 tiras/)
+    await userEvent.click(screen.getByRole('radio', { name: /1 tira/ }))
+    await userEvent.upload(screen.getByTestId('template-input'), file('Inteira.png'))
+    await waitFor(() => expect(onEditLayout).toHaveBeenCalledWith('one-strip'))
+
+    await userEvent.click(screen.getByRole('radio', { name: /2 tiras/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Editar posições das fotos (2 tiras)' }))
+    expect(onEditLayout).toHaveBeenLastCalledWith('two-strips')
+  })
+
+  it('does not open the editor for a rejected template', async () => {
+    stubBridge({ template: { import: () => Promise.resolve({ ok: false as const, reason: 'format' as const }) } })
+    const onEditLayout = vi.fn()
+    render(<CreateEventForm onEditLayout={onEditLayout} />)
+    await screen.findByText(/Nenhum template para 2 tiras/)
+    await userEvent.upload(screen.getByTestId('template-input'), file('errado.png'))
+    expect(await screen.findByText('Use um arquivo PNG ou JPG.')).toBeInTheDocument()
+    expect(onEditLayout).not.toHaveBeenCalled()
+  })
+
   it('explains a missing TV and keeps Iniciar evento disabled', async () => {
     stubBridge({ template: { getAll: () => Promise.resolve(WITH_TWO_STRIPS) } })
     render(<CreateEventForm />)

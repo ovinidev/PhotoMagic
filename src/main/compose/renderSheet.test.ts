@@ -68,7 +68,7 @@ describe('renderSheet (RF08, RF12)', () => {
       const topY = box.top - box.hiddenTop + box.fullHeight * 0.05
       const lowY = box.top - box.hiddenTop + box.fullHeight * 0.8
       expect(near(at(x, Math.max(box.top + 2, topY)), BAR), `${slot.id} top`).toBe(true)
-      expect(near(at(x, lowY), BODY[slot.photo]), `${slot.id} body`).toBe(true)
+      expect(near(at(x, lowY), BODY[slot.photo ?? 1]), `${slot.id} body`).toBe(true)
       // Full width covered: the slot's own left and right edges show the photo, not the template.
       expect(near(at(box.left + 2, lowY), GRAY), `${slot.id} left edge`).toBe(false)
       expect(near(at(box.left + box.width - 3, lowY), GRAY), `${slot.id} right edge`).toBe(false)
@@ -92,6 +92,14 @@ describe('renderSheet (RF08, RF12)', () => {
     expect(near(at(top3.left + top3.width / 2, top3.top + top3.height / 2), GRAY)).toBe(true)
     const bottom1 = TWO_STRIPS_SEED[3]!
     expect(near(at(bottom1.left + 250, bottom1.top + 250), BODY[1])).toBe(true)
+  })
+
+  it('leaves a slot set to Nenhuma empty, showing the template', async () => {
+    const slots = ONE_STRIP_SEED.map((slot) => (slot.id === 'photo-2' ? { ...slot, photo: null } : slot))
+    const jpeg = await renderSheet({ template: await template(), slots, photos: await allPhotos() }, { kind: 'montage' })
+    const at = await pixels(jpeg)
+    expect(near(at(922, 1000), GRAY)).toBe(true)
+    expect(near(at(322, 1000), BODY[1])).toBe(true)
   })
 
   it('fills the one-strip sheet with no white half', async () => {

@@ -16,10 +16,12 @@ export function createOperatorWindow(): BrowserWindow {
     show: false,
     title: 'Foto Mágica',
     backgroundColor: '#F4F1EB',
-    autoHideMenuBar: true,
     webPreferences: SECURE_WEB_PREFERENCES,
   })
 
+  // No menu bar: with the default menu, releasing Alt (the editor's "snap off" key) would reveal it
+  // and push the editor down in the middle of a gesture (DESIGN §7).
+  window.removeMenu()
   lockNavigation(window)
   window.once('ready-to-show', () => window.show())
   void loadRendererPage(window, 'operator')

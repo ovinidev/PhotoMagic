@@ -97,7 +97,7 @@ The app reads the file size. At 1844×1240, the template is accepted for the sel
 
 Assumption, until the client says otherwise: each mode has its own background. The two-strip art and the three-photo full-sheet art are different drawings, so the imported file is stored under the mode that is selected. Starting uses the template of that mode. The other mode keeps its own file. The same file can be imported into both, and they are still stored separately.
 
-There is a path to the slot editor before starting. `Iniciar evento` creates the folder on the Desktop and opens the camera on the TV.
+There is a path to the slot editor before starting: it opens by itself as soon as a template is accepted, on the layout of the selected mode, and again from the `Editar posições das fotos` button under the template. It opens over the form, which keeps the name and mode already filled in. `Iniciar evento` creates the folder on the Desktop and opens the camera on the TV.
 
 The screen does not show previous events.
 
@@ -119,9 +119,13 @@ The editor holds two layouts. A selector switches which one is on screen. Editin
 
 **1 tira** has three slots, photos 1, 2 and 3, with no cut guide. The seed below covers the sheet and is pending validation.
 
-The panel of the selected slot edits the photo (1, 2 or 3), Left, Top, Width, Height and Angle. In the preview, the selected slot has a dashed red border, 8 resize handles and a rotation handle below the bottom center. Left, Top and Angle change live during drag and rotation. Width and Height change live during resizing.
+The template of that mode is the background, at the real sheet proportion (1844×1240), and each slot is a colored card with its photo number, as in the current app: green 1, blue 2, yellow 3. This is how the operator sees and assigns which webcam photo goes into which gray square.
+
+The numbers panel on the left is a table with one row per slot, in the current app's order: Image, Left, Top, Width, Height, Angle. Image is the photo (1, 2 or 3) or `Nenhuma`, which leaves the slot empty on the montage (the template shows there). Typing a number moves the card while typing; Enter or leaving the field saves it. Clicking a card or a row selects that slot. In the preview, the selected slot has a dashed red border, 8 resize handles and a rotation handle below the bottom center. Left, Top and Angle change live during drag and rotation. Width and Height change live during resizing.
 
 The current app's editor freezes during this gesture. The new one keeps the pointer fluid and snaps the slot to edges and centers (screen, margins, the other slots and, only in the 2-strip layout, the cut line).
+
+In 2 tiras, a slot that crosses the cut line shows a warning under the preview; it does not block saving. `Desfazer` and `Refazer` (also Ctrl+Z and Ctrl+Y) step through the changes of the layout on screen, and `Restaurar padrão` puts back the seed of that mode, as one more undoable step. `Concluir` closes the editor; every change is already saved.
 
 Each layout is saved on the computer and applies to all events of that mode. Changing the template does not reset the layout. The operator adjusts again if the gray squares of a theme do not match the saved layout.
 
@@ -247,7 +251,7 @@ Given a slot 6 px from a sheet edge, a center, the margin (22 / 1822 horizontall
 
 Given both layouts saved and the app reopened, each comes back with its own numbers. A 2 tiras event uses the 2-strip layout. A 1 tira event uses the 1-strip one. Editing one does not write the other.
 
-Given the panel, changing a slot's photo to 1, 2 or 3 persists. The 2-strip default remains 1, 2, 3, 1, 2. The 1-strip default remains 1, 2, 3.
+Given the panel, changing a slot's photo to 1, 2, 3 or `Nenhuma` persists. A slot with `Nenhuma` stays empty on the montage, showing the template. The 2-strip default remains 1, 2, 3, 1, 2. The 1-strip default remains 1, 2, 3.
 
 ### RF04 — Camera window on the TV
 

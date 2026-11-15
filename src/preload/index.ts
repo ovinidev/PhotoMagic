@@ -61,6 +61,10 @@ const api: FotomagicaApi = {
     getAll: () => invoke(IPC_CHANNELS.templateGetAll, undefined),
     import: (input) => invoke(IPC_CHANNELS.templateImport, input),
   },
+  layout: {
+    get: () => invoke(IPC_CHANNELS.layoutGet, undefined),
+    save: (input) => invoke(IPC_CHANNELS.layoutSave, input),
+  },
   event: {
     start: (input) => invoke(IPC_CHANNELS.eventStart, input),
     end: () => invoke(IPC_CHANNELS.eventEnd, undefined),

@@ -24,7 +24,8 @@ export function useTemplates() {
     }
   }, [])
 
-  const importFile = useCallback(async (mode: PrintMode, file: File) => {
+  /** Resolves `true` when the file became that mode's template. */
+  const importFile = useCallback(async (mode: PrintMode, file: File): Promise<boolean> => {
     setImports((current) => ({ ...current, [mode]: { status: 'loading' } }))
     try {
       const bytes = new Uint8Array(await file.arrayBuffer())
@@ -34,11 +35,13 @@ export function useTemplates() {
           current.status === 'ready' ? { status: 'ready', value: { ...current.value, [mode]: result.template } } : current,
         )
         setImports((current) => ({ ...current, [mode]: { status: 'idle' } }))
-      } else {
-        setImports((current) => ({ ...current, [mode]: { status: 'rejected', result } }))
+        return true
       }
+      setImports((current) => ({ ...current, [mode]: { status: 'rejected', result } }))
+      return false
     } catch {
       setImports((current) => ({ ...current, [mode]: { status: 'rejected', result: { ok: false, reason: 'unreadable' } } }))
+      return false
     }
   }, [])
 

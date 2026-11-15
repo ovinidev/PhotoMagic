@@ -1,9 +1,12 @@
+import type { Layouts } from '../layout'
 import type {
   AppVersion,
   CameraStatus,
   DisplayState,
   EventStartInput,
   EventStartResult,
+  LayoutSaveInput,
+  LayoutSaveResult,
   PrinterStatus,
   SessionPhoto,
   SessionPreview,
@@ -44,6 +47,12 @@ export type FotomagicaApi = {
     getAll: () => Promise<Templates>
     /** Stores a 1844×1240 PNG or JPEG as that mode's template, or says why not (RF01). */
     import: (input: TemplateImportInput) => Promise<TemplateImportResult>
+  }
+  layout: {
+    /** Both saved layouts, or the PRD seeds on first run (RF03). */
+    get: () => Promise<Layouts>
+    /** Writes the layout of one mode only, once per gesture, on release (DESIGN §7). Refused while an event runs. */
+    save: (input: LayoutSaveInput) => Promise<LayoutSaveResult>
   }
   event: {
     /** Checks the name and the template, opens the TV and creates or reuses `Desktop\<name>` (RF01, RF02, RF04). */

@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
 import { slotListSchema } from '@shared/ipc'
-import { SEED_LAYOUTS, type Layouts, type PrintMode } from '@shared/layout'
+import { SEED_LAYOUTS, type Layouts, type PrintMode, type Slot } from '@shared/layout'
 
 /**
  * `userData/config.json` (DESIGN §9): both layouts and both templates. Read with Zod; a missing or
@@ -73,4 +73,25 @@ export async function writeConfig(userData: string, config: Config): Promise<voi
   const temporary = `${path}.tmp`
   await writeFile(temporary, JSON.stringify(config, null, 2))
   await rename(temporary, path)
+}
+
+let queue: Promise<unknown> = Promise.resolve()
+
+/**
+ * Reads, changes and writes `config.json`, one change at a time: a template import and a layout save
+ * that land together never undo each other. Returns the config as written.
+ */
+export function updateConfig(userData: string, change: (config: Config) => Config): Promise<Config> {
+  const next = queue.then(async () => {
+    const updated = change(await readConfig(userData))
+    await writeConfig(userData, updated)
+    return updated
+  })
+  queue = next.catch(() => undefined)
+  return next
+}
+
+/** Writes one mode's layout and leaves the other one, and the templates, as they are (RF03). */
+export function saveLayout(userData: string, mode: PrintMode, slots: readonly Slot[]): Promise<Config> {
+  return updateConfig(userData, (config) => ({ ...config, layouts: { ...config.layouts, [mode]: [...slots] } }))
 }

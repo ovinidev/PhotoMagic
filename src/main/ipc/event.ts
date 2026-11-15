@@ -2,8 +2,9 @@ import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { MessageChannelMain, type WebContents } from 'electron'
 import { checkEventName } from '@shared/files'
+import type { Layouts } from '@shared/layout'
 import { IPC_CHANNELS, PORT_CHANNELS, type EventStartResult, type SessionState } from '@shared/ipc'
-import { importTemplate, listTemplates, readConfig, readTemplate } from '../persist'
+import { importTemplate, listTemplates, readConfig, readTemplate, saveLayout } from '../persist'
 import type { Session } from '../session'
 import type { GuestWindowController } from '../windows'
 import { broadcast, handleInvoke, handleSend, sendTo } from './handle'
@@ -26,6 +27,17 @@ export function registerEventHandlers(deps: EventDeps): void {
 
   handleInvoke(IPC_CHANNELS.templateGetAll, () => listTemplates(deps.userData))
   handleInvoke(IPC_CHANNELS.templateImport, ({ mode, fileName, bytes }) => importTemplate(deps.userData, mode, fileName, bytes))
+
+  handleInvoke(IPC_CHANNELS.layoutGet, async () => mutableLayouts((await readConfig(deps.userData)).layouts))
+  handleInvoke(IPC_CHANNELS.layoutSave, async ({ mode, slots }) => {
+    // The editor does not open while an event runs (PRD §6.3); main refuses the write as well.
+    if (session.isOpen()) return { ok: false, reason: 'event-open' }
+    try {
+      return { ok: true, layouts: mutableLayouts((await saveLayout(deps.userData, mode, slots)).layouts) }
+    } catch {
+      return { ok: false, reason: 'failed' }
+    }
+  })
 
   handleInvoke(IPC_CHANNELS.eventStart, async ({ name, mode, allowLandscape }): Promise<EventStartResult> => {
     if (session.isOpen()) return { ok: false, reason: 'already-open' }
@@ -93,6 +105,11 @@ export function registerEventHandlers(deps: EventDeps): void {
     guest.postMessage(PORT_CHANNELS.cameraPreviewPort, null, [port1])
     operator.postMessage(PORT_CHANNELS.cameraPreviewPort, null, [port2])
   })
+}
+
+/** The IPC schema types arrays as mutable; the config keeps them readonly. */
+function mutableLayouts(layouts: Layouts) {
+  return { 'two-strips': [...layouts['two-strips']], 'one-strip': [...layouts['one-strip']] }
 }
 
 /** Pushes every session change to both windows. */

@@ -21,7 +21,8 @@ export type PhotoIndex = (typeof PHOTO_INDEXES)[number]
 export type Slot = {
   /** Stable id; the editor shows its pt-BR label (Cima 1, Baixo 1, …). */
   id: string
-  photo: PhotoIndex
+  /** Which photo of the round fills this slot, or `null` (`Nenhuma` in the editor): the slot stays empty and the template shows. */
+  photo: PhotoIndex | null
   left: number
   top: number
   width: number
