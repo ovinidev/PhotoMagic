@@ -4,9 +4,6 @@ import { expect, test } from './fixtures'
 import { TV_TITLE, listWindows, setDisplays, tvPlacement } from './tv'
 import { fillEvent, startEvent, takePhotos } from './event'
 
-// Each capture is a full-resolution 4K JPEG encoded in software under xvfb (see PHOTO_TIMEOUT).
-test.describe.configure({ timeout: 90_000 })
-
 test.describe('resilience', () => {
   // Chromium's fake camera cannot be unplugged mid-run; this needs a test hook that ends the track.
   test.fixme('RNF10 keeps the photos and accepts touch when the webcam disappears mid-round', async () => {})

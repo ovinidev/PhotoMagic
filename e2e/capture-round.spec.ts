@@ -7,9 +7,6 @@ import { expect, test } from './fixtures'
 import { PHOTO_TIMEOUT, startEvent, takePhotos } from './event'
 import { writeY4m } from './y4m'
 
-// Each capture is a full-resolution 4K JPEG encoded in software under xvfb (see PHOTO_TIMEOUT).
-test.describe.configure({ timeout: 90_000 })
-
 test.describe('capture round', () => {
   test.fixme('RF09 frames a slot without moving it and keeps shared captures independent', async () => {})
 

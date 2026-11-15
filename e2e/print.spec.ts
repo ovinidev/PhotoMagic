@@ -4,9 +4,6 @@ import sharp from 'sharp'
 import { expect, test } from './fixtures'
 import { simulatedTickets, startEvent, takePhotos } from './event'
 
-// Each capture is a full-resolution 4K JPEG encoded in software under xvfb (see PHOTO_TIMEOUT).
-test.describe.configure({ timeout: 90_000 })
-
 const MONTAGE = /^\d{2}-\d{2}-\d{2}(-\d+)?\.jpg$/
 
 test.describe('print', () => {

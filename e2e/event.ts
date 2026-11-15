@@ -41,10 +41,10 @@ export async function startEvent(app: ElectronApplication, operatorWindow: Page,
 }
 
 /**
- * One full-resolution capture: the fake camera honors the 3840×2160 request, and under xvfb the canvas
- * JPEG encode runs in software (about 3–4 s per photo). Generous so a loaded runner does not flake.
+ * One capture at the 1920×1080 request: under xvfb the canvas JPEG encode runs in software, so
+ * leave headroom above the default 5 s for a loaded runner.
  */
-export const PHOTO_TIMEOUT = 15_000
+export const PHOTO_TIMEOUT = 8_000
 
 /** Taps the white button `count` times with the timer off, waiting for each photo to count. */
 export async function takePhotos(tv: Page, count: number): Promise<void> {
