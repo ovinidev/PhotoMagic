@@ -17,8 +17,6 @@ import {
   templateImportInputSchema,
   templateImportResultSchema,
   templatesSchema,
-  tvOpenInputSchema,
-  tvOpenResultSchema,
 } from './schemas'
 
 /**
@@ -29,8 +27,6 @@ import {
 export const INVOKE_CONTRACT = {
   [IPC_CHANNELS.appGetVersion]: { input: appGetVersionInputSchema, output: appVersionSchema },
   [IPC_CHANNELS.displayGetState]: { input: noInputSchema, output: displayStateSchema },
-  [IPC_CHANNELS.tvOpen]: { input: tvOpenInputSchema, output: tvOpenResultSchema },
-  [IPC_CHANNELS.tvClose]: { input: noInputSchema, output: displayStateSchema },
   [IPC_CHANNELS.cameraGetStatus]: { input: noInputSchema, output: cameraStatusSchema },
   [IPC_CHANNELS.templateGetAll]: { input: noInputSchema, output: templatesSchema },
   [IPC_CHANNELS.templateImport]: { input: templateImportInputSchema, output: templateImportResultSchema },

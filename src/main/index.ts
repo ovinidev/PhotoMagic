@@ -1,8 +1,11 @@
 import { app, BrowserWindow, type WebContents } from 'electron'
 import type { DisplayFixture } from '@shared/runtime'
 import { readRuntimeFlags } from '@shared/runtime'
-import { registerIpcHandlers } from './ipc'
+import { renderSheet } from './compose/renderSheet'
+import { broadcastSession, registerIpcHandlers } from './ipc'
 import { applyCameraFixture, restrictPermissions } from './media'
+import { createPrinter } from './print'
+import { createSession, saveMontage } from './session'
 import { scheduleUpdateCheck } from './updater'
 import {
   createFixtureDisplaySource,
@@ -64,8 +67,27 @@ if (!app.requestSingleInstanceLock()) {
       },
     })
 
+    const userData = app.getPath('userData')
+    const desktop = (flags.e2e && flags.fixtures.paths.desktop) || app.getPath('desktop')
+    const session = createSession({
+      render: renderSheet,
+      saveMontage: (folder, jpeg) => saveMontage(folder, jpeg),
+      printer: createPrinter(flags, userData),
+      onChange: broadcastSession,
+      onError: (error) => console.error('[session] preview failed', error),
+    })
+
     restrictPermissions(isGuestWindow)
-    registerIpcHandlers({ flags, tv, isGuestWindow })
+    registerIpcHandlers({
+      flags,
+      tv,
+      session,
+      userData,
+      desktop,
+      isGuestWindow,
+      guestContents: () => (guestContents && !guestContents.isDestroyed() ? guestContents : null),
+      operatorContents: () => (operatorWindow && !operatorWindow.isDestroyed() ? operatorWindow.webContents : null),
+    })
 
     operatorWindow = createOperatorWindow()
     operatorWindow.on('closed', () => {
@@ -74,7 +96,7 @@ if (!app.requestSingleInstanceLock()) {
       tv.close()
     })
 
-    // No event can be open yet at startup; the getter is the hook for when events exist.
-    scheduleUpdateCheck({ flags, isEventOpen: () => false })
+    // The check runs only with no event open (DESIGN §11).
+    scheduleUpdateCheck({ flags, isEventOpen: session.isOpen })
   })
 }

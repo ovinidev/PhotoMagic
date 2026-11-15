@@ -11,8 +11,6 @@ import type {
   TemplateImportResult,
   Templates,
   Timer,
-  TvOpenInput,
-  TvOpenResult,
 } from './schemas'
 
 /** Stops a subscription made with one of the `on…` methods. */
@@ -28,12 +26,6 @@ export type FotomagicaApi = {
     getState: () => Promise<DisplayState>
     /** Pushed on every monitor added, removed or changed, and on every TV window change. */
     onState: (listener: (state: DisplayState) => void) => Unsubscribe
-  }
-  tv: {
-    /** Opens the camera window on the TV monitor, or says why it cannot (RF04). */
-    open: (input: TvOpenInput) => Promise<TvOpenResult>
-    /** Closes the camera window for real. */
-    close: () => Promise<DisplayState>
   }
   camera: {
     getStatus: () => Promise<CameraStatus>

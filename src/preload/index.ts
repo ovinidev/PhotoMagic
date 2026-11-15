@@ -51,10 +51,6 @@ const api: FotomagicaApi = {
     getState: () => invoke(IPC_CHANNELS.displayGetState, undefined),
     onState: (listener) => subscribe(IPC_CHANNELS.displayState, listener),
   },
-  tv: {
-    open: (input) => invoke(IPC_CHANNELS.tvOpen, input),
-    close: () => invoke(IPC_CHANNELS.tvClose, undefined),
-  },
   camera: {
     getStatus: () => invoke(IPC_CHANNELS.cameraGetStatus, undefined),
     onStatus: (listener) => subscribe(IPC_CHANNELS.cameraStatus, listener),

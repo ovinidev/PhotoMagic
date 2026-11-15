@@ -1,0 +1,101 @@
+import { mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
+import { MessageChannelMain, type WebContents } from 'electron'
+import { checkEventName } from '@shared/files'
+import { IPC_CHANNELS, PORT_CHANNELS, type EventStartResult, type SessionState } from '@shared/ipc'
+import { importTemplate, listTemplates, readConfig, readTemplate } from '../persist'
+import type { Session } from '../session'
+import type { GuestWindowController } from '../windows'
+import { broadcast, handleInvoke, handleSend, sendTo } from './handle'
+
+export type EventDeps = {
+  tv: GuestWindowController
+  session: Session
+  /** Electron's `userData` (or the E2E folder). */
+  userData: string
+  /** `app.getPath('desktop')` (or the E2E folder): the event folder is `<desktop>/<name>` (RF02). */
+  desktop: string
+  isGuestWindow: (contents: WebContents) => boolean
+  guestContents: () => WebContents | null
+  operatorContents: () => WebContents | null
+}
+
+/** `template:*`, `event:*` and `session:*` (DESIGN §4): main owns the event and the round. */
+export function registerEventHandlers(deps: EventDeps): void {
+  const { tv, session } = deps
+
+  handleInvoke(IPC_CHANNELS.templateGetAll, () => listTemplates(deps.userData))
+  handleInvoke(IPC_CHANNELS.templateImport, ({ mode, fileName, bytes }) => importTemplate(deps.userData, mode, fileName, bytes))
+
+  handleInvoke(IPC_CHANNELS.eventStart, async ({ name, mode, allowLandscape }): Promise<EventStartResult> => {
+    if (session.isOpen()) return { ok: false, reason: 'already-open' }
+    const checked = checkEventName(name)
+    if (!checked.ok) return { ok: false, reason: 'invalid-name' }
+    const template = await readTemplate(deps.userData, mode)
+    if (!template) return { ok: false, reason: 'no-template' }
+
+    // The TV first: with no TV the event does not start and no folder appears (RF04).
+    const opened = tv.open({ allowLandscape })
+    if (!opened.ok) {
+      // A TV that went away right after opening leaves a hidden window; do not keep it around.
+      if (opened.state.tv.kind !== 'closed') tv.close()
+      return { ok: false, reason: opened.reason }
+    }
+    const folder = join(deps.desktop, checked.name)
+    try {
+      // Reuses an existing folder and keeps its files (RF02).
+      await mkdir(folder, { recursive: true })
+    } catch {
+      tv.close()
+      return { ok: false, reason: 'folder-failed' }
+    }
+    const { layouts } = await readConfig(deps.userData)
+    return { ok: true, session: session.start({ name: checked.name, mode, folder, slots: layouts[mode], template: template.bytes }) }
+  })
+
+  handleInvoke(IPC_CHANNELS.eventEnd, () => {
+    tv.close()
+    return session.end()
+  })
+
+  // The TV window gone for any reason ends the event: the round lives with the camera.
+  tv.onChange((state) => {
+    if (state.tv.kind === 'closed' && session.isOpen()) session.end()
+  })
+
+  handleInvoke(IPC_CHANNELS.sessionGetState, () => session.state())
+  handleInvoke(IPC_CHANNELS.sessionGetPreview, () => session.preview())
+  handleInvoke(IPC_CHANNELS.sessionSetTimer, ({ timer }) => session.setTimer(timer))
+  handleInvoke(IPC_CHANNELS.sessionSetCopies, ({ copies }) => session.setCopies(copies))
+  handleInvoke(IPC_CHANNELS.sessionCancel, () => session.cancel())
+  handleInvoke(IPC_CHANNELS.sessionPrint, () => session.print())
+  handleInvoke(IPC_CHANNELS.sessionReprint, () => session.reprint())
+  handleInvoke(IPC_CHANNELS.sessionNewRound, () => session.newRound())
+
+  handleSend(IPC_CHANNELS.sessionPhoto, ({ index, jpeg }, event) => {
+    if (!deps.isGuestWindow(event.sender)) return
+    session.addPhoto(index, jpeg)
+  })
+
+  // The laptop's shutter runs the TV's own path, timer included (DESIGN §4).
+  handleSend(IPC_CHANNELS.sessionRequestShutter, (_payload, event) => {
+    if (deps.isGuestWindow(event.sender) || !session.isOpen()) return
+    const guest = deps.guestContents()
+    if (guest) sendTo(guest, IPC_CHANNELS.sessionShutter, {})
+  })
+
+  // A fresh live-preview channel whenever either side (re)mounts; frames never cross main (RNF04).
+  handleSend(IPC_CHANNELS.cameraRequestPreviewPort, () => {
+    const guest = deps.guestContents()
+    const operator = deps.operatorContents()
+    if (!guest || !operator || guest.isDestroyed() || operator.isDestroyed()) return
+    const { port1, port2 } = new MessageChannelMain()
+    guest.postMessage(PORT_CHANNELS.cameraPreviewPort, null, [port1])
+    operator.postMessage(PORT_CHANNELS.cameraPreviewPort, null, [port2])
+  })
+}
+
+/** Pushes every session change to both windows. */
+export function broadcastSession(state: SessionState): void {
+  broadcast(IPC_CHANNELS.sessionState, state)
+}

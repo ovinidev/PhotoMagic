@@ -6,8 +6,6 @@ export const IPC_CHANNELS = {
   // invoke: renderer asks, main answers
   appGetVersion: 'app:get-version',
   displayGetState: 'display:get-state',
-  tvOpen: 'tv:open',
-  tvClose: 'tv:close',
   cameraGetStatus: 'camera:get-status',
   templateGetAll: 'template:get-all',
   templateImport: 'template:import',

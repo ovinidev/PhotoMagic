@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, type IpcMainEvent } from 'electron'
+import { BrowserWindow, ipcMain, type IpcMainEvent, type WebContents } from 'electron'
 import {
   EVENT_CONTRACT,
   INVOKE_CONTRACT,
@@ -49,4 +49,10 @@ export function broadcast<C extends EventChannel>(channel: C, payload: EventPayl
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) window.webContents.send(channel, data)
   }
+}
+
+/** Pushes a validated main → renderer event to one window only. */
+export function sendTo<C extends EventChannel>(contents: WebContents, channel: C, payload: EventPayload<C>): void {
+  const data = EVENT_CONTRACT[channel].parse(payload)
+  if (!contents.isDestroyed()) contents.send(channel, data)
 }
