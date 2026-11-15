@@ -176,7 +176,7 @@ export const templateImportResultSchema = z.discriminatedUnion('ok', [
   z.strictObject({ ok: z.literal(true), template: templateInfoSchema }),
   z.strictObject({
     ok: z.literal(false),
-    reason: z.enum(['format', 'size', 'unreadable']),
+    reason: z.enum(['format', 'size', 'unreadable', 'pdf']),
     width: z.number().int().nonnegative().optional(),
     height: z.number().int().nonnegative().optional(),
   }),

@@ -93,7 +93,7 @@ flowchart TD
 
 Fields: event name, the party mode (2 tiras, default, or 1 tira) and import the PNG or JPG template for that mode.
 
-The app reads the file size. At 1844×1240, the template is accepted for the selected mode. At any other size, the screen shows the width and height found and the `Iniciar evento` button is disabled.
+The app reads the file size. At 1844×1240, the template is accepted for the selected mode. At any other size, the screen shows the width and height found and the `Iniciar evento` button is disabled. The importer takes PNG and JPEG only. A PDF (the client's artwork comes from Canva as PDF) is recognized and answered with `Este arquivo é um PDF. Exporte o template como PNG ou JPG de 1844 × 1240 px e importe de novo.`; rendering PDFs inside the app is an open question (section 11).
 
 Assumption, until the client says otherwise: each mode has its own background. The two-strip art and the three-photo full-sheet art are different drawings, so the imported file is stored under the mode that is selected. Starting uses the template of that mode. The other mode keeps its own file. The same file can be imported into both, and they are still stored separately.
 
@@ -454,6 +454,8 @@ The app proceeds with the current assumption until this data arrives. They do no
 4. **Template per mode.** Assumption in force: each mode stores its own 1844×1240 background, imported on the create-event screen with that mode selected. It falls if the client says a single file serves both.
 
 ### Still open
+
+0. **PDF templates.** The client sends artwork as a Canva PDF. sharp's bundled libvips has no PDF loader, so importing PDF would need pdf.js in a hidden renderer window (a new dependency and a third renderer entry) and a check of Canva's soft masks and CMYK output intent. Until the owner asks for it, the operator exports a 1844×1240 PNG or JPG.
 
 1. **Ribbon and paper.** Only the statuses the spooler or the driver expose are included. A missing status becomes "the driver did not report", not a guess.
 2. **Portrait orientation.** The current dialog marks Portrait for a 1844×1240 bitmap, which is wider than tall. The app does the same and does not rotate the bitmap again. A test sheet confirms that the strip comes out upright.

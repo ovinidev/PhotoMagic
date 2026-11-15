@@ -33,6 +33,7 @@ export const EVENTS_COPY = {
     size: (width: number, height: number) => `O arquivo tem ${width} × ${height} px. O template precisa ter 1844 × 1240 px.`,
     format: 'Use um arquivo PNG ou JPG.',
     unreadable: 'Não foi possível ler o arquivo.',
+    pdf: 'Este arquivo é um PDF. Exporte o template como PNG ou JPG de 1844 × 1240 px e importe de novo.',
   },
   editLayout: (mode: string) => `Editar posições das fotos (${mode})`,
   tv: 'Tela da TV',
