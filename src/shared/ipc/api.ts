@@ -1,20 +1,28 @@
 import type { Layouts } from '../layout'
+import type { WebcamValues } from '../webcam'
 import type {
   AppVersion,
   CameraStatus,
   DisplayState,
   EventStartInput,
   EventStartResult,
+  GalleryGetInput,
+  GalleryImage,
+  GalleryList,
+  GalleryReprintResult,
   LayoutSaveInput,
   LayoutSaveResult,
   PrinterStatus,
   SessionPhoto,
   SessionPreview,
   SessionState,
+  SetFramingInput,
   TemplateImportInput,
   TemplateImportResult,
   Templates,
   Timer,
+  WebcamReport,
+  WebcamState,
 } from './schemas'
 
 /** Stops a subscription made with one of the `on…` methods. */
@@ -68,6 +76,8 @@ export type FotomagicaApi = {
     getPreview: () => Promise<SessionPreview>
     setTimer: (timer: Timer) => Promise<SessionState>
     setCopies: (copies: number) => Promise<SessionState>
+    /** Pan, zoom and rotation of one filled slot of the round, before the montage is saved (RF09). */
+    setFraming: (input: SetFramingInput) => Promise<SessionState>
     /** `Cancelar`: discards the round, no file (RF10). */
     cancel: () => Promise<SessionState>
     /** `Imprimir`: composes, writes `HH-mm-ss.jpg`, sends it to the printer (RF11, RF12). */
@@ -82,6 +92,26 @@ export type FotomagicaApi = {
     onShutter: (listener: () => void) => Unsubscribe
     /** TV only: delivers photo `index`, already rotated and mirrored. Main ignores other windows. */
     sendPhoto: (photo: SessionPhoto) => void
+  }
+  webcam: {
+    /** Saved values, the camera's last advertised controls, and whether the TV has it open (RF15). */
+    getState: () => Promise<WebcamState>
+    /** Saves the values (both windows write the same state); the TV applies them to the camera. */
+    set: (values: WebcamValues) => Promise<WebcamState>
+    /** TV only: the open camera's capabilities, or `null` when it is not open. */
+    report: (report: WebcamReport) => void
+    /** Pushed to both windows on every change. */
+    onState: (listener: (state: WebcamState) => void) => Unsubscribe
+  }
+  gallery: {
+    /** The event folder's montages, newest first; only the app's `HH-mm-ss.jpg` files (RF14). */
+    list: () => Promise<GalleryList>
+    /** One montage, as the file or as a thumbnail. */
+    get: (input: GalleryGetInput) => Promise<GalleryImage>
+    /** `Imprimir novamente` from the gallery menu: resends that file, one copy, in the event's mode. */
+    reprint: (fileName: string) => Promise<GalleryReprintResult>
+    /** Pushed after a montage is written in the event folder. */
+    onChanged: (listener: () => void) => Unsubscribe
   }
   printer: {
     /** The DS-RX1 as the spooler reports it now (DESIGN §10). */

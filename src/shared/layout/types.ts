@@ -28,6 +28,11 @@ export type Slot = {
   width: number
   height: number
   angle: number
+  /**
+   * Corner radius of the photo box, in sheet pixels; the photo is clipped to that rounded rectangle
+   * so the artwork's rounded box shows no corner. Missing or 0 is a square box.
+   */
+  radius?: number | undefined
 }
 
 export type Layouts = Record<PrintMode, readonly Slot[]>

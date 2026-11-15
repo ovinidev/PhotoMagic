@@ -1,6 +1,8 @@
+import { readFile } from 'node:fs/promises'
+import { resolve } from 'node:path'
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
-import { ONE_STRIP_SEED, TWO_STRIPS_SEED, clipToSheet, slotBounds, type PhotoIndex, type Slot } from '@shared/layout'
+import { ONE_STRIP_SEED, TWO_STRIPS_CLIENT_BOXES, TWO_STRIPS_SEED, clipToSheet, slotBounds, type PhotoIndex, type Slot } from '@shared/layout'
 import { PREVIEW_WIDTH, renderSheet } from './renderSheet'
 
 type Rgb = [number, number, number]
@@ -79,8 +81,12 @@ describe('renderSheet (RF08, RF12)', () => {
     const jpeg = await renderSheet({ template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
     const at = await pixels(jpeg)
     const bottom1 = TWO_STRIPS_SEED[3]!
-    // Visible: 31.6% of the portrait height, from 34.2% to 65.8%. The bar (top 40%) fills its top 18%.
-    const barRows = 281 * ((BAR_FRACTION - 0.342) / 0.316)
+    // Cover fit: the portrait is scaled to the slot width, so the slot shows a centered band of it.
+    const shown = bottom1.height / ((PHOTO.height * bottom1.width) / PHOTO.width)
+    const hidden = (1 - shown) / 2
+    expect(hidden).toBeGreaterThan(0)
+    // The bar (top 40% of the portrait) fills only the top part of the slot.
+    const barRows = bottom1.height * ((BAR_FRACTION - hidden) / shown)
     expect(near(at(bottom1.left + 250, bottom1.top + barRows - 12), BAR)).toBe(true)
     expect(near(at(bottom1.left + 250, bottom1.top + barRows + 12), BODY[1])).toBe(true)
   })
@@ -108,9 +114,86 @@ describe('renderSheet (RF08, RF12)', () => {
     for (const x of [322, 922, 1522]) expect(near(at(x, 1000), [255, 255, 255])).toBe(false)
   })
 
+  it('frames one slot without moving it or the other slot of the same capture (RF09)', async () => {
+    const photos = await allPhotos()
+    const bottom1 = TWO_STRIPS_SEED[3]!
+    // Pan to the top of the portrait: the bar now fills Baixo 1 down to its middle.
+    const framings = { 'bottom-1': { zoom: 1, panX: 0, panY: -1, rotation: 0 } }
+    const at = await pixels(await renderSheet({ template: await template(), slots: TWO_STRIPS_SEED, photos, framings }, { kind: 'montage' }))
+    expect(near(at(bottom1.left + 250, bottom1.top + 140), BAR)).toBe(true)
+    // Cima 1 uses the same capture and keeps its default framing: bar on top, body below.
+    const top1 = visible(TWO_STRIPS_SEED[0]!)
+    expect(near(at(top1.left + top1.width / 2, top1.top - top1.hiddenTop + top1.fullHeight * 0.8), BODY[1])).toBe(true)
+  })
+
+  it('rotates the photo inside the slot and leaves no template corner showing (RF09)', async () => {
+    const bottom1 = TWO_STRIPS_SEED[3]!
+    const framings = { 'bottom-1': { zoom: 1, panX: 0, panY: 0, rotation: 15 } }
+    const at = await pixels(await renderSheet({ template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos(), framings }, { kind: 'montage' }))
+    // Probed just inside the seed's rounded corner (radius 30: the arc is 9 px in along the diagonal).
+    for (const [x, y] of [
+      [bottom1.left + 12, bottom1.top + 12],
+      [bottom1.left + bottom1.width - 13, bottom1.top + 12],
+      [bottom1.left + 12, bottom1.top + bottom1.height - 13],
+      [bottom1.left + bottom1.width - 13, bottom1.top + bottom1.height - 13],
+    ] as const) {
+      expect(near(at(x, y), GRAY), `corner ${x},${y}`).toBe(false)
+    }
+    // Outside the slot the template is untouched.
+    expect(near(at(bottom1.left + bottom1.width + 20, bottom1.top + 140), GRAY)).toBe(true)
+  })
+
   it('renders the preview from the same composition, scaled down', async () => {
     const preview = await renderSheet({ template: null, slots: ONE_STRIP_SEED, photos: await allPhotos() }, { kind: 'preview' })
     const meta = await sharp(preview).metadata()
     expect(meta).toMatchObject({ format: 'jpeg', width: PREVIEW_WIDTH, height: Math.round((PREVIEW_WIDTH * 1240) / 1844) })
+  })
+})
+
+describe('renderSheet over the client 2 tiras artwork', () => {
+  const CLIENT = resolve(import.meta.dirname, '../../../e2e/fixtures/client-2tiras-1844x1240.png')
+  const dark = ([r, g, b]: Rgb) => r < 60 && g < 60 && b < 60
+  /** The artwork's black, or its anti-aliased gray edge: a neutral pixel that is not paper white. */
+  const ink = ([r, g, b]: Rgb) => Math.abs(r - g) < 14 && Math.abs(g - b) < 14 && r < 225
+
+  it('fills every black photo box: no black corner or edge shows, the art around stays', async () => {
+    const jpeg = await renderSheet({ template: await readFile(CLIENT), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
+    const { data, info } = await sharp(jpeg).raw().toBuffer({ resolveWithObject: true })
+    const at = (x: number, y: number): Rgb => {
+      const i = (y * info.width + x) * info.channels
+      return [data[i]!, data[i + 1]!, data[i + 2]!]
+    }
+    for (const box of TWO_STRIPS_CLIENT_BOXES) {
+      // Not one dark pixel left anywhere inside the box, rounded corners included.
+      let black = 0
+      for (let y = box.top; y < box.top + box.height; y++) for (let x = box.left; x < box.left + box.width; x++) if (dark(at(x, y))) black++
+      expect(black, `black pixels in the box at ${box.left},${box.top}`).toBe(0)
+      // No gray hairline on any straight edge: the columns and rows just inside and outside each edge.
+      const midX = box.left + Math.floor(box.width / 2)
+      const midY = box.top + Math.floor(box.height / 2)
+      for (const [x, y] of [
+        [box.left - 1, midY],
+        [box.left, midY],
+        [box.left + box.width - 1, midY],
+        [box.left + box.width, midY],
+        [midX, box.top - 1],
+        [midX, box.top],
+        [midX, box.top + box.height - 1],
+        [midX, box.top + box.height],
+      ] as const) {
+        expect(ink(at(x, y)), `edge ${x},${y} = ${at(x, y).join(',')}`).toBe(false)
+      }
+      // The photo is clipped to the rounded corner: the very corner pixel is the white paper, not photo.
+      for (const [x, y] of [
+        [box.left + 1, box.top + 1],
+        [box.left + box.width - 2, box.top + 1],
+        [box.left + 1, box.top + box.height - 2],
+        [box.left + box.width - 2, box.top + box.height - 2],
+      ] as const) {
+        expect(near(at(x, y), [255, 255, 255]), `corner ${x},${y}`).toBe(true)
+      }
+      // Just outside the box the artwork is untouched (white paper there).
+      expect(near(at(box.left + box.width / 2, box.top + box.height + 6), [255, 255, 255])).toBe(true)
+    }
   })
 })

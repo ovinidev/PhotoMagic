@@ -1,8 +1,9 @@
 import { z } from 'zod'
 import { COPIES } from '../constants'
 import type { DisplayInfo, GuestChoice } from '../displays'
-import { EVENT_NAME_MAX_LENGTH } from '../files'
-import { PRINT_MODES } from '../layout'
+import { WEBCAM_CONTROL_IDS, WHITE_BALANCE_MODES, type WebcamCapabilities, type WebcamValues } from '../webcam'
+import { EVENT_NAME_MAX_LENGTH, isMontageFileName } from '../files'
+import { FRAMING_ROTATION_RANGE, PRINT_MODES, ZOOM_RANGE, type Framing } from '../layout'
 
 /** `app:get-version` takes no input. */
 export const appGetVersionInputSchema = z.undefined()
@@ -123,6 +124,7 @@ export const slotSchema = z.strictObject({
   width: z.number().finite().min(40),
   height: z.number().finite().min(40),
   angle: z.number().finite(),
+  radius: z.number().finite().min(0).max(500).optional(),
 })
 
 export const slotListSchema = z.array(slotSchema).min(1).max(12)
@@ -174,7 +176,7 @@ export const templateImportResultSchema = z.discriminatedUnion('ok', [
   z.strictObject({ ok: z.literal(true), template: templateInfoSchema }),
   z.strictObject({
     ok: z.literal(false),
-    reason: z.enum(['format', 'size', 'unreadable']),
+    reason: z.enum(['format', 'size', 'unreadable', 'pdf']),
     width: z.number().int().nonnegative().optional(),
     height: z.number().int().nonnegative().optional(),
   }),
@@ -244,6 +246,14 @@ export const roundPhaseSchema = z.discriminatedUnion('kind', [
   }),
 ])
 
+/** How the operator framed the photo inside one slot of the round (RF09, DESIGN §8). */
+export const framingSchema = z.strictObject({
+  zoom: z.number().finite().min(ZOOM_RANGE.min).max(ZOOM_RANGE.max),
+  panX: z.number().finite().min(-1).max(1),
+  panY: z.number().finite().min(-1).max(1),
+  rotation: z.number().finite().min(FRAMING_ROTATION_RANGE.min).max(FRAMING_ROTATION_RANGE.max),
+}) satisfies z.ZodType<Framing>
+
 /** Main is the source of truth for the event and its round; both windows render this (DESIGN §2). */
 export const sessionStateSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('idle') }),
@@ -259,6 +269,8 @@ export const sessionStateSchema = z.discriminatedUnion('kind', [
     previewRevision: z.number().int().nonnegative(),
     /** The slots of the event's mode, for the laptop guide. */
     slots: slotListSchema,
+    /** The round's framing per slot id; a slot missing here has the default framing (RF09). */
+    framings: z.record(z.string().min(1).max(32), framingSchema),
     phase: roundPhaseSchema,
   }),
 ])
@@ -279,6 +291,8 @@ export const eventStartResultSchema = z.discriminatedUnion('ok', [
 
 export const setTimerInputSchema = z.strictObject({ timer: timerSchema })
 export const setCopiesInputSchema = z.strictObject({ copies: copiesSchema })
+/** `session:set-framing`: pan, zoom and rotation of one slot of the round (RF09). */
+export const setFramingInputSchema = z.strictObject({ slotId: z.string().min(1).max(32), framing: framingSchema })
 
 /** `session:photo`: the TV's capture for photo `index`, already rotated and mirrored. */
 export const sessionPhotoSchema = z.strictObject({
@@ -294,6 +308,74 @@ export const sessionPreviewSchema = z.strictObject({
 /** Payload of `session:shutter`, main → TV. Empty: the TV runs its own timer and capture. */
 export const shutterSchema = z.strictObject({})
 
+// ── Webcam adjustments (PRD §6.7, RF15; DESIGN §5) ───────────────────────────
+
+const webcamControlIdSchema = z.enum(WEBCAM_CONTROL_IDS)
+const whiteBalanceModeSchema = z.enum(WHITE_BALANCE_MODES)
+
+export const webcamRangeSchema = z
+  .strictObject({ key: z.string().min(1).max(64), min: z.number().finite(), max: z.number().finite(), step: z.number().finite().positive() })
+  .refine((range) => range.max > range.min, 'Expected max > min')
+
+export const webcamCapabilitiesSchema = z.strictObject({
+  controls: z.partialRecord(webcamControlIdSchema, webcamRangeSchema),
+  whiteBalanceModes: z.array(whiteBalanceModeSchema).max(2),
+  powerLineFrequency: z.boolean(),
+}) satisfies z.ZodType<WebcamCapabilities>
+
+export const webcamValuesSchema = z.strictObject({
+  controls: z.partialRecord(webcamControlIdSchema, z.number().finite()),
+  whiteBalanceMode: whiteBalanceModeSchema.optional(),
+}) satisfies z.ZodType<WebcamValues>
+
+/**
+ * `webcam:get` output and `webcam:state` payload. `capabilities` is what the camera last advertised
+ * (persisted, so the panel opens with the saved controls even with no camera, RF15); `live` says
+ * whether the TV has the camera open right now.
+ */
+export const webcamStateSchema = z.strictObject({
+  values: webcamValuesSchema,
+  capabilities: webcamCapabilitiesSchema.nullable(),
+  live: z.boolean(),
+})
+
+export const webcamSetInputSchema = z.strictObject({ values: webcamValuesSchema })
+
+/** `webcam:report`, TV → main: the open camera's capabilities, or `null` when it is not open. */
+export const webcamReportSchema = z.strictObject({ capabilities: webcamCapabilitiesSchema.nullable() })
+
+export type WebcamState = z.infer<typeof webcamStateSchema>
+export type WebcamReport = z.infer<typeof webcamReportSchema>
+
+// ── Gallery (PRD §6.6, RF14) ─────────────────────────────────────────────────
+
+/** A montage name this app writes (`HH-mm-ss.jpg`); never a path. */
+export const montageFileNameSchema = z.string().max(32).refine(isMontageFileName, 'Expected an HH-mm-ss.jpg montage name')
+
+/** `gallery:list` output: the event folder's montages, newest first; empty with no event open. */
+export const galleryListSchema = z.strictObject({ fileNames: z.array(montageFileNameSchema).max(10_000) })
+
+export const galleryGetInputSchema = z.strictObject({ fileName: montageFileNameSchema, size: z.enum(['thumb', 'full']) })
+
+/** The montage JPEG, or `null` when the file is no longer there. The file itself is about 1 MB. */
+export const galleryImageSchema = z.strictObject({ jpeg: bytesSchema(40 * 1024 * 1024).nullable() })
+
+export const galleryReprintInputSchema = z.strictObject({ fileName: montageFileNameSchema })
+
+/** `gallery:reprint` output: sent, or why not (a print failure, or `missing` when the file is gone or no event is open). */
+export const galleryReprintResultSchema = z.discriminatedUnion('ok', [
+  z.strictObject({ ok: z.literal(true) }),
+  z.strictObject({ ok: z.literal(false), reason: z.union([printFailureReasonSchema, z.literal('missing')]), detail: z.string().max(1000) }),
+])
+
+/** `gallery:changed`, main → both windows, after a montage is written. */
+export const galleryChangedSchema = z.strictObject({})
+
+export type GalleryList = z.infer<typeof galleryListSchema>
+export type GalleryGetInput = z.infer<typeof galleryGetInputSchema>
+export type GalleryImage = z.infer<typeof galleryImageSchema>
+export type GalleryReprintResult = z.infer<typeof galleryReprintResultSchema>
+
 export type Timer = z.infer<typeof timerSchema>
 export type PrintFailureReason = z.infer<typeof printFailureReasonSchema>
 export type PrinterStatus = z.infer<typeof printerStatusSchema>
@@ -304,4 +386,5 @@ export type EventStartInput = z.infer<typeof eventStartInputSchema>
 export type EventStartError = z.infer<typeof eventStartErrorSchema>
 export type EventStartResult = z.infer<typeof eventStartResultSchema>
 export type SessionPhoto = z.infer<typeof sessionPhotoSchema>
+export type SetFramingInput = z.infer<typeof setFramingInputSchema>
 export type SessionPreview = z.infer<typeof sessionPreviewSchema>

@@ -1,8 +1,25 @@
-import { readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
 import sharp from 'sharp'
+import { TWO_STRIPS_CLIENT_BOXES } from '@shared/layout'
 import { expect, test } from './fixtures'
 import { setSimulatedPrinter, simulatedTickets, startEvent, takePhotos } from './event'
+import { writeY4m } from './y4m'
+
+/** The client's real 2 tiras artwork (Canva PDF rendered at 1844×1240): black rounded photo boxes. */
+const CLIENT_TEMPLATE = resolve(__dirname, 'fixtures/client-2tiras-1844x1240.png')
+
+/**
+ * A bright 1920×1080 sensor frame with no dark color, so any dark pixel left in a photo box is the
+ * artwork's black showing through. The sensor's left band becomes the top of the portrait (DESIGN §5).
+ */
+const brightFrame = join(mkdtempSync(join(tmpdir(), 'fotomagica-e2e-')), 'client-sensor.y4m')
+writeY4m(brightFrame, { width: 1920, height: 1080 }, [176, 208, 236], [
+  { x: 0, y: 0, width: 240, height: 1080, color: [250, 214, 110] },
+  { x: 640, y: 200, width: 900, height: 680, color: [226, 168, 140] },
+  { x: 1540, y: 0, width: 380, height: 1080, color: [140, 186, 120] },
+])
 
 const MONTAGE = /^\d{2}-\d{2}-\d{2}(-\d+)?\.jpg$/
 
@@ -162,5 +179,59 @@ test.describe('print', () => {
       await expect(tv.getByText('Impressora sem papel')).toBeVisible()
       expect(readdirSync(join(dirs.desktop, 'Festa'))).toEqual(files)
     })
+  })
+})
+
+test.describe('print: client 2 tiras artwork', () => {
+  test.use({ appEnv: { FOTOMAGICA_FAKE_CAMERA: brightFrame } })
+
+  test('RF08 RF12 fills the client photo boxes with no black corner and leaves the art untouched', async ({ app, operatorWindow, dirs }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa LB', mode: 'two-strips', template: CLIENT_TEMPLATE })
+    await takePhotos(tv, 3)
+    await tv.getByRole('button', { name: 'Imprimir' }).click()
+    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed')
+    const [file] = readdirSync(join(dirs.desktop, 'Festa LB'))
+    const montage = join(dirs.desktop, 'Festa LB', file!)
+
+    const { data, info } = await sharp(montage).raw().toBuffer({ resolveWithObject: true })
+    expect(info).toMatchObject({ width: 1844, height: 1240 })
+    const art = await sharp(CLIENT_TEMPLATE).removeAlpha().raw().toBuffer()
+    const at = (buffer: Buffer, x: number, y: number) => {
+      const i = (y * 1844 + x) * 3
+      return [buffer[i]!, buffer[i + 1]!, buffer[i + 2]!]
+    }
+    for (const box of TWO_STRIPS_CLIENT_BOXES) {
+      let black = 0
+      for (let y = box.top; y < box.top + box.height; y++) {
+        for (let x = box.left; x < box.left + box.width; x++) if (at(data, x, y).every((value) => value < 60)) black++
+      }
+      expect(black, `black pixels in the box at ${box.left},${box.top}`).toBe(0)
+      // No gray hairline from the artwork's anti-aliased edge, just inside or outside each side.
+      const midY = box.top + Math.floor(box.height / 2)
+      for (const x of [box.left - 1, box.left, box.left + box.width - 1, box.left + box.width]) {
+        const [r, g, b] = at(data, x, midY)
+        expect(Math.abs(r! - g!) < 14 && Math.abs(g! - b!) < 14 && r! < 225, `edge ${x},${midY} = ${r},${g},${b}`).toBe(false)
+      }
+    }
+    // Outside the boxes the montage is the artwork (the monogram corner on the right), up to JPEG noise.
+    let diff = 0
+    let count = 0
+    for (let y = 60; y < 560; y += 4) {
+      for (let x = 1330; x < 1830; x += 4) {
+        const a = at(data, x, y)
+        const b = at(art, x, y)
+        diff += Math.abs(a[0]! - b[0]!) + Math.abs(a[1]! - b[1]!) + Math.abs(a[2]! - b[2]!)
+        count += 3
+      }
+    }
+    expect(diff / count).toBeLessThan(4)
+
+    // Owner sample, only when asked for (not in CI): FOTOMAGICA_SAMPLE_OUT=/path/montage.png.
+    const sample = process.env.FOTOMAGICA_SAMPLE_OUT
+    if (sample) {
+      mkdirSync(dirname(sample), { recursive: true })
+      if (sample.endsWith('.png')) await sharp(montage).png().toFile(sample)
+      else copyFileSync(montage, sample)
+    }
   })
 })

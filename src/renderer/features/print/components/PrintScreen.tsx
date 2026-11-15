@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import markUrl from '@brand/mark.png'
 import { COPIES } from '@shared/constants'
 import type { EventSession, SessionState } from '@shared/ipc'
 import { stepCopies } from '@shared/round'
@@ -42,6 +43,8 @@ export function PrintScreen({ session }: { session: EventSession }) {
 
   return (
     <div data-testid="print-screen" data-phase={phase.kind} className="absolute inset-0 flex flex-col items-center justify-center gap-16 bg-black/65 px-16">
+      {/* The symbol only, outside the sheet preview, at most 48 px (DESIGN §14). */}
+      <img src={markUrl} alt="" aria-hidden data-testid="print-mark" className="absolute top-12 right-12 size-12 invert" draggable={false} />
       <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-10">
         <div className="flex justify-start gap-10">
           {phase.kind === 'printed' ? (

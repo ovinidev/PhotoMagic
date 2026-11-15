@@ -1,5 +1,5 @@
 import type { EventSession, PrintFailureReason, RoundPhase, SessionPreview, SessionState, Timer } from '@shared/ipc'
-import type { PhotoIndex, PrintMode, Slot } from '@shared/layout'
+import { clampFraming, isDefaultFraming, type Framing, type PhotoIndex, type PrintMode, type Slot } from '@shared/layout'
 import { clampCopies } from '@shared/round'
 import type { SheetInput, SheetOutput } from '../compose/renderSheet'
 import { ticketFor, type Printer } from '../print'
@@ -33,11 +33,15 @@ export type Session = {
   state: () => SessionState
   preview: () => SessionPreview
   isOpen: () => boolean
+  /** The open event (folder and mode), for the gallery. */
+  openEvent: () => OpenEvent | null
   start: (event: OpenEvent) => SessionState
   end: () => SessionState
   addPhoto: (index: PhotoIndex, jpeg: Uint8Array) => SessionState
   setTimer: (timer: Timer) => SessionState
   setCopies: (copies: number) => SessionState
+  /** RF09: frames one filled slot; refused once the montage is saved or while printing. */
+  setFraming: (slotId: string, framing: Framing) => SessionState
   cancel: () => SessionState
   print: () => Promise<SessionState>
   reprint: () => Promise<SessionState>
@@ -48,12 +52,14 @@ export type Session = {
 
 type Round = {
   photos: Map<PhotoIndex, Uint8Array>
+  /** Framing per slot id; each slot has its own, even when two slots share a capture (RF09). */
+  framings: Map<string, Framing>
   phase: RoundPhase
   /** Montage already written for this round, kept across a failed send (RF13). */
   saved: { fileName: string; path: string } | null
 }
 
-const freshRound = (): Round => ({ photos: new Map(), phase: { kind: 'capturing' }, saved: null })
+const freshRound = (): Round => ({ photos: new Map(), framings: new Map(), phase: { kind: 'capturing' }, saved: null })
 
 export function createSession(deps: SessionDeps): Session {
   let event: OpenEvent | null = null
@@ -64,6 +70,8 @@ export function createSession(deps: SessionDeps): Session {
   /** Identifies the event and round a preview job belongs to; a stale job is dropped. */
   let generation = 0
   let queue: Promise<void> = Promise.resolve()
+  /** Generation of a preview job queued but not started yet; another request just reuses it. */
+  let pendingFor: number | null = null
 
   const state = (): SessionState => {
     if (!event) return { kind: 'idle' }
@@ -76,6 +84,7 @@ export function createSession(deps: SessionDeps): Session {
       taken: round.photos.size,
       previewRevision: preview.revision,
       slots: [...event.slots],
+      framings: Object.fromEntries(round.framings),
       phase: round.phase,
     }
     return open
@@ -87,15 +96,26 @@ export function createSession(deps: SessionDeps): Session {
     return current
   }
 
-  /** Composes the preview of the current round after the jobs already queued. */
+  const sheetInput = (open: OpenEvent, current: Round): SheetInput => ({
+    template: open.template,
+    slots: open.slots,
+    photos: Object.fromEntries(current.photos),
+    framings: Object.fromEntries(current.framings),
+  })
+
+  /**
+   * Composes the preview of the current round after the jobs already queued. The input is read when
+   * the job starts, so a burst of framing changes during a drag costs one composition, not one each.
+   */
   const schedulePreview = () => {
-    if (!event) return
+    if (!event || pendingFor === generation) return
     const job = generation
-    const input: SheetInput = { template: event.template, slots: event.slots, photos: Object.fromEntries(round.photos) }
+    pendingFor = job
     queue = queue
       .then(async () => {
-        if (job !== generation) return
-        const jpeg = await deps.render(input, { kind: 'preview' })
+        if (pendingFor === job) pendingFor = null
+        if (job !== generation || !event) return
+        const jpeg = await deps.render(sheetInput(event, round), { kind: 'preview' })
         if (job !== generation) return
         preview = { revision: preview.revision + 1, jpeg }
         notify()
@@ -128,6 +148,7 @@ export function createSession(deps: SessionDeps): Session {
     state,
     preview: () => preview,
     isOpen: () => event !== null,
+    openEvent: () => event,
 
     start: (next) => {
       event = next
@@ -166,6 +187,18 @@ export function createSession(deps: SessionDeps): Session {
       return notify()
     },
 
+    setFraming: (slotId, framing) => {
+      const slot = event?.slots.find((candidate) => candidate.id === slotId)
+      const phase = round.phase.kind
+      if (!event || !slot || slot.photo === null || !round.photos.has(slot.photo)) return state()
+      if (round.saved || (phase !== 'capturing' && phase !== 'review' && phase !== 'print-failed')) return state()
+      const next = clampFraming(framing)
+      if (isDefaultFraming(next)) round.framings.delete(slotId)
+      else round.framings.set(slotId, next)
+      schedulePreview()
+      return notify()
+    },
+
     cancel: () => {
       if (!event || round.phase.kind === 'printing') return state()
       copies = 1
@@ -182,10 +215,7 @@ export function createSession(deps: SessionDeps): Session {
 
       if (!current.saved) {
         try {
-          const jpeg = await deps.render(
-            { template: open.template, slots: open.slots, photos: Object.fromEntries(current.photos) },
-            { kind: 'montage' },
-          )
+          const jpeg = await deps.render(sheetInput(open, current), { kind: 'montage' })
           current.saved = await deps.saveMontage(open.folder, jpeg)
         } catch (error) {
           // Nothing was written, so nothing is announced as printed (DESIGN §10).

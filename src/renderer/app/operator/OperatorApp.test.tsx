@@ -10,7 +10,10 @@ describe('OperatorApp', () => {
     stubBridge()
     render(<OperatorApp />)
 
-    expect(screen.getByRole('heading', { name: 'Novo evento' })).toBeInTheDocument()
+    // RNF12: the full logo at startup, until main answers whether an event is open.
+    expect(screen.getByTestId('startup-splash')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Novo evento' })).toBeInTheDocument()
+    expect(screen.queryByTestId('startup-splash')).toBeNull()
     expect(screen.getByRole('button', { name: 'Iniciar evento' })).toBeDisabled()
     expect(await screen.findByText('Versão 0.1.0')).toBeInTheDocument()
   })
@@ -26,7 +29,7 @@ describe('OperatorApp', () => {
   it('switches to the event screen when main opens an event, and back on Encerrar evento', async () => {
     const { pushSession, api } = stubBridge()
     render(<OperatorApp />)
-    expect(screen.getByRole('heading', { name: 'Novo evento' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Novo evento' })).toBeInTheDocument()
 
     act(() => pushSession(eventState({ taken: 1 })))
     expect(await screen.findByTestId('event-title')).toHaveTextContent('Aniversário AJ')
@@ -42,7 +45,7 @@ describe('OperatorApp', () => {
   it('opens the slot editor over the form and closes it with Concluir, keeping the typed name', async () => {
     stubBridge()
     render(<OperatorApp />)
-    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Festa')
+    await userEvent.type(await screen.findByLabelText('Nome do evento'), 'Festa')
     await userEvent.click(screen.getByRole('button', { name: 'Editar posições das fotos (2 tiras)' }))
     const dialog = await screen.findByRole('dialog', { name: 'Posições das fotos' })
     expect(await within(dialog).findAllByRole('button', { name: /^(Cima|Baixo) \d, foto \d$/ })).toHaveLength(5)

@@ -35,7 +35,7 @@ describe('LayoutEditor (RF03)', () => {
       'Baixo 1, foto 1',
       'Baixo 2, foto 2',
     ])
-    expect(field('Left de Baixo 2').value).toBe('620')
+    expect(field('Left de Baixo 2').value).toBe('708')
     expect(field('Angle de Cima 3').value).toBe('270')
     expect(screen.getByTestId('cut-line')).toBeInTheDocument()
   })
@@ -54,18 +54,18 @@ describe('LayoutEditor (RF03)', () => {
     const sheet = screen.getByTestId('layout-sheet')
     pointer('pointerDown', card, 300, 800)
     pointer('pointerMove', sheet, 340, 780)
-    // Left 102, Top 630: clear of every snap target.
+    // Left 92, Top 693: clear of every snap target.
     pointer('pointerMove', sheet, 330, 760)
-    expect(field('Left de Baixo 1').value).toBe('102')
-    expect(field('Top de Baixo 1').value).toBe('630')
-    expect(percent(card.style.left)).toBeCloseTo((102 / 1844) * 100, 3)
+    expect(field('Left de Baixo 1').value).toBe('92')
+    expect(field('Top de Baixo 1').value).toBe('693')
+    expect(percent(card.style.left)).toBeCloseTo((92 / 1844) * 100, 3)
     expect(api.layout.save).not.toHaveBeenCalled()
 
     pointer('pointerUp', sheet, 330, 760)
     await waitFor(() => expect(api.layout.save).toHaveBeenCalledTimes(1))
     const saved = api.layout.save.mock.calls[0]![0]
     expect(saved.mode).toBe('two-strips')
-    expect(saved.slots.find((slot) => slot.id === 'bottom-1')).toMatchObject({ left: 102, top: 630 })
+    expect(saved.slots.find((slot) => slot.id === 'bottom-1')).toMatchObject({ left: 92, top: 693 })
     expect(saved.slots.find((slot) => slot.id === 'top-1')).toEqual(SEED_LAYOUTS['two-strips'][0])
   })
 
@@ -74,33 +74,33 @@ describe('LayoutEditor (RF03)', () => {
     const card = screen.getByTestId('slot-card-bottom-1')
     const sheet = screen.getByTestId('layout-sheet')
     pointer('pointerDown', card, 300, 800)
-    pointer('pointerMove', sheet, 300 - 66, 900) // Left 6
+    pointer('pointerMove', sheet, 300 - 56, 800) // Left 6
     expect(field('Left de Baixo 1').value).toBe('0')
-    pointer('pointerMove', sheet, 300 - 66, 900, { altKey: true })
+    pointer('pointerMove', sheet, 300 - 56, 800, { altKey: true })
     expect(field('Left de Baixo 1').value).toBe('6')
-    pointer('pointerUp', sheet, 300 - 66, 900, { altKey: true })
+    pointer('pointerUp', sheet, 300 - 56, 800, { altKey: true })
   })
 
   it('rotates from the rotation handle with the angle live in the panel', async () => {
     await open()
     await userEvent.click(screen.getByTestId('slot-card-bottom-1'))
     const sheet = screen.getByTestId('layout-sheet')
-    // Center of Baixo 1: 322, 810.5. A pointer to its left points the handle at 90°.
-    pointer('pointerDown', screen.getByTestId('handle-rotate'), 322, 1000)
-    pointer('pointerMove', sheet, 100, 815)
+    // Center of Baixo 1: 363, 934. A pointer to its left points the handle at 90°.
+    pointer('pointerDown', screen.getByTestId('handle-rotate'), 363, 1180)
+    pointer('pointerMove', sheet, 100, 939)
     expect(field('Angle de Baixo 1').value).toBe('90')
-    pointer('pointerUp', sheet, 100, 815)
+    pointer('pointerUp', sheet, 100, 939)
   })
 
   it('resizes from a handle with Width and Height live', async () => {
     await open()
     await userEvent.click(screen.getByTestId('slot-card-bottom-1'))
     const sheet = screen.getByTestId('layout-sheet')
-    pointer('pointerDown', screen.getByTestId('handle-se'), 572, 951)
-    pointer('pointerMove', sheet, 552, 921)
-    expect(field('Width de Baixo 1').value).toBe('480')
-    expect(field('Height de Baixo 1').value).toBe('251')
-    pointer('pointerUp', sheet, 552, 921)
+    pointer('pointerDown', screen.getByTestId('handle-se'), 664, 1135)
+    pointer('pointerMove', sheet, 644, 1105)
+    expect(field('Width de Baixo 1').value).toBe('582')
+    expect(field('Height de Baixo 1').value).toBe('372')
+    pointer('pointerUp', sheet, 644, 1105)
   })
 
   it('moves the card when a number is typed, and saves on Enter', async () => {
@@ -131,11 +131,11 @@ describe('LayoutEditor (RF03)', () => {
     await userEvent.clear(left)
     await userEvent.type(left, '90{Enter}')
     await userEvent.click(screen.getByRole('button', { name: 'Desfazer' }))
-    expect(field('Left de Baixo 1').value).toBe('72')
+    expect(field('Left de Baixo 1').value).toBe('62')
     await userEvent.click(screen.getByRole('button', { name: 'Refazer' }))
     expect(field('Left de Baixo 1').value).toBe('90')
     await userEvent.click(screen.getByRole('button', { name: 'Restaurar padrão' }))
-    expect(field('Left de Baixo 1').value).toBe('72')
+    expect(field('Left de Baixo 1').value).toBe('62')
     await waitFor(() => expect(api.layout.save).toHaveBeenCalledTimes(4))
   })
 

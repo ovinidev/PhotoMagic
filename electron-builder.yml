@@ -22,8 +22,8 @@ win:
   target:
     - target: nsis
       arch: [x64]
-  # Source of the .ico (16, 32, 48, 256): the symbol on a light tile, never the full logo.
-  icon: assets/brand/icon.png
+  # The symbol on a light tile at 16, 32, 48 and 256 px, never the full logo (`pnpm icon` rebuilds it from icon.png).
+  icon: assets/brand/icon.ico
   # Signing happens only when CSC_LINK and CSC_KEY_PASSWORD are set; otherwise the installer is unsigned.
 
 nsis:

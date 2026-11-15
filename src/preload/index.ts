@@ -75,6 +75,7 @@ const api: FotomagicaApi = {
     getPreview: () => invoke(IPC_CHANNELS.sessionGetPreview, undefined),
     setTimer: (timer) => invoke(IPC_CHANNELS.sessionSetTimer, { timer }),
     setCopies: (copies) => invoke(IPC_CHANNELS.sessionSetCopies, { copies }),
+    setFraming: (input) => invoke(IPC_CHANNELS.sessionSetFraming, input),
     cancel: () => invoke(IPC_CHANNELS.sessionCancel, undefined),
     print: () => invoke(IPC_CHANNELS.sessionPrint, undefined),
     reprint: () => invoke(IPC_CHANNELS.sessionReprint, undefined),
@@ -82,6 +83,18 @@ const api: FotomagicaApi = {
     requestShutter: () => send(IPC_CHANNELS.sessionRequestShutter, undefined),
     onShutter: (listener) => subscribe(IPC_CHANNELS.sessionShutter, () => listener()),
     sendPhoto: (photo) => send(IPC_CHANNELS.sessionPhoto, photo),
+  },
+  webcam: {
+    getState: () => invoke(IPC_CHANNELS.webcamGet, undefined),
+    set: (values) => invoke(IPC_CHANNELS.webcamSet, { values }),
+    report: (report) => send(IPC_CHANNELS.webcamReport, report),
+    onState: (listener) => subscribe(IPC_CHANNELS.webcamState, listener),
+  },
+  gallery: {
+    list: () => invoke(IPC_CHANNELS.galleryList, undefined),
+    get: (input) => invoke(IPC_CHANNELS.galleryGet, input),
+    reprint: (fileName) => invoke(IPC_CHANNELS.galleryReprint, { fileName }),
+    onChanged: (listener) => subscribe(IPC_CHANNELS.galleryChanged, () => listener()),
   },
   printer: {
     getStatus: () => invoke(IPC_CHANNELS.printerStatus, undefined),

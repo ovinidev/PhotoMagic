@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import sharp, { type Metadata } from 'sharp'
 import type { TemplateImportResult, TemplateInfo, Templates } from '@shared/ipc'
 import { PRINT_MODES, type PrintMode } from '@shared/layout'
-import { checkTemplate } from '@shared/template'
+import { checkTemplate, isPdf } from '@shared/template'
 import { TEMPLATES_DIR, readConfig, updateConfig } from './config'
 
 /**
@@ -23,6 +23,7 @@ async function info(mode: PrintMode, fileName: string, bytes: Uint8Array): Promi
 }
 
 export async function importTemplate(userData: string, mode: PrintMode, fileName: string, bytes: Uint8Array): Promise<TemplateImportResult> {
+  if (isPdf(bytes)) return { ok: false, reason: 'pdf' }
   let meta: Metadata
   try {
     meta = await sharp(bytes).metadata()

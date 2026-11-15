@@ -1,4 +1,5 @@
-import { useRef, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useApplyWebcam } from '@renderer/features/webcam'
 import type { EventSession } from '@shared/ipc'
 import { CAMERA_COPY } from '../copy'
 import { useCamera } from '../hooks/useCamera'
@@ -6,6 +7,7 @@ import { usePreviewSender } from '../hooks/usePreviewSender'
 import { useShutter } from '../hooks/useShutter'
 import { CameraPreview } from './CameraPreview'
 import { CaptureControls } from './CaptureControls'
+import { ThirdsGrid, TvTopBar } from './TvTopBar'
 import { GLASS } from '@renderer/shared/utils/glass'
 
 function CameraMessage({ title, detail, children }: { title: string; detail?: string; children?: ReactNode }) {
@@ -31,11 +33,16 @@ export function CameraView({ session = null }: { session?: EventSession | null }
   const videoRef = useRef<HTMLVideoElement>(null)
   const shutter = useShutter({ session, videoRef })
   usePreviewSender(videoRef)
+  const stream = state.kind === 'live' ? state.stream : null
+  const track = useMemo(() => stream?.getVideoTracks()[0] ?? null, [stream])
+  useApplyWebcam(track)
+  const [grid, setGrid] = useState(false)
   const capturing = session !== null && session.phase.kind === 'capturing'
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-black" data-testid="camera-view" data-camera-state={state.kind}>
       {state.kind === 'live' ? <CameraPreview stream={state.stream} videoRef={videoRef} /> : null}
+      {grid && state.kind === 'live' ? <ThirdsGrid /> : null}
       {state.kind === 'starting' ? <CameraMessage title={CAMERA_COPY.starting} /> : null}
       {state.kind === 'error' ? (
         <CameraMessage {...CAMERA_COPY.errors[state.reason]}>
@@ -48,6 +55,7 @@ export function CameraView({ session = null }: { session?: EventSession | null }
           </button>
         </CameraMessage>
       ) : null}
+      {session ? <TvTopBar grid={grid} onToggleGrid={() => setGrid((on) => !on)} /> : null}
       {capturing ? <CaptureControls session={session} shutter={shutter} disabled={state.kind !== 'live'} /> : null}
     </div>
   )

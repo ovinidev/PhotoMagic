@@ -20,4 +20,16 @@ export const SESSION_COPY = {
   ending: 'Encerrando…',
   endError: 'Não foi possível encerrar o evento. Tente de novo.',
   modes: { 'two-strips': '2 tiras', 'one-strip': '1 tira' },
+  framing: {
+    slot: (label: string) => `Enquadrar ${label}`,
+    hint: 'Clique numa foto da montagem para enquadrar. Arraste para mover, use a roda do mouse para o zoom e a alça para girar.',
+    empty: 'As fotos aparecem aqui para enquadrar assim que forem tiradas.',
+    readout: (label: string, zoom: number, rotation: number) =>
+      `${label}: zoom ${zoom.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}× · giro ${rotation.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}°`,
+    zoomIn: 'Aproximar',
+    zoomOut: 'Afastar',
+    turnLeft: 'Girar para a esquerda',
+    turnRight: 'Girar para a direita',
+    reset: 'Restaurar enquadramento',
+  },
 } as const

@@ -20,6 +20,7 @@
     "test:e2e": "playwright test",
     "build": "electron-vite build",
     "dist": "electron-vite build && electron-builder --win",
+    "icon": "node scripts/build-icon.mjs",
     "prepare": "husky"
   },
   "pnpm": {

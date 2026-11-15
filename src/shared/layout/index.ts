@@ -10,11 +10,13 @@ export {
   type PrintMode,
   type Slot,
 } from './types'
-export { ONE_STRIP_SEED, SEED_LAYOUTS, TWO_STRIPS_SEED } from './seed'
+export { CLIENT_BOX_BLEED, CLIENT_BOX_RADIUS, ONE_STRIP_SEED, SEED_LAYOUTS, TWO_STRIPS_CLIENT_BOXES, TWO_STRIPS_SEED } from './seed'
 export {
   DEFAULT_FRAMING,
+  FRAMING_ROTATION_RANGE,
   ZOOM_RANGE,
   clampFraming,
+  isDefaultFraming,
   clipToSheet,
   guideCrop,
   nearestQuarterTurn,
@@ -40,3 +42,4 @@ export {
   type ResizeHandle,
 } from './gesture'
 export { ANGLE_SNAP_TOLERANCE, SNAP_TOLERANCE, snapAngle, snapMove, snapResize, snapTargets, type SnapOptions, type SnapTargets } from './snap'
+export { ASSUMED_PHOTO, FRAMING_ROTATION_SNAP, panFraming, rotateFraming, turnFraming, wheelZoomFactor, zoomFraming } from './framing'

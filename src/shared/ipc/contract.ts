@@ -7,6 +7,12 @@ import {
   displayStateSchema,
   eventStartInputSchema,
   eventStartResultSchema,
+  galleryChangedSchema,
+  galleryGetInputSchema,
+  galleryImageSchema,
+  galleryListSchema,
+  galleryReprintInputSchema,
+  galleryReprintResultSchema,
   layoutSaveInputSchema,
   layoutSaveResultSchema,
   layoutsSchema,
@@ -16,11 +22,15 @@ import {
   sessionPreviewSchema,
   sessionStateSchema,
   setCopiesInputSchema,
+  setFramingInputSchema,
   setTimerInputSchema,
   shutterSchema,
   templateImportInputSchema,
   templateImportResultSchema,
   templatesSchema,
+  webcamReportSchema,
+  webcamSetInputSchema,
+  webcamStateSchema,
 } from './schemas'
 
 /**
@@ -40,6 +50,7 @@ export const INVOKE_CONTRACT = {
   [IPC_CHANNELS.sessionGetPreview]: { input: noInputSchema, output: sessionPreviewSchema },
   [IPC_CHANNELS.sessionSetTimer]: { input: setTimerInputSchema, output: sessionStateSchema },
   [IPC_CHANNELS.sessionSetCopies]: { input: setCopiesInputSchema, output: sessionStateSchema },
+  [IPC_CHANNELS.sessionSetFraming]: { input: setFramingInputSchema, output: sessionStateSchema },
   [IPC_CHANNELS.sessionCancel]: { input: noInputSchema, output: sessionStateSchema },
   [IPC_CHANNELS.sessionPrint]: { input: noInputSchema, output: sessionStateSchema },
   [IPC_CHANNELS.sessionReprint]: { input: noInputSchema, output: sessionStateSchema },
@@ -47,6 +58,11 @@ export const INVOKE_CONTRACT = {
   [IPC_CHANNELS.layoutGet]: { input: noInputSchema, output: layoutsSchema },
   [IPC_CHANNELS.layoutSave]: { input: layoutSaveInputSchema, output: layoutSaveResultSchema },
   [IPC_CHANNELS.printerStatus]: { input: noInputSchema, output: printerStatusSchema },
+  [IPC_CHANNELS.galleryList]: { input: noInputSchema, output: galleryListSchema },
+  [IPC_CHANNELS.galleryGet]: { input: galleryGetInputSchema, output: galleryImageSchema },
+  [IPC_CHANNELS.webcamGet]: { input: noInputSchema, output: webcamStateSchema },
+  [IPC_CHANNELS.webcamSet]: { input: webcamSetInputSchema, output: webcamStateSchema },
+  [IPC_CHANNELS.galleryReprint]: { input: galleryReprintInputSchema, output: galleryReprintResultSchema },
 } as const satisfies Record<string, { input: z.ZodType; output: z.ZodType }>
 
 /** Renderer → main, fire and forget. The preload validates before sending, main again on arrival. */
@@ -55,6 +71,7 @@ export const SEND_CONTRACT = {
   [IPC_CHANNELS.cameraRequestPreviewPort]: noInputSchema,
   [IPC_CHANNELS.sessionRequestShutter]: noInputSchema,
   [IPC_CHANNELS.sessionPhoto]: sessionPhotoSchema,
+  [IPC_CHANNELS.webcamReport]: webcamReportSchema,
 } as const satisfies Record<string, z.ZodType>
 
 /** Main → renderer pushes. Main validates before sending, the preload again before the listener. */
@@ -64,6 +81,8 @@ export const EVENT_CONTRACT = {
   [IPC_CHANNELS.sessionState]: sessionStateSchema,
   [IPC_CHANNELS.sessionShutter]: shutterSchema,
   [IPC_CHANNELS.printerStatusChanged]: printerStatusSchema,
+  [IPC_CHANNELS.galleryChanged]: galleryChangedSchema,
+  [IPC_CHANNELS.webcamState]: webcamStateSchema,
 } as const satisfies Record<string, z.ZodType>
 
 export type InvokeChannel = keyof typeof INVOKE_CONTRACT

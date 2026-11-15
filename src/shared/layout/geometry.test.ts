@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { Slot } from './types'
 import {
+  DEFAULT_FRAMING,
   clampFraming,
+  isDefaultFraming,
   clipToSheet,
   guideCrop,
   nearestQuarterTurn,
@@ -33,8 +35,10 @@ describe('angles', () => {
 
 describe('slotBounds', () => {
   it('rotates around the center without swapping width and height in the model', () => {
-    // Cima 1: center (322, 210.5); 270 makes it 281 wide and 500 tall, sticking out above the sheet.
-    expect(slotBounds(TWO_STRIPS_SEED[0]!)).toEqual({ left: 181.5, top: -39.5, width: 281, height: 500 })
+    // Cima 1: model 532×358 around (299, 310); 270 makes it the client's box, 358 wide (1 px bleed each side) and 532 tall.
+    expect(slotBounds(TWO_STRIPS_SEED[0]!)).toEqual({ left: 120, top: 44, width: 358, height: 532 })
+    // A slot that sticks out above the sheet is still allowed by the model.
+    expect(slotBounds(slot({ left: 72, top: 70, width: 500, height: 281, angle: 270 }))).toEqual({ left: 181.5, top: -39.5, width: 281, height: 500 })
   })
 
   it('grows to the bounding box of a tilted slot', () => {
@@ -77,14 +81,35 @@ describe('planSlot', () => {
   })
 
   it('zooms and pans without uncovering the slot (RF09)', () => {
-    const zoomed = planSlot(slot({}), PORTRAIT, { zoom: 2, panX: -1, panY: 1 })
+    const zoomed = planSlot(slot({}), PORTRAIT, { zoom: 2, panX: -1, panY: 1, rotation: 0 })
     expect(zoomed.resize).toEqual({ width: 1000, height: 1778 })
     expect(zoomed.extract).toEqual({ left: 0, top: 1778 - 281, width: 500, height: 281 })
 
-    const past = planSlot(slot({}), PORTRAIT, { zoom: 9, panX: 5, panY: -5 })
+    const past = planSlot(slot({}), PORTRAIT, { zoom: 9, panX: 5, panY: -5, rotation: 0 })
     expect(past.resize.width).toBe(1500)
     expect(past.extract.left + past.extract.width).toBe(past.resize.width)
     expect(past.extract.top).toBe(0)
+  })
+
+  it('rotates the photo inside the still slot and still covers it (RF09)', () => {
+    const plan = planSlot(slot({}), PORTRAIT, { zoom: 1, panX: 0, panY: 0, rotation: 10 })
+    expect(plan.rotate).toBe(10)
+    expect(plan.box).toEqual({ width: 500, height: 281 })
+    // The tile turned by 10° covers the 500×281 box: it is at least the box's turned bounds.
+    const rad = (10 * Math.PI) / 180
+    expect(plan.extract.width).toBeGreaterThanOrEqual(500 * Math.cos(rad) + 281 * Math.sin(rad))
+    expect(plan.extract.height).toBeGreaterThanOrEqual(500 * Math.sin(rad) + 281 * Math.cos(rad))
+    expect(plan.extract.left + plan.extract.width).toBeLessThanOrEqual(plan.resize.width)
+    expect(plan.extract.top + plan.extract.height).toBeLessThanOrEqual(plan.resize.height)
+    // The slot itself does not move.
+    expect(plan.center).toEqual({ x: 350, y: 240.5 })
+    expect(plan.angle).toBe(0)
+  })
+
+  it('carries the box corner radius, at most half the box', () => {
+    expect(planSlot(slot({}), PORTRAIT).radius).toBe(0)
+    expect(planSlot(slot({ radius: 31 }), PORTRAIT).radius).toBe(31)
+    expect(planSlot(slot({ width: 60, height: 50, radius: 99 }), PORTRAIT).radius).toBe(25)
   })
 
   it('never resizes below the slot box', () => {
@@ -96,8 +121,15 @@ describe('planSlot', () => {
 
 describe('clampFraming', () => {
   it('keeps zoom in 1..3 and pan in -1..1, and repairs non-numbers', () => {
-    expect(clampFraming({ zoom: 0.5, panX: -2, panY: 2 })).toEqual({ zoom: 1, panX: -1, panY: 1 })
-    expect(clampFraming({ zoom: 4, panX: 0.25, panY: Number.NaN })).toEqual({ zoom: 3, panX: 0.25, panY: 0 })
+    expect(clampFraming({ zoom: 0.5, panX: -2, panY: 2, rotation: 0 })).toEqual({ zoom: 1, panX: -1, panY: 1, rotation: 0 })
+    expect(clampFraming({ zoom: 4, panX: 0.25, panY: Number.NaN, rotation: Number.NaN })).toEqual({ zoom: 3, panX: 0.25, panY: 0, rotation: 0 })
+  })
+
+  it('folds the rotation into -180..180', () => {
+    expect(clampFraming({ ...DEFAULT_FRAMING, rotation: 190 }).rotation).toBe(-170)
+    expect(clampFraming({ ...DEFAULT_FRAMING, rotation: -30 }).rotation).toBe(-30)
+    expect(isDefaultFraming(DEFAULT_FRAMING)).toBe(true)
+    expect(isDefaultFraming({ ...DEFAULT_FRAMING, zoom: 1.5 })).toBe(false)
   })
 })
 
@@ -138,16 +170,18 @@ describe('slotCrop and guideCrop', () => {
 
   it('shows the bottom strip band for photo 1 in 2 tiras', () => {
     const guide = guideCrop(TWO_STRIPS_SEED, 1, FRAME)
-    // Cima 1 (281:500) is a hair narrower than 9:16; the band is the bottom slot's height.
-    expect(guide?.width).toBeCloseTo(1, 2)
-    expect(guide?.height).toBeCloseTo((281 / 500) * (9 / 16), 6)
+    // Cima 1 (356:532) is wider than 9:16, so it keeps the whole width; the band is the bottom slot's height.
+    expect(guide?.width).toBeCloseTo(1, 6)
+    expect(guide?.height).toBeCloseTo((402 / 602) * (9 / 16), 6)
     expect(guide!.top).toBeCloseTo((1 - guide!.height) / 2, 6)
   })
 
   it('follows the only, vertical slot of photo 3 in 2 tiras', () => {
     const guide = guideCrop(TWO_STRIPS_SEED, 3, FRAME)
     expect(guide).toEqual(slotCrop(TWO_STRIPS_SEED[2]!, FRAME))
-    expect(guide!.height).toBe(1)
+    // The client's portrait box is wider than 9:16: it keeps the whole width and crops a little height.
+    expect(guide!.width).toBe(1)
+    expect(guide!.height).toBeCloseTo((532 / 358) * (9 / 16), 6)
   })
 
   it('is null when no slot uses the photo', () => {

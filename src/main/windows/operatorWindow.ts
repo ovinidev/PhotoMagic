@@ -1,4 +1,5 @@
 import { BrowserWindow, screen } from 'electron'
+import appIcon from '@brand/icon.png?asset'
 import { centerIn } from '@shared/displays'
 import { SECURE_WEB_PREFERENCES, loadRendererPage, lockNavigation } from './rendererEntry'
 
@@ -16,6 +17,8 @@ export function createOperatorWindow(): BrowserWindow {
     show: false,
     title: 'Foto Mágica',
     backgroundColor: '#F4F1EB',
+    // The symbol on its light tile (RNF12): taskbar and title bar in dev too; the installer embeds icon.ico.
+    icon: appIcon,
     webPreferences: SECURE_WEB_PREFERENCES,
   })
 

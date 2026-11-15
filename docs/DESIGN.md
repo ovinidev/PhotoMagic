@@ -129,8 +129,13 @@ The preload exposes `window.fotomagica`. Each method validates input and output 
 | invoke | `session:cancel` | Discards the round |
 | invoke | `session:print` | No input: the copies live in the session. Composes, saves, prints; after a failed send, resends the file already saved |
 | invoke | `session:reprint` | `Imprimir novamente`: resends the round's JPG with the current copies |
-| invoke | `gallery:list` | Lists the JPGs in the event folder |
-| invoke | `webcam:get` / `webcam:set` | Persisted constraints |
+| invoke | `gallery:list` | The open event folder's montages (only `HH-mm-ss.jpg` names the app writes), newest first. Names only, never a path |
+| invoke | `gallery:get` | One montage by name, as the file (`full`) or a 480 px JPEG (`thumb`); `null` when it is gone |
+| invoke | `gallery:reprint` | `Imprimir novamente` from the gallery menu: resends that file, one copy, in the event's mode. No new file |
+| invoke | `webcam:get` / `webcam:set` | Saved values, the controls the camera last advertised, and `live` (the TV has the camera open). `set` saves and pushes `webcam:state` |
+| send | `webcam:report` | TV → main: the open camera's capabilities, or `null` with no camera. Ignored from other windows |
+| event | `webcam:state` | Main → both windows, on every change of the adjustments |
+| event | `gallery:changed` | Main → both windows, after a montage is written |
 | invoke | `printer:status` | A fresh read of the printer state (`PrinterStatus`, §10) |
 | event | `session:state` | Main → both windows, on every round change |
 | event | `printer:status-changed` | Main → laptop and TV, when the polled state changes |
@@ -195,6 +200,8 @@ The panel reads `track.getCapabilities()` and only draws what exists:
 
 `applyConstraints` runs on the TV. The saved value goes along in `webcam:set`. When the event opens, the TV reapplies the JSON. `powerLineFrequency`, if it exists, is fixed at 60, with no control on screen.
 
+The pure rules are in `src/shared/webcam.ts`: `readWebcamCapabilities` keeps only the controls above that have a usable `{ min, max }` range (gain is `gain`, else `iso`), and `webcamConstraintSet` clamps each saved value to its range and step, under the capability's own name, as one `advanced` set. Color temperature only applies, and is only drawn, in manual white balance. The TV reports what its track advertises with `webcam:report`; main stores those controls in `config.json` next to the values, so the panel still opens with the saved controls when there is no camera (RF15 fixture mode), with the note `A câmera não está aberta. Os ajustes ficam salvos e são aplicados quando ela abrir.` A camera that advertises no control at all (Chromium's fake device) does not erase the controls saved from the real one. The panel saves 200 ms after a slider rests, so a drag is one write.
+
 The numbers visible in figure 8 (brightness 145, contrast 111, and the rest) are the state of that Windows on the day of the photo. The app does not copy them as factory defaults: it shows what the camera reports and persists what the operator changes.
 
 ## 6. Montage
@@ -209,9 +216,9 @@ For each slot, in this order:
 
 1. The capture of the indicated photo (1, 2 or 3), already upright and mirrored
 2. Pre-rotation of the photo by minus the quarter turn nearest to the slot's `angle` (Angle 270 turns the photo 90° clockwise first). Step 4 turns it back, so the person stays upright while the slot's frame turns: a 500×281 slot at Angle 270 shows a tall, upright portrait
-3. `cover` fit into the unrotated rectangle (`width` × `height`), with that slot's pan (-1 to 1 on each axis) and zoom (1 to 3). Zoom 1 and pan 0 crop the center: in a horizontal slot, the portrait loses top and bottom in equal parts. Framing rotation arrives with RF09
-4. Rotation of the result by the slot's `angle`, clockwise around the center
-5. Composition over that mode's template, centered on the slot's center and clipped to the sheet. The seed's top slots at Angle 270 stick out about 40 px above y = 0; that part is cut
+3. `cover` fit into the unrotated rectangle (`width` × `height`), with that slot's pan (-1 to 1 on each axis) and zoom (1 to 3). Zoom 1 and pan 0 crop the center: in a horizontal slot, the portrait loses top and bottom in equal parts. With a framing rotation, the photo covers the bounds of the box turned by that rotation (plus 2 px), is turned clockwise by it, and the centered `width` × `height` is kept, so no corner of the slot ever shows the template (RF09)
+4. If the slot has a `radius`, the tile is clipped to a rounded rectangle of that radius (a `dest-in` SVG mask), in the box's own axes; a rounded rectangle turns into itself, so this works at any angle. Then rotation of the result by the slot's `angle`, clockwise around the center
+5. Composition over that mode's template, centered on the slot's center and clipped to the sheet. A slot dragged partly off the sheet is cut there (the client seed sits fully inside)
 
 The plan is pure (`planSlot`, `clipToSheet` in `src/shared/layout/geometry.ts`) and `src/main/compose/renderSheet.ts` runs it with sharp, one materialized step at a time (sharp otherwise reorders rotate, resize and extract). The preview the laptop and the TV show is the same composition scaled to 922 px wide, recomposed after each photo; the round state carries a `previewRevision` and both windows fetch the JPEG with `session:get-preview`.
 
@@ -221,7 +228,7 @@ The golden test does not depend on guessing the pivot: a frame with a light bar 
 
 After the mode's slots, `sharp` writes a quality-95 JPEG, density 300, 1844×1240. This is the `HH-mm-ss.jpg` file.
 
-The cut line used by the editor, only in the 2-strip layout, is y = 620. It is a working assumption, pending from the client, along with the measurements of the gray squares. Until that data arrives, a slot that crosses this line does not prevent saving, and the editor shows a warning. The 1-strip layout does not draw this line.
+The cut line used by the editor, only in the 2-strip layout, is y = 620. It falls in the 576–733 gap of the client's 2 tiras artwork and is to be confirmed on a test sheet. A slot that crosses this line does not prevent saving, and the editor shows a warning. The 1-strip layout does not draw this line.
 
 ### Editor model
 
@@ -230,6 +237,8 @@ Left and Top are the top-left corner of the rectangle before rotation. Width and
 In the current app, Angle 270 with 500×281 draws a tall slot, and Angle 0 draws a lying-down slot. The new renderer reproduces this. The photo number is drawn in the slot's local space, so it rotates with it, as in the demonstration: vertically the "3" is sideways. This is the current app's behavior, and the editor keeps it.
 
 A slot's `photo` is 1, 2, 3 or `null` (`Nenhuma` in the panel). The montage skips a `null` slot, so the template shows there.
+
+A slot may carry `radius` (sheet pixels, default 0): the corner radius of the artwork's photo box. The client's 2 tiras boxes are black rounded rectangles of about 33 px (31.1 to 35.3 px, measured from the anti-aliased coverage of all 20 corners), and the seed uses 30 px (`CLIENT_BOX_RADIUS`). Clipping 1 px under the tightest corner keeps the photo's anti-aliased edge past the black curve everywhere. The boxes' right edge is also anti-aliased (a 35% black column past the measured width), so the seed bleeds 1 px past each side edge (`CLIENT_BOX_BLEED`), keeping integer numbers and the same centers. A render test over the client artwork counts zero dark pixels in every box, no gray pixel just inside or outside any edge, and white paper at each box's corner pixel. `print.spec.ts` runs a full round over the same artwork (`e2e/fixtures/client-2tiras-1844x1240.png`); with `FOTOMAGICA_SAMPLE_OUT=<file.png>` it also writes the montage, for showing the owner. The alternative, a square photo covering the box, would put square photo corners on the white paper outside the rounded box. The panel does not show the radius; editing a slot keeps it, and `Restaurar padrão` brings it back. A layout saved before the client seed has no radius and stays square.
 
 ![Figure 4 — Selected slot with dashed red border](assets/briefing/image4.png)
 
@@ -269,13 +278,15 @@ This is not the slot editor. With the party open, the slot stays still. The gest
 
 Next to it, the laptop shows the camera without the iPhone chrome, in the full portrait. The guide is the part of the frame that every slot of the next photo keeps at default framing (`guideCrop`): for photos 1 and 2 of 2 tiras, the horizontal band of the bottom strip; for photo 3 of 2 tiras, its vertical slot; in 1 tira mode, the portrait slot of the next photo.
 
-The framing gestures themselves (RF09) are not built yet; every slot uses the default framing.
+Framing is `{ zoom 1..3, panX -1..1, panY -1..1, rotation -180..180 }` per slot id, kept in the round (`framings` in `session:state`, absent means the default) and sent with `session:set-framing`. Main accepts it only for a slot whose photo is taken and only until the montage is written (capturing, review, or a failed save); `Nova rodada` and `Cancelar` reset it. The gesture math is pure, in `src/shared/layout/framing.ts`: a drag is read in the photo's own axes (slot angle plus framing rotation) and turned into pan using the 1920×1080 capture stood upright as the assumed photo size, so the photo follows the pointer; the wheel zooms by `exp(-deltaY / 500)`; the handle turns by the angle swept around the slot center and snaps to 0° within 3° (Alt turns that off). The laptop also offers `Aproximar`, `Afastar`, `Girar para a esquerda`, `Girar para a direita` (5° steps) and `Restaurar enquadramento`.
+
+Unlike the slot editor, framing does go to main during the gesture, because the TV print preview must follow it: the laptop keeps at most one `session:set-framing` in flight and only the latest framing waits, and main composes one preview for a burst (a queued preview job reads the round when it starts). Nothing is written to disk until `Imprimir`.
 
 ## 9. Persistence
 
 | Data | Location |
 | --- | --- |
-| Both layouts, both templates, webcam, printer name | `app.getPath('userData')/config.json` |
+| Both layouts, both templates, webcam values and the controls the camera last advertised | `app.getPath('userData')/config.json` |
 | Each mode's template file (`two-strips.png` or `.jpg`, `one-strip.…`) | `app.getPath('userData')/templates/` |
 | JPG montage | `app.getPath('desktop')/<event name>/HH-mm-ss.jpg` |
 
@@ -390,7 +401,7 @@ Signing, in the Windows job, only applies if the secrets are filled in:
 
 NSIS: per machine, desktop shortcut, selectable install directory. `appId`: `com.fotomagica.desktop`. `productName`: `Foto Mágica`.
 
-Builder icon: `assets/brand/icon.png` (symbol on a light background). The builder emits the `.ico` with 16, 32, 48 and 256. The full logo does not go into the small icon, because the text does not survive at 16 px.
+Builder icon: `assets/brand/icon.ico`, generated from `assets/brand/icon.png` (symbol on a light background) by `pnpm icon` (`scripts/build-icon.mjs`, sharp) with PNG entries at 16, 32, 48 and 256; a unit test checks the four sizes. The operator window uses `icon.png` as its window icon (title bar and taskbar in dev); the installed exe carries the `.ico`. The TV window has no taskbar entry. The full logo does not go into the small icon, because the text does not survive at 16 px.
 
 ## 12. CI and tests
 
@@ -435,10 +446,10 @@ E2E, in `e2e/`, one spec per flow, on real Electron:
 | --- | --- |
 | `create-event.spec.ts` | Name, correct and wrong template, folder |
 | `layout-editor.spec.ts` | Editor after import with the five cards, drag with live panel and one write on release, snap and Alt, rotation and resize, numeric edit, the two independent layouts across a relaunch, and the event using its layout |
-| `capture-round.spec.ts` | Three photos, counter, timer, cancel |
+| `capture-round.spec.ts` | Three photos, counter, timer, cancel, framing one slot on the laptop with the TV preview following |
 | `print.spec.ts` | Simulated ticket, copies, status failure, printer line and TV warning, `Tentar novamente` after the paper or the cut is fixed, single file |
-| `gallery.spec.ts` | List, fullscreen, reprint |
-| `resilience.spec.ts` | Webcam disappears mid-round, TV keeps responding, ending closes the TV |
+| `gallery.spec.ts` | Only the app's montages listed on the TV and the laptop, a new print showing up, fullscreen, reprint from the menu with no new file |
+| `resilience.spec.ts` | Webcam disappears mid-round (the spec ends the fake track and then fires `devicechange`), TV keeps responding, the missing photo after reconnecting; TV unplug and replug; no camera; webcam panel with persisted controls in fixture mode and across a restart; ending closes the TV |
 
 A PRD scenario whose screen does not exist yet stays as `test.fixme`, with the requirement id in the title, and becomes a test in the PR that builds the screen. E2E does not point at the DS-RX1 or the MX Brio.
 
@@ -470,6 +481,7 @@ src/
       dnp/               spooler flags, PrintCapabilities choice, helper protocol and bridge, dnp-helper.ps1
     persist/             config.json and the per-mode templates
     updater/
+    gallery/             the event folder's montages by name, thumbnails
   preload/
     index.ts             contextBridge
     fotomagica.d.ts      window.fotomagica type for the renderer
@@ -483,8 +495,8 @@ src/
       session/           laptop event screen: live preview and guide, montage preview, round controls
       camera/            TV: live view, shutter, timer, laptop preview sender; laptop TV and camera status
       print/             TV print screen, printer status line and hook
-      gallery/
-      webcam/            constraints panel
+      gallery/           TV thumbnail and grid, laptop panel, fullscreen view and reprint menu
+      webcam/            constraints panel (TV and laptop), applying the saved values on the TV track
     shared/
       components/ui/     shadcn, used by the laptop
       hooks/             session state, montage preview, object URL
@@ -499,6 +511,9 @@ assets/brand/
   logo.png               transparent lockup
   mark.png               transparent symbol, 1024
   icon.png               symbol on a light background, source of the .ico
+  icon.ico               16, 32, 48 and 256, generated by `pnpm icon`
+scripts/
+  build-icon.mjs         icon.png → icon.ico
 ```
 
 Rules, the same as PilatePay:
@@ -544,7 +559,7 @@ Inter, weights 400, 500 and 600, local files. The words FOTO MÁGICA in the inte
 
 Background `--bg`, cards `--bg-raised`, 1 px `--line` border, 12 px radius on cards and 8 px on fields. The primary button is black with light text. The secondary button is ghost, with a `--line` border. Visible focus: 2 px `--ink` ring, 2 px offset.
 
-Header with the symbol and the event name when there is one. The home screen centers the full logo, the name, the mode (2 tiras or 1 tira) and the file for that mode. A single column, maximum width 720 px, because it is a short form and not a dashboard.
+At startup, until main says whether an event is open, the window shows the full logo centered. Header with the symbol and the event name when there is one. The home screen centers the full logo, the name, the mode (2 tiras or 1 tira) and the file for that mode. A single column, maximum width 720 px, because it is a short form and not a dashboard.
 
 The editor is the exception to width: the 1844×1240 sheet scales to fit the window, with the numbers panel in a fixed 520 px column on the left: a table with one row per slot, in the same order as the current app (Image, Left, Top, Width, Height, Angle), so all the slots of the layout are visible at once, as in the current app's dialog.
 
@@ -562,6 +577,8 @@ Logical frame 1080×1920.
 - `backdrop-filter: blur(24px)`. If the compositor has no blur, the bar falls back to `rgba(28, 28, 30, 0.72)`, opaque enough for the label to stay legible
 
 The rule-of-thirds grid is white hairlines at 20% opacity. When off, it disappears completely.
+
+The webcam panel opens from the adjustments icon as a strong-glass sheet under the top bar, with the same controls as the laptop card. The gallery grid and the fullscreen view are rendered into `document.body`, because the bottom bar's `backdrop-filter` would make `position: fixed` relative to the bar.
 
 The print screen keeps the image of the last preview in the background, darkened, and floats the controls as in figure 9: `Imprimir` and `Cancelar` on one side, `Mais` and `Menos` on the other, the quantity in the center, the sheet preview below. Each target is at least 64 px; the drawn circle may be larger. Label under the icon, in white: `Imprimir`, `Cancelar`, `Mais`, `Menos`.
 

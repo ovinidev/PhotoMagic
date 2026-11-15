@@ -15,6 +15,7 @@ import {
   tvOpenResultSchema,
   sessionPhotoSchema,
   sessionStateSchema,
+  setFramingInputSchema,
   slotSchema,
 } from './index'
 
@@ -87,8 +88,18 @@ describe('event and round payloads', () => {
     taken: 0,
     previewRevision: 0,
     slots: [{ id: 'top-1', photo: 1 as const, left: 72, top: 70, width: 500, height: 281, angle: 270 }],
+    framings: {},
     phase: { kind: 'capturing' as const },
   }
+
+  it('accepts a framing within zoom 1..3, pan -1..1 and rotation -180..180 (RF09)', () => {
+    const framing = { zoom: 2, panX: -1, panY: 1, rotation: 45 }
+    expect(sessionStateSchema.safeParse({ ...session, framings: { 'top-1': framing } }).success).toBe(true)
+    expect(setFramingInputSchema.safeParse({ slotId: 'top-1', framing }).success).toBe(true)
+    expect(setFramingInputSchema.safeParse({ slotId: 'top-1', framing: { ...framing, zoom: 0.5 } }).success).toBe(false)
+    expect(setFramingInputSchema.safeParse({ slotId: 'top-1', framing: { ...framing, panX: 2 } }).success).toBe(false)
+    expect(setFramingInputSchema.safeParse({ slotId: 'top-1', framing: { ...framing, rotation: 200 } }).success).toBe(false)
+  })
 
   it('accepts an event session and rejects copies outside 1..10 or a fourth photo', () => {
     expect(sessionStateSchema.safeParse(session).success).toBe(true)

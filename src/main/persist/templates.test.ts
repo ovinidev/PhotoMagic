@@ -38,5 +38,8 @@ describe('templates (RF01)', () => {
     const dir = await mkdtemp(join(tmpdir(), 'fotomagica-tpl-'))
     expect(await importTemplate(dir, 'one-strip', 'a.webp', await image(1844, 1240, 'webp'))).toEqual({ ok: false, reason: 'format' })
     expect(await importTemplate(dir, 'one-strip', 'a.png', new Uint8Array([1, 2, 3]))).toEqual({ ok: false, reason: 'unreadable' })
+    // A PDF (like the client's Canva export) gets its own reason, and nothing is stored.
+    expect(await importTemplate(dir, 'two-strips', 'template.pdf', new TextEncoder().encode('%PDF-1.4\n1 0 obj'))).toEqual({ ok: false, reason: 'pdf' })
+    expect(await listTemplates(dir)).toMatchObject({ 'two-strips': null })
   })
 })

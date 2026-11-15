@@ -11,22 +11,35 @@ export type Rect = { left: number; top: number; width: number; height: number }
 
 /**
  * How the operator framed the photo inside one slot of the round (DESIGN §8). `zoom` 1 to 3;
- * `panX`/`panY` from -1 (left/top edge of the photo) to 1 (right/bottom edge), 0 is the center.
+ * `panX`/`panY` from -1 (left/top edge of the photo) to 1 (right/bottom edge), 0 is the center;
+ * `rotation` turns the photo clockwise inside the still slot, in degrees, -180 to 180.
  */
-export type Framing = { zoom: number; panX: number; panY: number }
+export type Framing = { zoom: number; panX: number; panY: number; rotation: number }
 
-export const DEFAULT_FRAMING: Framing = { zoom: 1, panX: 0, panY: 0 }
+export const DEFAULT_FRAMING: Framing = { zoom: 1, panX: 0, panY: 0, rotation: 0 }
 export const ZOOM_RANGE = { min: 1, max: 3 } as const
+export const FRAMING_ROTATION_RANGE = { min: -180, max: 180 } as const
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
-/** Keeps the zoom in 1..3 and the pan in -1..1, so the photo always covers the slot (RF09). */
+/**
+ * Keeps the zoom in 1..3, the pan in -1..1 and the rotation in -180..180 (folded, so 190 becomes
+ * -170), so the photo always covers the slot (RF09).
+ */
 export function clampFraming(framing: Framing): Framing {
+  const rotation = Number.isFinite(framing.rotation) ? framing.rotation : 0
+  const folded = normalizeAngle(rotation)
   return {
     zoom: clamp(Number.isFinite(framing.zoom) ? framing.zoom : 1, ZOOM_RANGE.min, ZOOM_RANGE.max),
     panX: clamp(Number.isFinite(framing.panX) ? framing.panX : 0, -1, 1),
     panY: clamp(Number.isFinite(framing.panY) ? framing.panY : 0, -1, 1),
+    rotation: folded > 180 ? folded - 360 : folded,
   }
+}
+
+/** True when the framing is the default one (zoom 1, centered, not rotated). */
+export function isDefaultFraming(framing: Framing): boolean {
+  return framing.zoom === 1 && framing.panX === 0 && framing.panY === 0 && framing.rotation === 0
 }
 
 /** Any angle folded into [0, 360). */
@@ -59,40 +72,65 @@ export function slotBounds(slot: Slot): Rect {
  * The steps that put one photo into one slot, in order:
  * 1. rotate the upright photo clockwise by `preRotate`, so that step 4 stands it up again: the
  *    slot's angle turns the frame (Angle 270 makes a 500×281 slot tall) but the person stays upright;
- * 2. resize to `resize`, which covers the unrotated `width × height` box at the framing's zoom;
- * 3. extract `extract` (the box, moved by the framing's pan; pan 0 crops the center in equal parts);
- * 4. rotate that tile clockwise by `angle` around its center and place the center at `center`.
+ * 2. resize to `resize`, which covers the unrotated `width × height` box at the framing's zoom (with a
+ *    framing rotation, it covers the bounds of the box turned by that rotation, so no corner shows);
+ * 3. extract `extract` (that box, moved by the framing's pan; pan 0 crops the center in equal parts);
+ * 4. with a framing rotation, rotate the tile clockwise by `rotate` and keep the centered `box`;
+ *    then clip it to a rounded rectangle of `radius` (the artwork's rounded photo box);
+ * 5. rotate that tile clockwise by `angle` around its center and place the center at `center`.
  */
 export type SlotPlan = {
   preRotate: QuarterTurn
   resize: Size
   extract: Rect
+  /** The framing rotation, degrees clockwise; 0 skips step 4. */
+  rotate: number
+  /** The slot's unrotated box, the tile size after step 4. */
+  box: Size
+  /** Corner radius the tile is clipped to before step 5 (0: square); never more than half the box. */
+  radius: number
   angle: number
   center: { x: number; y: number }
 }
 
 export function planSlot(slot: Slot, photo: Size, framing: Framing = DEFAULT_FRAMING): SlotPlan {
-  const { zoom, panX, panY } = clampFraming(framing)
+  const { zoom, panX, panY, rotation } = clampFraming(framing)
   const turn = nearestQuarterTurn(slot.angle)
   const preRotate = normalizeRotation((360 - turn) % 360)
   const turned = preRotate === 90 || preRotate === 270 ? { width: photo.height, height: photo.width } : photo
   const box = { width: Math.round(slot.width), height: Math.round(slot.height) }
+  const need = rotation === 0 ? box : rotatedCover(box, rotation)
 
-  const scale = coverFit(turned, box).scale * zoom
+  const scale = coverFit(turned, need).scale * zoom
   // Never below the box: rounding must not leave a 1 px strip uncovered.
   const resize = {
-    width: Math.max(box.width, Math.round(turned.width * scale)),
-    height: Math.max(box.height, Math.round(turned.height * scale)),
+    width: Math.max(need.width, Math.round(turned.width * scale)),
+    height: Math.max(need.height, Math.round(turned.height * scale)),
   }
-  const spareX = resize.width - box.width
-  const spareY = resize.height - box.height
+  const spareX = resize.width - need.width
+  const spareY = resize.height - need.height
   const extract = {
     left: Math.round((spareX / 2) * (1 + panX)),
     top: Math.round((spareY / 2) * (1 + panY)),
-    width: box.width,
-    height: box.height,
+    width: need.width,
+    height: need.height,
   }
-  return { preRotate, resize, extract, angle: normalizeAngle(slot.angle), center: slotCenter(slot) }
+  const radius = Math.max(0, Math.min(slot.radius ?? 0, box.width / 2, box.height / 2))
+  return { preRotate, resize, extract, rotate: rotation, box, radius, angle: normalizeAngle(slot.angle), center: slotCenter(slot) }
+}
+
+/**
+ * The tile that, turned by `rotation`, still covers `box` everywhere: the bounds of the box turned
+ * the other way, plus 2 px so rounding never shows a transparent corner.
+ */
+function rotatedCover(box: Size, rotation: number): Size {
+  const radians = (rotation * Math.PI) / 180
+  const cos = Math.abs(round6(Math.cos(radians)))
+  const sin = Math.abs(round6(Math.sin(radians)))
+  return {
+    width: Math.ceil(box.width * cos + box.height * sin) + 2,
+    height: Math.ceil(box.width * sin + box.height * cos) + 2,
+  }
 }
 
 /**

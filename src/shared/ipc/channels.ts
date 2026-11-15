@@ -15,6 +15,7 @@ export const IPC_CHANNELS = {
   sessionGetPreview: 'session:get-preview',
   sessionSetTimer: 'session:set-timer',
   sessionSetCopies: 'session:set-copies',
+  sessionSetFraming: 'session:set-framing',
   sessionCancel: 'session:cancel',
   sessionPrint: 'session:print',
   sessionReprint: 'session:reprint',
@@ -22,17 +23,25 @@ export const IPC_CHANNELS = {
   layoutGet: 'layout:get',
   layoutSave: 'layout:save',
   printerStatus: 'printer:status',
+  galleryList: 'gallery:list',
+  galleryGet: 'gallery:get',
+  galleryReprint: 'gallery:reprint',
+  webcamGet: 'webcam:get',
+  webcamSet: 'webcam:set',
   // send: renderer → main, no answer
   cameraReport: 'camera:report',
   cameraRequestPreviewPort: 'camera:request-preview-port',
   sessionRequestShutter: 'session:request-shutter',
   sessionPhoto: 'session:photo',
+  webcamReport: 'webcam:report',
   // event: main → renderer
   displayState: 'display:state',
   cameraStatus: 'camera:status',
   sessionState: 'session:state',
   sessionShutter: 'session:shutter',
   printerStatusChanged: 'printer:status-changed',
+  galleryChanged: 'gallery:changed',
+  webcamState: 'webcam:state',
 } as const
 
 /**

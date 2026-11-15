@@ -1,6 +1,7 @@
 import type { EventSession, Timer } from '@shared/ipc'
 import { PHOTOS_PER_ROUND } from '@shared/layout'
 import { TIMER_OPTIONS } from '@shared/round'
+import { TvGallery } from '@renderer/features/gallery'
 import { cn } from '@renderer/shared/utils/cn'
 import { CAPTURE_COPY } from '../copy'
 import type { ShutterState } from '../hooks/useShutter'
@@ -36,8 +37,9 @@ export function CaptureControls({ session, shutter, disabled }: { session: Event
           {CAPTURE_COPY.counter(current, PHOTOS_PER_ROUND)}
         </p>
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center px-12">
-          {/* Left: the gallery thumbnail lands here with the gallery (RF14). */}
-          <span aria-hidden />
+          <div className="flex justify-start">
+            <TvGallery />
+          </div>
           <button
             type="button"
             aria-label={CAPTURE_COPY.shutter}
