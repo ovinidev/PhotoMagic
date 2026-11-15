@@ -40,3 +40,6 @@ export const TV_FRAME = {
   width: 1080,
   height: 1920,
 } as const
+
+/** JPEG quality of the still the TV exports at the shutter (DESIGN §5). Canvas scale: 0 to 1. */
+export const CAPTURE_JPEG_QUALITY = 0.95
