@@ -40,9 +40,9 @@ export const TV_COPY = {
   },
   landscape: {
     title: 'A TV não está na vertical',
-    detail: 'A câmera foi feita para a TV em pé. Gire a tela nas configurações de vídeo do Windows ou abra assim mesmo.',
+    detail: 'A câmera foi feita para a TV em pé. Gire a tela nas configurações de vídeo do Windows ou inicie assim mesmo.',
   },
-  open: { title: 'Câmera aberta na TV', detail: (size: string) => `Tela da TV em ${size}.`, action: 'Abrir câmera na TV' },
+  open: { title: 'Câmera aberta na TV', detail: (size: string) => `Tela da TV em ${size}.` },
   detached: {
     missing: { title: 'A TV foi desconectada', detail: 'A tela da câmera volta sozinha quando a TV for conectada de novo.' },
     landscape: {
@@ -50,7 +50,14 @@ export const TV_COPY = {
       detail: 'Gire a tela para retrato nas configurações de vídeo do Windows. A câmera volta sozinha.',
     },
   },
-  openAnyway: 'Abrir mesmo assim',
-  close: 'Fechar tela da TV',
-  actionError: 'Não foi possível mudar a tela da TV. Tente de novo.',
+} as const
+
+/** pt-BR copy of the TV capture surface (PRD §6.4, DESIGN §14). */
+export const CAPTURE_COPY = {
+  shutter: 'Tirar foto',
+  timer: 'Timer',
+  timerOptions: { 0: 'Sem timer', 5: '5 s', 10: '10 s' },
+  timerShort: { 0: 'Off', 5: '5s', 10: '10s' },
+  counter: (current: number, total: number) => `${current}/${total}`,
+  captureError: 'Não foi possível tirar a foto. Toque de novo.',
 } as const

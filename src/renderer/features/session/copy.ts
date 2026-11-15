@@ -1,0 +1,23 @@
+/** pt-BR copy of the laptop event screen (PRD §6.3). */
+export const SESSION_COPY = {
+  live: 'Câmera ao vivo',
+  liveWaiting: 'Aguardando a imagem da TV…',
+  liveAlt: 'Imagem da câmera, como a TV mostra',
+  guide: (photo: number) => `Área da foto ${photo} na montagem`,
+  montage: 'Montagem da rodada',
+  montageAlt: 'Prévia da montagem da rodada',
+  montageLoading: 'Montando a prévia…',
+  montageError: 'Não foi possível mostrar a prévia da montagem.',
+  shutter: 'Tirar foto',
+  timer: 'Timer',
+  timerOptions: { 0: 'Sem timer', 5: '5 s', 10: '10 s' },
+  copies: 'Cópias',
+  photo: (current: number, total: number) => `Foto ${current}/${total}`,
+  review: 'As 3 fotos estão prontas. Imprima ou cancele na TV.',
+  printing: 'Imprimindo…',
+  printed: (fileName: string) => `Impresso: ${fileName}`,
+  end: 'Encerrar evento',
+  ending: 'Encerrando…',
+  endError: 'Não foi possível encerrar o evento. Tente de novo.',
+  modes: { 'two-strips': '2 tiras', 'one-strip': '1 tira' },
+} as const

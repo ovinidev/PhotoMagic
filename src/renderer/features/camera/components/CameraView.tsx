@@ -1,11 +1,12 @@
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
+import type { EventSession } from '@shared/ipc'
 import { CAMERA_COPY } from '../copy'
 import { useCamera } from '../hooks/useCamera'
+import { usePreviewSender } from '../hooks/usePreviewSender'
+import { useShutter } from '../hooks/useShutter'
 import { CameraPreview } from './CameraPreview'
-
-/** Frosted glass over the image (DESIGN §14), with an opaque fallback when there is no blur. */
-const GLASS =
-  'bg-glass-strong backdrop-blur-[24px] supports-[not(backdrop-filter:blur(1px))]:bg-[rgba(28,28,30,0.72)]'
+import { CaptureControls } from './CaptureControls'
+import { GLASS } from '@renderer/shared/utils/glass'
 
 function CameraMessage({ title, detail, children }: { title: string; detail?: string; children?: ReactNode }) {
   return (
@@ -22,13 +23,19 @@ function CameraMessage({ title, detail, children }: { title: string; detail?: st
 /**
  * The TV camera surface, 1080×1920 logical: the live image fills the window edge to edge, already
  * rotated and mirrored, with no logo over it. Loading and error states float on glass, in pt-BR.
+ * With an event capturing, the shutter, counter and timer float over it. The camera stays open
+ * during the print screen, so the next round starts at once.
  */
-export function CameraView() {
+export function CameraView({ session = null }: { session?: EventSession | null }) {
   const { state, retry } = useCamera()
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const shutter = useShutter({ session, videoRef })
+  usePreviewSender(videoRef)
+  const capturing = session !== null && session.phase.kind === 'capturing'
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-black" data-testid="camera-view" data-camera-state={state.kind}>
-      {state.kind === 'live' ? <CameraPreview stream={state.stream} /> : null}
+      {state.kind === 'live' ? <CameraPreview stream={state.stream} videoRef={videoRef} /> : null}
       {state.kind === 'starting' ? <CameraMessage title={CAMERA_COPY.starting} /> : null}
       {state.kind === 'error' ? (
         <CameraMessage {...CAMERA_COPY.errors[state.reason]}>
@@ -41,6 +48,7 @@ export function CameraView() {
           </button>
         </CameraMessage>
       ) : null}
+      {capturing ? <CaptureControls session={session} shutter={shutter} disabled={state.kind !== 'live'} /> : null}
     </div>
   )
 }

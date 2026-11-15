@@ -26,14 +26,14 @@ export function selectCamera<D extends CameraDevice>(devices: readonly D[]): D |
   return cameras.find((camera) => camera.label.toLowerCase().includes(needle)) ?? cameras[0] ?? null
 }
 
-/** `getUserMedia` constraints: ideal 3840×2160 at 30 fps, no audio. A smaller camera keeps its largest mode. */
+/** `getUserMedia` constraints: ideal 1920×1080 at 30 fps, no audio. Ideals only: the camera delivers its closest mode. */
 export function cameraConstraints(deviceId: string | null): MediaStreamConstraintsLike {
   return {
     audio: false,
     video: {
       ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
-      width: { ideal: 3840 },
-      height: { ideal: 2160 },
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
       frameRate: { ideal: 30 },
     },
   }

@@ -3,6 +3,8 @@ import {
   EVENT_CONTRACT,
   INVOKE_CONTRACT,
   IPC_CHANNELS,
+  PORT_CHANNELS,
+  PREVIEW_PORT_MESSAGE,
   SEND_CONTRACT,
   type EventChannel,
   type EventPayload,
@@ -49,15 +51,44 @@ const api: FotomagicaApi = {
     getState: () => invoke(IPC_CHANNELS.displayGetState, undefined),
     onState: (listener) => subscribe(IPC_CHANNELS.displayState, listener),
   },
-  tv: {
-    open: (input) => invoke(IPC_CHANNELS.tvOpen, input),
-    close: () => invoke(IPC_CHANNELS.tvClose, undefined),
-  },
   camera: {
     getStatus: () => invoke(IPC_CHANNELS.cameraGetStatus, undefined),
     onStatus: (listener) => subscribe(IPC_CHANNELS.cameraStatus, listener),
     report: (status) => send(IPC_CHANNELS.cameraReport, status),
+    requestPreviewPort: () => send(IPC_CHANNELS.cameraRequestPreviewPort, undefined),
+  },
+  template: {
+    getAll: () => invoke(IPC_CHANNELS.templateGetAll, undefined),
+    import: (input) => invoke(IPC_CHANNELS.templateImport, input),
+  },
+  event: {
+    start: (input) => invoke(IPC_CHANNELS.eventStart, input),
+    end: () => invoke(IPC_CHANNELS.eventEnd, undefined),
+  },
+  session: {
+    getState: () => invoke(IPC_CHANNELS.sessionGetState, undefined),
+    onState: (listener) => subscribe(IPC_CHANNELS.sessionState, listener),
+    getPreview: () => invoke(IPC_CHANNELS.sessionGetPreview, undefined),
+    setTimer: (timer) => invoke(IPC_CHANNELS.sessionSetTimer, { timer }),
+    setCopies: (copies) => invoke(IPC_CHANNELS.sessionSetCopies, { copies }),
+    cancel: () => invoke(IPC_CHANNELS.sessionCancel, undefined),
+    print: () => invoke(IPC_CHANNELS.sessionPrint, undefined),
+    reprint: () => invoke(IPC_CHANNELS.sessionReprint, undefined),
+    newRound: () => invoke(IPC_CHANNELS.sessionNewRound, undefined),
+    requestShutter: () => send(IPC_CHANNELS.sessionRequestShutter, undefined),
+    onShutter: (listener) => subscribe(IPC_CHANNELS.sessionShutter, () => listener()),
+    sendPhoto: (photo) => send(IPC_CHANNELS.sessionPhoto, photo),
   },
 }
 
 contextBridge.exposeInMainWorld('fotomagica', api)
+
+/** The page's `window`, typed for the one call below (the preload's tsconfig has no DOM lib). */
+const page = globalThis as unknown as { postMessage: (message: string, targetOrigin: string, transfer: unknown[]) => void }
+
+// The live-preview port cannot cross `contextBridge`; hand it to the page with `postMessage` (DESIGN §5).
+// The target is this same window, so '*' does not leak it: `file://` pages have the opaque origin 'null'.
+ipcRenderer.on(PORT_CHANNELS.cameraPreviewPort, (event) => {
+  const [port] = event.ports
+  if (port) page.postMessage(PREVIEW_PORT_MESSAGE, '*', [port])
+})

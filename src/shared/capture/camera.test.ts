@@ -38,10 +38,10 @@ describe('videoInputs', () => {
 })
 
 describe('cameraConstraints', () => {
-  it('asks for 3840×2160 at 30 fps, without audio, as ideals so a smaller camera still opens', () => {
+  it('asks for 1920×1080 at 30 fps, without audio, as ideals so any camera still opens', () => {
     expect(cameraConstraints(null)).toEqual({
       audio: false,
-      video: { width: { ideal: 3840 }, height: { ideal: 2160 }, frameRate: { ideal: 30 } },
+      video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
     })
   })
 

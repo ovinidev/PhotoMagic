@@ -1,5 +1,5 @@
 import { vi, type Mock } from 'vitest'
-import type { CameraStatus, DisplayState, FotomagicaApi } from '@shared/ipc'
+import type { CameraStatus, DisplayState, FotomagicaApi, SessionState, Templates } from '@shared/ipc'
 
 type Listener<T> = (value: T) => void
 
@@ -18,53 +18,93 @@ export type BridgeStub = {
   api: MockedBridge
   pushDisplay: (state: DisplayState) => void
   pushCamera: (status: CameraStatus) => void
+  pushSession: (state: SessionState) => void
+  pushShutter: () => void
 }
 
 const CLOSED: DisplayState = { guest: { kind: 'missing' }, tv: { kind: 'closed' } }
+const NO_TEMPLATES: Templates = { 'two-strips': null, 'one-strip': null }
+const IDLE: SessionState = { kind: 'idle' }
+
+function listeners<T>() {
+  const set = new Set<Listener<T>>()
+  return {
+    add: (listener: Listener<T>) => {
+      set.add(listener)
+      return () => void set.delete(listener)
+    },
+    push: (value: T) => set.forEach((listener) => listener(value)),
+  }
+}
 
 /**
- * Installs a `window.fotomagica` stand-in for renderer tests. Defaults: version 0.1.0, no TV,
- * camera idle. `pushDisplay` and `pushCamera` emit the main → renderer events.
+ * Installs a `window.fotomagica` stand-in for renderer tests. Defaults: version 0.1.0, no TV, camera
+ * idle, no templates, no event. `push…` emit the main → renderer events.
  */
 export function stubBridge(overrides: Overrides = {}): BridgeStub {
-  const displayListeners = new Set<Listener<DisplayState>>()
-  const cameraListeners = new Set<Listener<CameraStatus>>()
+  const display = listeners<DisplayState>()
+  const camera = listeners<CameraStatus>()
+  const session = listeners<SessionState>()
+  const shutter = listeners<void>()
+  const o = overrides
 
   const api: MockedBridge = {
     app: {
-      getVersion: vi.fn(overrides.app?.getVersion ?? (() => Promise.resolve({ version: '0.1.0', e2e: false }))),
+      getVersion: vi.fn(o.app?.getVersion ?? (() => Promise.resolve({ version: '0.1.0', e2e: false }))),
     },
     display: {
-      getState: vi.fn(overrides.display?.getState ?? (() => Promise.resolve(CLOSED))),
-      onState: vi.fn(
-        overrides.display?.onState ??
-          ((listener) => {
-            displayListeners.add(listener)
-            return () => void displayListeners.delete(listener)
-          }),
-      ),
-    },
-    tv: {
-      open: vi.fn(overrides.tv?.open ?? (() => Promise.resolve({ ok: false as const, reason: 'missing' as const, state: CLOSED }))),
-      close: vi.fn(overrides.tv?.close ?? (() => Promise.resolve(CLOSED))),
+      getState: vi.fn(o.display?.getState ?? (() => Promise.resolve(CLOSED))),
+      onState: vi.fn(o.display?.onState ?? display.add),
     },
     camera: {
-      getStatus: vi.fn(overrides.camera?.getStatus ?? (() => Promise.resolve<CameraStatus>({ kind: 'idle' }))),
-      onStatus: vi.fn(
-        overrides.camera?.onStatus ??
-          ((listener) => {
-            cameraListeners.add(listener)
-            return () => void cameraListeners.delete(listener)
-          }),
-      ),
-      report: vi.fn(overrides.camera?.report ?? (() => {})),
+      getStatus: vi.fn(o.camera?.getStatus ?? (() => Promise.resolve<CameraStatus>({ kind: 'idle' }))),
+      onStatus: vi.fn(o.camera?.onStatus ?? camera.add),
+      report: vi.fn(o.camera?.report ?? (() => {})),
+      requestPreviewPort: vi.fn(o.camera?.requestPreviewPort ?? (() => {})),
+    },
+    template: {
+      getAll: vi.fn(o.template?.getAll ?? (() => Promise.resolve(NO_TEMPLATES))),
+      import: vi.fn(o.template?.import ?? (() => Promise.resolve({ ok: false as const, reason: 'unreadable' as const }))),
+    },
+    event: {
+      start: vi.fn(o.event?.start ?? (() => Promise.resolve({ ok: false as const, reason: 'missing' as const }))),
+      end: vi.fn(o.event?.end ?? (() => Promise.resolve(IDLE))),
+    },
+    session: {
+      getState: vi.fn(o.session?.getState ?? (() => Promise.resolve(IDLE))),
+      onState: vi.fn(o.session?.onState ?? session.add),
+      getPreview: vi.fn(o.session?.getPreview ?? (() => Promise.resolve({ revision: 0, jpeg: null }))),
+      setTimer: vi.fn(o.session?.setTimer ?? (() => Promise.resolve(IDLE))),
+      setCopies: vi.fn(o.session?.setCopies ?? (() => Promise.resolve(IDLE))),
+      cancel: vi.fn(o.session?.cancel ?? (() => Promise.resolve(IDLE))),
+      print: vi.fn(o.session?.print ?? (() => Promise.resolve(IDLE))),
+      reprint: vi.fn(o.session?.reprint ?? (() => Promise.resolve(IDLE))),
+      newRound: vi.fn(o.session?.newRound ?? (() => Promise.resolve(IDLE))),
+      requestShutter: vi.fn(o.session?.requestShutter ?? (() => {})),
+      onShutter: vi.fn(o.session?.onShutter ?? ((listener: () => void) => shutter.add(listener))),
+      sendPhoto: vi.fn(o.session?.sendPhoto ?? (() => {})),
     },
   }
 
   window.fotomagica = api
+  return { api, pushDisplay: display.push, pushCamera: camera.push, pushSession: session.push, pushShutter: () => shutter.push() }
+}
+
+/** An open event in 2 tiras, capturing, for renderer tests. */
+export function eventState(overrides: Partial<Extract<SessionState, { kind: 'event' }>> = {}): Extract<SessionState, { kind: 'event' }> {
   return {
-    api,
-    pushDisplay: (state) => displayListeners.forEach((listener) => listener(state)),
-    pushCamera: (status) => cameraListeners.forEach((listener) => listener(status)),
+    kind: 'event',
+    name: 'Aniversário AJ',
+    mode: 'two-strips',
+    timer: 0,
+    copies: 1,
+    taken: 0,
+    previewRevision: 1,
+    slots: [
+      { id: 'top-1', photo: 1, left: 72, top: 70, width: 500, height: 281, angle: 270 },
+      { id: 'bottom-1', photo: 1, left: 72, top: 670, width: 500, height: 281, angle: 0 },
+    ],
+    phase: { kind: 'capturing' },
+    ...overrides,
   }
 }

@@ -43,3 +43,12 @@ export const TV_FRAME = {
 
 /** JPEG quality of the still the TV exports at the shutter (DESIGN §5). Canvas scale: 0 to 1. */
 export const CAPTURE_JPEG_QUALITY = 0.95
+
+/**
+ * Size of each live frame the TV sends to the laptop over the `MessageChannel` (DESIGN §5): the
+ * portrait camera image, already rotated and mirrored, small enough to keep 30 fps cheap.
+ */
+export const LAPTOP_PREVIEW = {
+  width: 360,
+  height: 640,
+} as const

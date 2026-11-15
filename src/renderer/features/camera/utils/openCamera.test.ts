@@ -7,7 +7,7 @@ function fakeTrack(deviceId: string, label: string) {
   return {
     label,
     stop: vi.fn(),
-    getSettings: () => ({ deviceId, width: 3840, height: 2160 }),
+    getSettings: () => ({ deviceId, width: 1920, height: 1080 }),
   }
 }
 
@@ -42,14 +42,14 @@ const brio: Device = { deviceId: 'brio', kind: 'videoinput', label: 'Logitech MX
 const mic: Device = { deviceId: 'mic', kind: 'audioinput', label: 'Microphone' }
 
 describe('openCamera', () => {
-  it('opens the MX Brio at 4K ideal, without audio', async () => {
+  it('opens the MX Brio at 1920×1080 ideal, without audio', async () => {
     const { media } = fakeMedia([integrated, brio, mic])
     const camera = await openCamera(media)
     expect(media.getUserMedia).toHaveBeenCalledWith({
       audio: false,
-      video: { deviceId: { exact: 'brio' }, width: { ideal: 3840 }, height: { ideal: 2160 }, frameRate: { ideal: 30 } },
+      video: { deviceId: { exact: 'brio' }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
     })
-    expect(camera).toMatchObject({ label: 'Logitech MX Brio', width: 3840, height: 2160 })
+    expect(camera).toMatchObject({ label: 'Logitech MX Brio', width: 1920, height: 1080 })
   })
 
   it('falls back to the first camera without a Brio', async () => {

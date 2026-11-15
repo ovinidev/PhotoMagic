@@ -98,7 +98,7 @@ Monitors change at runtime (`display-added`, `display-removed`, `display-metrics
 - When an eligible TV comes back, the window covers it again on its own
 - The landscape confirmation (RF04) lasts until the TV window is closed
 
-Until the create-event form exists (RF01), a `Tela da TV` card on the laptop home opens and closes the TV window through `tv:open` and `tv:close`, and shows the TV and camera state. `event:start` and `event:end` will call the same controller.
+`event:start` opens the TV window through this controller and `event:end` closes it; there is no separate IPC to open the TV, so the TV never shows without an event. The create-event form shows the TV state and, for a landscape TV, a checkbox the operator ticks to open anyway (RF04). The TV window closing for any reason ends the event.
 
 The operator window opens on the primary monitor, with a frame and a comfortable size (minimum 1280×800). The TV window has no frame, ignores accidental close and covers the `bounds` of the chosen monitor. Main closes it, on `Encerrar evento` or when quitting the app.
 
@@ -114,15 +114,21 @@ The preload exposes `window.fotomagica`. Each method validates input and output 
 
 | Direction | Channel | Role |
 | --- | --- | --- |
-| invoke | `event:start` | Name, mode (`two-strips` or `one-strip`) and the path of that mode's template. Returns the chosen monitor or the error |
+| invoke | `template:get-all` | Each mode's stored template (name, size and a small JPEG preview), or `null` |
+| invoke | `template:import` | Mode, file name and bytes. Stores a 1844×1240 PNG or JPEG for that mode only, or returns `format`, `size` (with the size read) or `unreadable` |
+| invoke | `event:start` | Name, mode (`two-strips` or `one-strip`) and the landscape confirmation. Checks the name and that mode's stored template, opens the TV, then creates or reuses the Desktop folder. Returns the session or the reason (`invalid-name`, `no-template`, `missing`, `landscape`, `folder-failed`, `already-open`) |
 | invoke | `event:end` | Closes the TV and forgets the unprinted round |
+| invoke | `session:get-state` | The event and its round (`idle`, or name, mode, timer, copies, photos taken, preview revision, slots and phase) |
+| invoke | `session:get-preview` | The current montage preview JPEG and its revision |
+| invoke | `session:set-timer` / `session:set-copies` | Timer (0, 5, 10) and copies (1 to 10), shared by both windows |
+| invoke | `session:new-round` | `Nova rodada`, after a print |
 | invoke | `layout:get` / `layout:save` | Reads and writes both layouts: five slots in `two-strips`, three in `one-strip` |
 | send | `session:request-shutter` | The laptop requests the capture. Main forwards it to the TV |
 | send | `session:photo` | The TV delivers the already rotated and mirrored JPEG |
 | invoke | `session:set-framing` | Pan, zoom and rotation of one slot of the round |
 | invoke | `session:cancel` | Discards the round |
-| invoke | `session:print` | Copies. Composes, saves, prints |
-| invoke | `session:reprint` | Resends a JPG from the folder |
+| invoke | `session:print` | No input: the copies live in the session. Composes, saves, prints; after a failed send, resends the file already saved |
+| invoke | `session:reprint` | `Imprimir novamente`: resends the round's JPG with the current copies |
 | invoke | `gallery:list` | Lists the JPGs in the event folder |
 | invoke | `webcam:get` / `webcam:set` | Persisted constraints |
 | invoke | `printer:status` | Current state |
@@ -130,11 +136,13 @@ The preload exposes `window.fotomagica`. Each method validates input and output 
 | event | `printer:status-changed` | Main → laptop and TV |
 | invoke | `display:get-state` | TV monitor choice (`GuestChoice`) and TV window state (`closed`, `open` on a monitor, or `detached` because the TV went away) |
 | event | `display:state` | Main → both windows, on every monitor change and every TV window change |
-| invoke | `tv:open` | Opens the TV window on the chosen monitor. Takes `allowLandscape`, the operator's confirmation for a landscape TV. Returns the state, or why it could not open (`missing`, `landscape`) |
-| invoke | `tv:close` | Closes the TV window for real |
 | send | `camera:report` | TV → main, the state of its `MediaStream`. Main ignores it from any other window |
 | invoke | `camera:get-status` | Last camera state reported by the TV (`idle` while the TV window is closed) |
 | event | `camera:status` | Main → both windows, on every camera state change |
+| send | `camera:request-preview-port` | Either window, on mount: main creates a `MessageChannelMain` and posts one end to each window on `camera:preview-port` |
+| event | `session:shutter` | Main → TV only, when the laptop asked for a photo |
+
+`camera:preview-port` carries no payload, only the transferred port, so it is not in the Zod contract. `contextBridge` cannot pass a `MessagePort`: the preload re-posts it to the page with `window.postMessage` and the page recognizes the fixed message `PREVIEW_PORT_MESSAGE`. Binary payloads (captures, previews, templates) are checked as `Uint8Array` by tag, not `instanceof`, because the preload's isolated world has its own globals, and each has a size ceiling.
 
 Every `send` and `event` payload has a Zod schema too: the preload validates before sending and before calling a listener, main validates on arrival and before broadcasting.
 
@@ -146,11 +154,11 @@ The MX Brio is mounted horizontally, on top of the TV. The sensor delivers lands
 
 Fixed order, a single function, used by the preview and by the file:
 
-1. Raw frame, ideally 3840×2160, 30 fps, no audio
+1. Raw frame, ideally 1920×1080, 30 fps, no audio
 2. Rotation to portrait. The angle lives in `CAMERA_ROTATION_DEG`, initial value `90`, in a single file. Flipping the sign of this constant turns the image over if the first test on the hardware shows the person upside down
 3. Horizontal mirroring
 
-`getUserMedia` asks for ideal `width` and `height` of 3840 and 2160. If the camera refuses, the largest mode it delivers is kept. The preferred device is the one whose label contains `MX Brio`. Without it, the first `videoinput`. With more than one camera and no Brio, create-event shows a select. Labels are empty before the camera permission exists: the camera is then opened blind, the list is read again and, if the Brio shows up, it replaces the one opened.
+`getUserMedia` asks for ideal `width` and `height` of 1920 and 1080 (the webcam is not used at 4K in practice). These are ideals, not requirements: whatever mode the camera delivers is accepted. The preferred device is the one whose label contains `MX Brio`. Without it, the first `videoinput`. With more than one camera and no Brio, create-event shows a select. Labels are empty before the camera permission exists: the camera is then opened blind, the list is read again and, if the Brio shows up, it replaces the one opened.
 
 Only the TV window gets the camera permission, video only; every other permission request is denied. The geometry lives in `src/shared/capture/orientation.ts` (`frameTransform`), the only drawing call in `features/camera/utils/drawFrame.ts`: the preview passes its canvas size (cover fit), the still passes nothing (full resolution). Both go through the same matrix.
 
@@ -167,9 +175,9 @@ Camera states on the TV, floating on glass over the black surface, reported to t
 
 The error states offer `Tentar novamente` (64 px target). A device plugged in while in error reopens the camera on its own. Under E2E, Chromium's fake device replaces the webcam: its moving pattern by default, a `.y4m` file with `FOTOMAGICA_FAKE_CAMERA=<path>`, or no camera at all with `FOTOMAGICA_FAKE_CAMERA=none`.
 
-The TV preview draws this frame on a canvas, with `requestAnimationFrame`. The camera opens once, on the TV. At the start of the event main hands a `MessageChannel` to both windows. On every frame the TV transfers an `ImageBitmap`, already rotated and mirrored, at the size of the laptop preview, and drops the frame if the laptop has not yet consumed the previous one. This does not go through `invoke` and does not write to disk. The full-resolution JPEG remains a single send, at the shutter.
+The TV preview draws this frame on a canvas, with `requestAnimationFrame`. The camera opens once, on the TV. At the start of the event main hands a `MessageChannel` to both windows. At most 30 times per second the TV transfers an `ImageBitmap`, already rotated and mirrored through the same `drawCameraFrame`, at `LAPTOP_PREVIEW` (360×640), and drops the frame until the laptop answers `ack` for the previous one. Either window asks for a fresh channel when it mounts, so a reload on either side reconnects. This does not go through `invoke` and does not write to disk. The full-resolution JPEG remains a single send, at the shutter.
 
-At the shutter the TV exports a quality-95 JPEG of the already transformed frame (portrait, mirrored) and sends the bytes. Main keeps the three captures in the round. It does not write those three to disk.
+At the shutter the TV waits (up to 3 s) for a decoded video frame, so a tap right after the camera opens still takes the photo, then exports a quality-95 JPEG of the already transformed frame (portrait, mirrored) and sends the bytes. Main keeps the three captures in the round. It does not write those three to disk.
 
 ### Constraints
 
@@ -195,14 +203,17 @@ The logical sheet is 1844×1240 px, 300 DPI. It is the "print extent" of the cur
 
 ![Figure 10 — DS-RX1, 300 DPI, 6×4", extent 1844×1240, margins 22 and 20, Portrait orientation](assets/briefing/image12.png)
 
-`src/main/compose/renderSheet.ts` is a pure function over buffers. `sharp` sits in a thin shell that this function calls, so the test can replace it.
+The geometry is pure and unit-tested without sharp; the sharp shell is tested with real images (the golden test below).
 
 For each slot, in this order:
 
 1. The capture of the indicated photo (1, 2 or 3), already upright and mirrored
-2. `cover` fit into the unrotated rectangle (`width` × `height`), with that slot's pan, zoom (1 to 3) and framing rotation. Zoom 1 and pan 0 crop the center: in a horizontal slot, the portrait loses top and bottom in equal parts
-3. Rotation of the result by the slot's `angle`, around the center
-4. Composition over that mode's template at `left`, `top`
+2. Pre-rotation of the photo by minus the quarter turn nearest to the slot's `angle` (Angle 270 turns the photo 90° clockwise first). Step 4 turns it back, so the person stays upright while the slot's frame turns: a 500×281 slot at Angle 270 shows a tall, upright portrait
+3. `cover` fit into the unrotated rectangle (`width` × `height`), with that slot's pan (-1 to 1 on each axis) and zoom (1 to 3). Zoom 1 and pan 0 crop the center: in a horizontal slot, the portrait loses top and bottom in equal parts. Framing rotation arrives with RF09
+4. Rotation of the result by the slot's `angle`, clockwise around the center
+5. Composition over that mode's template, centered on the slot's center and clipped to the sheet. The seed's top slots at Angle 270 stick out about 40 px above y = 0; that part is cut
+
+The plan is pure (`planSlot`, `clipToSheet` in `src/shared/layout/geometry.ts`) and `src/main/compose/renderSheet.ts` runs it with sharp, one materialized step at a time (sharp otherwise reorders rotate, resize and extract). The preview the laptop and the TV show is the same composition scaled to 922 px wide, recomposed after each photo; the round state carries a `previewRevision` and both windows fetch the JPEG with `session:get-preview`.
 
 The chosen mode only changes which layout and which template are used. Both fill the 1844×1240. The 1 tira mode does not paint half of it white.
 
@@ -248,14 +259,16 @@ Minimum slot size: 40×40 px, so the handle does not invert the rectangle.
 
 This is not the slot editor. With the party open, the slot stays still. The gesture on the laptop preview moves the photo inside it: dragging moves, the wheel zooms, a small handle (ink color, not the editor's red) rotates the photo. Each slot of the round has its own pan, zoom and rotation, including when two slots use the same capture.
 
-Next to it, the laptop shows the camera without the iPhone chrome, in the full portrait. In 2 tiras mode, a guide rectangle marks the horizontal band of the bottom strip. In 1 tira mode, the guide follows the portrait slot of the next photo.
+Next to it, the laptop shows the camera without the iPhone chrome, in the full portrait. The guide is the part of the frame that every slot of the next photo keeps at default framing (`guideCrop`): for photos 1 and 2 of 2 tiras, the horizontal band of the bottom strip; for photo 3 of 2 tiras, its vertical slot; in 1 tira mode, the portrait slot of the next photo.
+
+The framing gestures themselves (RF09) are not built yet; every slot uses the default framing.
 
 ## 9. Persistence
 
 | Data | Location |
 | --- | --- |
 | Both layouts, both templates, webcam, printer name | `app.getPath('userData')/config.json` |
-| Copy of the mode's template and meta of the open event (name, mode, id) | `app.getPath('userData')/events/<id>/` |
+| Each mode's template file (`two-strips.png` or `.jpg`, `one-strip.…`) | `app.getPath('userData')/templates/` |
 | JPG montage | `app.getPath('desktop')/<event name>/HH-mm-ss.jpg` |
 
 The folder name goes through a pure function: trim, reject empty, reject the characters `\ / : * ? " < > |`, reject reserved Windows names, reject a trailing dot or space. The test lists these cases.
@@ -295,7 +308,7 @@ type PrintResult =
 Two implementations of the same interface:
 
 - `SimulatedPrinter`, used with `FOTOMAGICA_PRINTER=simulated`. Copies the JPEG to `userData/simulated-prints/` and writes the ticket as JSON. `FOTOMAGICA_PRINTER_STATUS` forces `ready`, `offline`, `no-paper` or `no-ribbon`. `FOTOMAGICA_PRINTER_CUT=unsupported` returns `cut-unavailable`
-- `WindowsDnpPrinter`, the only one that talks to the spooler. Picks the queue whose name contains `DS-RX1`
+- `WindowsDnpPrinter`, the only one that talks to the spooler. Picks the queue whose name contains `DS-RX1`. Not implemented yet: until the printing milestone it answers `failed` ("Impressão na DS-RX1 ainda não implementada"), so on real hardware `Imprimir` saves the JPG and keeps the round on the print screen
 
 Real printing is silent (`silent: true`, the queue's `deviceName`). The Windows dialog does not open. Paper 6.00" × 4.00" (152 × 102 mm), 300 DPI, Portrait orientation, same as figure 10. The bitmap is not rotated again.
 
@@ -351,7 +364,7 @@ Two workflows implement this contract. `.github/workflows/ci.yml` runs the check
 - `pnpm lint` (`oxlint --deny-warnings .`)
 - `pnpm test:coverage`
 - `pnpm exec playwright install --with-deps chromium` when the runner is Linux
-- `pnpm test:e2e` with `FOTOMAGICA_E2E=1` and `FOTOMAGICA_PRINTER=simulated`, under `xvfb-run`. Playwright's global setup runs `electron-vite build` first
+- `pnpm test:e2e` with `FOTOMAGICA_E2E=1` and `FOTOMAGICA_PRINTER=simulated`, under `xvfb-run`. Playwright's global setup runs `electron-vite build` first. Each test gets its own `FOTOMAGICA_USER_DATA` and `FOTOMAGICA_DESKTOP` folders (read only under E2E), so E2E never touches the real `userData` or Desktop. `FOTOMAGICA_PRINTER_STATUS` and `FOTOMAGICA_PRINTER_CUT` drive the simulated printer's failures. A full-resolution capture takes 3–4 s under xvfb, so the round specs allow 15 s per photo
 
 The pull-request E2E can run on `ubuntu-latest`: the printer is simulated, the camera is a fixture and the second monitor is injected. What is Windows-specific (DEVMODE, signing, NSIS) stays in the packaging job.
 
@@ -399,9 +412,11 @@ oxlint, minimal configuration: plugins `react`, `typescript` and `import`; categ
 src/
   shared/                no React and no Electron
     ipc/                 channel names, Zod schemas and the invoke contract
-    layout/              snap, seed, geometry
+    layout/              modes, seeds, slot geometry (snap lands with the editor)
     capture/             rotation, mirror, cover
     files/               folder name and HH-mm-ss
+    round.ts             timer options and copies
+    template.ts          template format and size check
     displays.ts          TV monitor choice
     constants.ts         rotation, sheet, margins, copies, TV frame
     runtime.ts           FOTOMAGICA_* environment flags
@@ -412,7 +427,7 @@ src/
     session/             round state
     compose/             sharp shell around renderSheet
     print/               types.ts, SimulatedPrinter.ts, WindowsDnpPrinter.ts
-    persist/             config.json and the event meta
+    persist/             config.json and the per-mode templates
     updater/
   preload/
     index.ts             contextBridge
@@ -424,15 +439,15 @@ src/
     features/
       events/            create event, name, mode template, 2 tiras or 1 tira
       layout/            editor and handles
-      session/           montage preview and framing on the laptop
-      camera/            TV: live view, shutter, timer, grid
+      session/           laptop event screen: live preview and guide, montage preview, round controls
+      camera/            TV: live view, shutter, timer, laptop preview sender; laptop TV and camera status
       print/             TV print screen
       gallery/
       webcam/            constraints panel
     shared/
       components/ui/     shadcn, used by the laptop
-      hooks/
-      utils/
+      hooks/             session state, montage preview, object URL
+      utils/             cn, TV glass, preview-port hand-off
     test/                Vitest setup for renderer tests
 e2e/
 docs/

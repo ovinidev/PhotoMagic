@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
+import { act } from 'react'
 import { describe, expect, it } from 'vitest'
-import { stubBridge } from '@renderer/test/bridge'
+import { eventState, stubBridge } from '@renderer/test/bridge'
 import { OperatorApp } from './OperatorApp'
 
 describe('OperatorApp', () => {
@@ -19,5 +20,21 @@ describe('OperatorApp', () => {
 
     expect(screen.getByText('Carregando versão…')).toBeInTheDocument()
     expect(await screen.findByText('Não foi possível ler a versão do app')).toBeInTheDocument()
+  })
+
+  it('switches to the event screen when main opens an event, and back on Encerrar evento', async () => {
+    const { pushSession, api } = stubBridge()
+    render(<OperatorApp />)
+    expect(screen.getByRole('heading', { name: 'Novo evento' })).toBeInTheDocument()
+
+    act(() => pushSession(eventState({ taken: 1 })))
+    expect(await screen.findByTestId('event-title')).toHaveTextContent('Aniversário AJ')
+    expect(screen.getByTestId('round-status')).toHaveTextContent('Foto 2/3')
+    expect(screen.getByRole('button', { name: 'Tirar foto' })).toBeEnabled()
+
+    screen.getByRole('button', { name: 'Encerrar evento' }).click()
+    expect(api.event.end).toHaveBeenCalled()
+    act(() => pushSession({ kind: 'idle' }))
+    expect(await screen.findByRole('heading', { name: 'Novo evento' })).toBeInTheDocument()
   })
 })

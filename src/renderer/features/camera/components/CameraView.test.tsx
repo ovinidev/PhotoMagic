@@ -13,7 +13,7 @@ function liveStream() {
   const track = Object.assign(new EventTarget(), {
     label: 'Logitech MX Brio',
     stop: vi.fn(),
-    getSettings: () => ({ deviceId: 'brio', width: 3840, height: 2160 }),
+    getSettings: () => ({ deviceId: 'brio', width: 1920, height: 1080 }),
   })
   return { track, stream: { getTracks: () => [track], getVideoTracks: () => [track] } as unknown as MediaStream }
 }
@@ -46,7 +46,7 @@ describe('CameraView', () => {
     expect(await screen.findByTestId('camera-preview')).toBeInTheDocument()
     expect(bridge.api.camera.report).toHaveBeenCalledWith({ kind: 'starting' })
     // The report is a passive effect: it may run just after the DOM shows the state.
-    await waitFor(() => expect(bridge.api.camera.report).toHaveBeenLastCalledWith({ kind: 'live', label: 'Logitech MX Brio', width: 3840, height: 2160 }))
+    await waitFor(() => expect(bridge.api.camera.report).toHaveBeenLastCalledWith({ kind: 'live', label: 'Logitech MX Brio', width: 1920, height: 1080 }))
   })
 
   it('explains a missing camera in pt-BR and opens it when one is plugged in', async () => {
