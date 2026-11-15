@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { stubBridge, type BridgeStub } from '@renderer/test/bridge'
@@ -45,13 +45,15 @@ describe('CameraView', () => {
     expect(screen.getByText('Abrindo a câmera…')).toBeInTheDocument()
     expect(await screen.findByTestId('camera-preview')).toBeInTheDocument()
     expect(bridge.api.camera.report).toHaveBeenCalledWith({ kind: 'starting' })
-    expect(bridge.api.camera.report).toHaveBeenLastCalledWith({ kind: 'live', label: 'Logitech MX Brio', width: 3840, height: 2160 })
+    // The report is a passive effect: it may run just after the DOM shows the state.
+    await waitFor(() => expect(bridge.api.camera.report).toHaveBeenLastCalledWith({ kind: 'live', label: 'Logitech MX Brio', width: 3840, height: 2160 }))
   })
 
   it('explains a missing camera in pt-BR and opens it when one is plugged in', async () => {
     render(<CameraView />)
     expect(await screen.findByText('Nenhuma câmera encontrada')).toBeInTheDocument()
-    expect(bridge.api.camera.report).toHaveBeenLastCalledWith({ kind: 'error', reason: 'not-found' })
+    // The report is a passive effect: it may run just after the DOM shows the state.
+    await waitFor(() => expect(bridge.api.camera.report).toHaveBeenLastCalledWith({ kind: 'error', reason: 'not-found' }))
 
     const { stream } = liveStream()
     media.enumerateDevices.mockResolvedValue([brio])
@@ -72,7 +74,7 @@ describe('CameraView', () => {
     expect(retry).toHaveClass('min-h-16', 'min-w-16', 'cursor-pointer')
 
     await userEvent.click(retry)
-    expect(media.getUserMedia).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(media.getUserMedia).toHaveBeenCalledTimes(2))
   })
 
   it('turns an unplugged camera into the disconnected warning', async () => {
@@ -86,6 +88,7 @@ describe('CameraView', () => {
       track.dispatchEvent(new Event('ended'))
     })
     expect(await screen.findByText('A câmera foi desconectada')).toBeInTheDocument()
-    expect(bridge.api.camera.report).toHaveBeenLastCalledWith({ kind: 'error', reason: 'disconnected' })
+    // The report is a passive effect: it may run just after the DOM shows the state.
+    await waitFor(() => expect(bridge.api.camera.report).toHaveBeenLastCalledWith({ kind: 'error', reason: 'disconnected' }))
   })
 })
