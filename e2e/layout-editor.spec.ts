@@ -36,7 +36,7 @@ test.describe('layout editor (RF03)', () => {
     const cards = editor.getByRole('button', { name: /^(Cima|Baixo) \d, foto \d$/ })
     await expect(cards).toHaveText(['1', '2', '3', '1', '2'])
     await expect(editor.getByLabel('Angle de Cima 3')).toHaveValue('270')
-    await expect(editor.getByLabel('Left de Baixo 2')).toHaveValue('709')
+    await expect(editor.getByLabel('Left de Baixo 2')).toHaveValue('708')
     await expect(editor.getByTestId('cut-line')).toBeVisible()
     // Cima 1 at Angle 270 is drawn tall, Baixo 1 at Angle 0 lying down.
     const top1 = (await editor.getByTestId('slot-card-top-1').boundingBox())!
@@ -59,10 +59,10 @@ test.describe('layout editor (RF03)', () => {
 
     await operatorWindow.mouse.move(start.x, start.y)
     await operatorWindow.mouse.down()
-    // 30 px right and 40 px up on the sheet, in a few steps: Left ≈ 93, Top ≈ 693, clear of snap targets.
+    // 30 px right and 40 px up on the sheet, in a few steps: Left ≈ 92, Top ≈ 693, clear of snap targets.
     await operatorWindow.mouse.move(start.x + 30 * scale, start.y - 40 * scale, { steps: 8 })
-    await expect.poll(() => numberOf(left)).toBeGreaterThan(87)
-    expect(Math.abs((await numberOf(left)) - 93)).toBeLessThanOrEqual(3)
+    await expect.poll(() => numberOf(left)).toBeGreaterThan(86)
+    expect(Math.abs((await numberOf(left)) - 92)).toBeLessThanOrEqual(3)
     expect(Math.abs((await numberOf(top)) - 693)).toBeLessThanOrEqual(3)
     expect(readConfig(dirs.userData)).toBe(before)
 
@@ -80,11 +80,11 @@ test.describe('layout editor (RF03)', () => {
     const start = await center(editor.getByTestId('slot-card-bottom-1'))
     await operatorWindow.mouse.move(start.x, start.y)
     await operatorWindow.mouse.down()
-    // Baixo 1 starts at Left 63: 57 px left puts it 6 px from the sheet edge.
-    await operatorWindow.mouse.move(start.x - 57 * scale, start.y, { steps: 6 })
+    // Baixo 1 starts at Left 62: 56 px left puts it 6 px from the sheet edge.
+    await operatorWindow.mouse.move(start.x - 56 * scale, start.y, { steps: 6 })
     await expect(left).toHaveValue('0')
     await operatorWindow.keyboard.down('Alt')
-    await operatorWindow.mouse.move(start.x - 57 * scale, start.y + 1)
+    await operatorWindow.mouse.move(start.x - 56 * scale, start.y + 1)
     await expect.poll(() => numberOf(left)).toBeGreaterThan(2)
     expect(Math.abs((await numberOf(left)) - 6)).toBeLessThanOrEqual(3)
     await operatorWindow.mouse.up()
