@@ -10,5 +10,5 @@ export { ticketFor, type Printer, type PrinterStatus, type PrintResult, type Pri
 export function createPrinter(flags: RuntimeFlags, userData: string): Printer {
   return flags.printer === 'simulated'
     ? createSimulatedPrinter({ dir: join(userData, 'simulated-prints'), flags: flags.simulatedPrinter })
-    : createWindowsDnpPrinter()
+    : createWindowsDnpPrinter({ helperDir: join(userData, 'helpers') })
 }
