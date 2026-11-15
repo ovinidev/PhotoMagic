@@ -13,6 +13,10 @@ files:
   - '!**/*.map'
 
 asar: true
+# sharp loads native libvips binaries, which cannot run from inside the asar archive.
+asarUnpack:
+  - '**/node_modules/sharp/**'
+  - '**/node_modules/@img/**'
 
 win:
   target:
