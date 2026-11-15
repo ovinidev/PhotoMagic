@@ -1,14 +1,22 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type RefObject } from 'react'
 import { CAMERA_ROTATION_DEG } from '@shared/constants'
 import { drawCameraFrame } from '../utils/drawFrame'
 
 /**
  * The live image on the TV: each animation frame draws the video through `drawCameraFrame`
  * (rotated and mirrored, the same call as the still), covering the canvas edge to edge.
- * The `<video>` only decodes; it is never shown.
+ * The `<video>` only decodes; it is never shown. `videoRef` lets the shutter and the laptop preview
+ * read the same element.
  */
-export function CameraPreview({ stream, rotationDeg = CAMERA_ROTATION_DEG }: { stream: MediaStream; rotationDeg?: number }) {
-  const videoRef = useRef<HTMLVideoElement>(null)
+export function CameraPreview({
+  stream,
+  videoRef,
+  rotationDeg = CAMERA_ROTATION_DEG,
+}: {
+  stream: MediaStream
+  videoRef: RefObject<HTMLVideoElement | null>
+  rotationDeg?: number
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -40,7 +48,7 @@ export function CameraPreview({ stream, rotationDeg = CAMERA_ROTATION_DEG }: { s
       video.pause()
       video.srcObject = null
     }
-  }, [stream, rotationDeg])
+  }, [stream, rotationDeg, videoRef])
 
   return (
     <>

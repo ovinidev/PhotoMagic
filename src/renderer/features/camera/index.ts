@@ -1,4 +1,5 @@
 export { CameraView } from './components/CameraView'
 export { CameraStatusLine } from './components/CameraStatusLine'
-export { TvCard } from './components/TvCard'
+export { TvStatus } from './components/TvStatus'
+export { useDisplayState, type DisplayStateView } from './hooks/useDisplayState'
 export { captureStill, type VideoFrameSource } from './utils/captureStill'
