@@ -1,11 +1,13 @@
+import { CameraView } from '@renderer/features/camera'
+
 /**
- * TV window shell, 1080×1920 portrait. The camera surface (features/camera) replaces this
- * placeholder; the TV is dark glass over the image, not the laptop's light form (DESIGN §14).
+ * TV window shell, 1080×1920 logical portrait. Main only creates this window when the TV opens,
+ * so the camera surface starts right away (DESIGN §14: dark glass over the image, no logo on it).
  */
 export function GuestApp() {
   return (
-    <div className="flex h-full items-center justify-center bg-black text-white">
-      <p className="text-2xl font-semibold">Aguardando o início do evento</p>
-    </div>
+    <main className="h-full w-full bg-black">
+      <CameraView />
+    </main>
   )
 }
