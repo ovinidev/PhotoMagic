@@ -29,7 +29,7 @@ async function requestStream(media: MediaDevicesLike, deviceId: string | null): 
 
 /**
  * Opens the camera as DESIGN §5 says: the device labelled `MX Brio`, else the first camera,
- * asking for 3840×2160 at 30 fps as ideals so a smaller camera keeps its largest mode.
+ * asking for 1920×1080 at 30 fps as ideals, so whatever mode the camera delivers is accepted.
  * Before camera permission exists, labels are empty; then the list is read again after opening
  * and the Brio, if it shows up, replaces the camera opened blind.
  * Rejects with the `getUserMedia` error, or a `NotFoundError` when there is no camera at all.

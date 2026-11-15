@@ -36,7 +36,7 @@ Their success is: finding the white button, waiting for the countdown when there
 | --- | --- |
 | Computer | Laptop with Windows 10 or 11. Operator window |
 | TV | Samsung UN49MU6120, 49", portrait, touch frame, HDMI as second monitor. The camera window is designed for 1080×1920 |
-| Webcam | Logitech MX Brio 705 for Business, up to 3840×2160, mounted horizontally on top of the TV. Portrait is a 90° software rotation |
+| Webcam | Logitech MX Brio 705 for Business, used at 1920×1080 (not 4K in practice), mounted horizontally on top of the TV. Portrait is a 90° software rotation |
 | Printer | DNP DS-RX1, 300×300 DPI, 6×4" paper (152×102 mm), 2" cut that produces two strips |
 | Print file | 1844×1240 px. Margin of 22 px on the sides and 20 px top and bottom |
 | Network | There is no internet at the party. Capture, file and printing work offline |
@@ -369,7 +369,7 @@ The live preview asks the camera for 30 fps. The frame does not pass through the
 
 ### RNF05 — Quality
 
-Capture asks for 3840×2160 and accepts the maximum the camera delivers if that mode is missing. The montage is 1844×1240 at 300 DPI.
+Capture asks for 1920×1080 as an ideal and accepts whatever mode the camera delivers. The montage is 1844×1240 at 300 DPI.
 
 ### RNF06 — Interface
 

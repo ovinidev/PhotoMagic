@@ -154,11 +154,11 @@ The MX Brio is mounted horizontally, on top of the TV. The sensor delivers lands
 
 Fixed order, a single function, used by the preview and by the file:
 
-1. Raw frame, ideally 3840×2160, 30 fps, no audio
+1. Raw frame, ideally 1920×1080, 30 fps, no audio
 2. Rotation to portrait. The angle lives in `CAMERA_ROTATION_DEG`, initial value `90`, in a single file. Flipping the sign of this constant turns the image over if the first test on the hardware shows the person upside down
 3. Horizontal mirroring
 
-`getUserMedia` asks for ideal `width` and `height` of 3840 and 2160. If the camera refuses, the largest mode it delivers is kept. The preferred device is the one whose label contains `MX Brio`. Without it, the first `videoinput`. With more than one camera and no Brio, create-event shows a select. Labels are empty before the camera permission exists: the camera is then opened blind, the list is read again and, if the Brio shows up, it replaces the one opened.
+`getUserMedia` asks for ideal `width` and `height` of 1920 and 1080 (the webcam is not used at 4K in practice). These are ideals, not requirements: whatever mode the camera delivers is accepted. The preferred device is the one whose label contains `MX Brio`. Without it, the first `videoinput`. With more than one camera and no Brio, create-event shows a select. Labels are empty before the camera permission exists: the camera is then opened blind, the list is read again and, if the Brio shows up, it replaces the one opened.
 
 Only the TV window gets the camera permission, video only; every other permission request is denied. The geometry lives in `src/shared/capture/orientation.ts` (`frameTransform`), the only drawing call in `features/camera/utils/drawFrame.ts`: the preview passes its canvas size (cover fit), the still passes nothing (full resolution). Both go through the same matrix.
 

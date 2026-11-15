@@ -104,7 +104,7 @@ export function bytesSchema(maxBytes: number) {
     .refine((value) => value.byteLength > 0 && value.byteLength <= maxBytes, `Expected 1 to ${maxBytes} bytes`)
 }
 
-/** A 3840×2160 quality-95 JPEG is around 3 MB; 40 MB leaves room without letting a renderer exhaust main. */
+/** A 1920×1080 quality-95 JPEG is well under 1 MB; 40 MB leaves room for a larger camera mode without letting a renderer exhaust main. */
 const MAX_CAPTURE_BYTES = 40 * 1024 * 1024
 const MAX_TEMPLATE_BYTES = 50 * 1024 * 1024
 const MAX_PREVIEW_BYTES = 10 * 1024 * 1024
