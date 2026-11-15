@@ -5,7 +5,18 @@ import {
   appVersionSchema,
   cameraStatusSchema,
   displayStateSchema,
+  eventStartInputSchema,
+  eventStartResultSchema,
   noInputSchema,
+  sessionPhotoSchema,
+  sessionPreviewSchema,
+  sessionStateSchema,
+  setCopiesInputSchema,
+  setTimerInputSchema,
+  shutterSchema,
+  templateImportInputSchema,
+  templateImportResultSchema,
+  templatesSchema,
   tvOpenInputSchema,
   tvOpenResultSchema,
 } from './schemas'
@@ -21,17 +32,34 @@ export const INVOKE_CONTRACT = {
   [IPC_CHANNELS.tvOpen]: { input: tvOpenInputSchema, output: tvOpenResultSchema },
   [IPC_CHANNELS.tvClose]: { input: noInputSchema, output: displayStateSchema },
   [IPC_CHANNELS.cameraGetStatus]: { input: noInputSchema, output: cameraStatusSchema },
+  [IPC_CHANNELS.templateGetAll]: { input: noInputSchema, output: templatesSchema },
+  [IPC_CHANNELS.templateImport]: { input: templateImportInputSchema, output: templateImportResultSchema },
+  [IPC_CHANNELS.eventStart]: { input: eventStartInputSchema, output: eventStartResultSchema },
+  [IPC_CHANNELS.eventEnd]: { input: noInputSchema, output: sessionStateSchema },
+  [IPC_CHANNELS.sessionGetState]: { input: noInputSchema, output: sessionStateSchema },
+  [IPC_CHANNELS.sessionGetPreview]: { input: noInputSchema, output: sessionPreviewSchema },
+  [IPC_CHANNELS.sessionSetTimer]: { input: setTimerInputSchema, output: sessionStateSchema },
+  [IPC_CHANNELS.sessionSetCopies]: { input: setCopiesInputSchema, output: sessionStateSchema },
+  [IPC_CHANNELS.sessionCancel]: { input: noInputSchema, output: sessionStateSchema },
+  [IPC_CHANNELS.sessionPrint]: { input: noInputSchema, output: sessionStateSchema },
+  [IPC_CHANNELS.sessionReprint]: { input: noInputSchema, output: sessionStateSchema },
+  [IPC_CHANNELS.sessionNewRound]: { input: noInputSchema, output: sessionStateSchema },
 } as const satisfies Record<string, { input: z.ZodType; output: z.ZodType }>
 
 /** Renderer → main, fire and forget. The preload validates before sending, main again on arrival. */
 export const SEND_CONTRACT = {
   [IPC_CHANNELS.cameraReport]: cameraStatusSchema,
+  [IPC_CHANNELS.cameraRequestPreviewPort]: noInputSchema,
+  [IPC_CHANNELS.sessionRequestShutter]: noInputSchema,
+  [IPC_CHANNELS.sessionPhoto]: sessionPhotoSchema,
 } as const satisfies Record<string, z.ZodType>
 
 /** Main → renderer pushes. Main validates before sending, the preload again before the listener. */
 export const EVENT_CONTRACT = {
   [IPC_CHANNELS.displayState]: displayStateSchema,
   [IPC_CHANNELS.cameraStatus]: cameraStatusSchema,
+  [IPC_CHANNELS.sessionState]: sessionStateSchema,
+  [IPC_CHANNELS.sessionShutter]: shutterSchema,
 } as const satisfies Record<string, z.ZodType>
 
 export type InvokeChannel = keyof typeof INVOKE_CONTRACT

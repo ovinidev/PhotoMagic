@@ -1,4 +1,4 @@
-import sharp from 'sharp'
+import sharp, { type OverlayOptions } from 'sharp'
 import { SHEET } from '@shared/constants'
 import { DEFAULT_FRAMING, clipToSheet, planSlot, type Framing, type PhotoIndex, type Slot } from '@shared/layout'
 
@@ -28,7 +28,7 @@ type Raw = { data: Buffer; info: { width: number; height: number; channels: numb
  * 1844×1240, 300 DPI. `preview` is the same composition scaled to 922 px wide.
  */
 export async function renderSheet(input: SheetInput, output: SheetOutput): Promise<Buffer> {
-  const layers: sharp.OverlayOptions[] = []
+  const layers: OverlayOptions[] = []
   const sizes = new Map<PhotoIndex, { width: number; height: number }>()
 
   for (const slot of input.slots) {
@@ -67,7 +67,7 @@ export async function renderSheet(input: SheetInput, output: SheetOutput): Promi
  * Runs one slot plan. Each step is materialized before the next, because sharp otherwise reorders
  * rotate, resize and extract inside a single pipeline.
  */
-async function renderSlot(photo: Uint8Array, plan: ReturnType<typeof planSlot>): Promise<sharp.OverlayOptions | null> {
+async function renderSlot(photo: Uint8Array, plan: ReturnType<typeof planSlot>): Promise<OverlayOptions | null> {
   const turned = plan.preRotate === 0 ? photo : await sharp(photo).rotate(plan.preRotate).toBuffer()
   const resized = await sharp(turned).resize(plan.resize.width, plan.resize.height, { fit: 'fill' }).toBuffer()
   const tile = sharp(resized).extract(plan.extract).ensureAlpha()
