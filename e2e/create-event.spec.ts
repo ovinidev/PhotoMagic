@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures'
-import { TV_TITLE, listWindows, openTv } from './tv'
+import { TV_TITLE, listWindows, openTv, tvPlacement } from './tv'
 
 // PRD scenarios whose screens do not exist yet. Each becomes a real test in the PR that builds its screen.
 test.describe('create event', () => {
@@ -22,12 +22,9 @@ test.describe('create event: TV window (RF04)', () => {
     await expect(tv).toHaveTitle(TV_TITLE)
     await expect(card.getByTestId('tv-status')).toContainText('Câmera aberta na TV')
 
+    expect(await tvPlacement(operatorWindow)).toEqual({ kind: 'open', bounds: { x: 1920, y: 0, width: 1080, height: 1920 } })
     const windows = await listWindows(app)
-    expect(windows.find((window) => window.title === TV_TITLE)).toEqual({
-      title: TV_TITLE,
-      visible: true,
-      bounds: { x: 1920, y: 0, width: 1080, height: 1920 },
-    })
+    expect(windows.find((window) => window.title === TV_TITLE)?.visible).toBe(true)
     // The laptop window stays on the primary (laptop) screen.
     const operator = windows.find((window) => window.title === 'Foto Mágica')
     expect(operator?.bounds.x).toBeLessThan(1920)
@@ -56,8 +53,8 @@ test.describe('create event: TV window (RF04)', () => {
 
       await openTv(app, operatorWindow, 'Abrir mesmo assim')
       await expect(operatorWindow.getByTestId('tv-status')).toContainText('Câmera aberta na TV')
-      const tvWindow = (await listWindows(app)).find((window) => window.title === TV_TITLE)
-      expect(tvWindow?.bounds).toEqual({ x: 1920, y: 0, width: 1920, height: 1080 })
+      expect(await tvPlacement(operatorWindow)).toEqual({ kind: 'open', bounds: { x: 1920, y: 0, width: 1920, height: 1080 } })
+      expect((await listWindows(app)).find((window) => window.title === TV_TITLE)?.visible).toBe(true)
     })
   })
 })

@@ -14,6 +14,16 @@ export function listWindows(app: ElectronApplication): Promise<WindowInfo[]> {
   )
 }
 
+/**
+ * Where main placed the TV window, from `display:get-state`. The fixture monitors do not exist on
+ * the X server, which may clamp the real window onto its own screen, so specs assert main's
+ * decision here and only visibility on the BrowserWindow.
+ */
+export async function tvPlacement(operatorWindow: Page) {
+  const { tv } = await operatorWindow.evaluate(() => window.fotomagica.display.getState())
+  return tv.kind === 'open' ? { kind: tv.kind, bounds: { x: tv.display.x, y: tv.display.y, width: tv.display.width, height: tv.display.height } } : tv
+}
+
 /** Clicks `Abrir câmera na TV` (or the landscape confirmation) and returns the TV page. */
 export async function openTv(app: ElectronApplication, operatorWindow: Page, button = 'Abrir câmera na TV'): Promise<Page> {
   const opened = app.waitForEvent('window')

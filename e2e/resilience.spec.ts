@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures'
-import { TV_TITLE, listWindows, openTv, setDisplays } from './tv'
+import { TV_TITLE, listWindows, openTv, setDisplays, tvPlacement } from './tv'
 
 // PRD scenarios whose screens do not exist yet. Each becomes a real test in the PR that builds its screen.
 test.describe('resilience', () => {
@@ -18,11 +18,12 @@ test.describe('resilience: TV monitor and camera', () => {
     await expect(status).toContainText('A TV foi desconectada')
     // Hidden, not moved onto the laptop and not destroyed: the camera and the round stay in memory.
     await expect.poll(async () => (await tvWindow())?.visible).toBe(false)
-    expect((await tvWindow())?.bounds.x).toBe(1920)
+    expect(await tvPlacement(operatorWindow)).toEqual({ kind: 'detached', reason: 'missing' })
 
     await setDisplays(app, 'portrait-tv')
     await expect(status).toContainText('Câmera aberta na TV')
     await expect.poll(async () => (await tvWindow())?.visible).toBe(true)
+    expect(await tvPlacement(operatorWindow)).toEqual({ kind: 'open', bounds: { x: 1920, y: 0, width: 1080, height: 1920 } })
     await expect(tv.getByTestId('camera-view')).toBeVisible()
   })
 
