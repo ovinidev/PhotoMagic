@@ -89,7 +89,16 @@ The choice, in order:
 2. If there is only a landscape external, `landscape-external`
 3. If there is only the primary, `missing`
 
-The module that reads `screen.getAllDisplays()` is thin and hands `DisplayInfo[]` to this function. The unit test covers the three outputs without Electron. With `FOTOMAGICA_E2E=1`, the list comes from a fixture: primary 1920×1080 and a secondary 1080×1920. This way E2E does not depend on two physical monitors.
+The module that reads `screen.getAllDisplays()` is thin and hands `DisplayInfo[]` to this function. The unit test covers the three outputs without Electron. With `FOTOMAGICA_E2E=1`, the list comes from a fixture: primary 1920×1080 and a secondary 1080×1920. This way E2E does not depend on two physical monitors. `FOTOMAGICA_DISPLAYS` picks another fixture (`portrait-tv`, the default, `landscape-tv` or `laptop-only`), and under E2E main exposes a test hook that swaps the fixture at runtime to simulate plugging and unplugging the TV.
+
+Monitors change at runtime (`display-added`, `display-removed`, `display-metrics-changed`). A second pure function, `placeGuestWindow`, decides what the open TV window does, and `src/main/windows/guestWindowController.ts` applies it:
+
+- The window stays on its current monitor while that monitor is still an eligible TV, so another screen plugged in mid-party does not steal it. A monitor event that leaves the TV unchanged does not touch the window
+- If the TV goes away (or turns landscape without confirmation), the window is hidden, never moved onto the laptop screen and never destroyed: the camera and the round stay in memory. The laptop shows that the TV was disconnected
+- When an eligible TV comes back, the window covers it again on its own
+- The landscape confirmation (RF04) lasts until the TV window is closed
+
+Until the create-event form exists (RF01), a `Tela da TV` card on the laptop home opens and closes the TV window through `tv:open` and `tv:close`, and shows the TV and camera state. `event:start` and `event:end` will call the same controller.
 
 The operator window opens on the primary monitor, with a frame and a comfortable size (minimum 1280×800). The TV window has no frame, ignores accidental close and covers the `bounds` of the chosen monitor. Main closes it, on `Encerrar evento` or when quitting the app.
 
@@ -119,6 +128,15 @@ The preload exposes `window.fotomagica`. Each method validates input and output 
 | invoke | `printer:status` | Current state |
 | event | `session:state` | Main → both windows, on every round change |
 | event | `printer:status-changed` | Main → laptop and TV |
+| invoke | `display:get-state` | TV monitor choice (`GuestChoice`) and TV window state (`closed`, `open` on a monitor, or `detached` because the TV went away) |
+| event | `display:state` | Main → both windows, on every monitor change and every TV window change |
+| invoke | `tv:open` | Opens the TV window on the chosen monitor. Takes `allowLandscape`, the operator's confirmation for a landscape TV. Returns the state, or why it could not open (`missing`, `landscape`) |
+| invoke | `tv:close` | Closes the TV window for real |
+| send | `camera:report` | TV → main, the state of its `MediaStream`. Main ignores it from any other window |
+| invoke | `camera:get-status` | Last camera state reported by the TV (`idle` while the TV window is closed) |
+| event | `camera:status` | Main → both windows, on every camera state change |
+
+Every `send` and `event` payload has a Zod schema too: the preload validates before sending and before calling a listener, main validates on arrival and before broadcasting.
 
 The TV is the sole owner of the `MediaStream`. The laptop's shutter does not capture on its own: it asks main, and main tells the TV to run the same path (timer included).
 
@@ -132,7 +150,22 @@ Fixed order, a single function, used by the preview and by the file:
 2. Rotation to portrait. The angle lives in `CAMERA_ROTATION_DEG`, initial value `90`, in a single file. Flipping the sign of this constant turns the image over if the first test on the hardware shows the person upside down
 3. Horizontal mirroring
 
-`getUserMedia` asks for ideal `width` and `height` of 3840 and 2160. If the camera refuses, the largest mode it delivers is kept. The preferred device is the one whose label contains `MX Brio`. Without it, the first `videoinput`. With more than one camera and no Brio, create-event shows a select.
+`getUserMedia` asks for ideal `width` and `height` of 3840 and 2160. If the camera refuses, the largest mode it delivers is kept. The preferred device is the one whose label contains `MX Brio`. Without it, the first `videoinput`. With more than one camera and no Brio, create-event shows a select. Labels are empty before the camera permission exists: the camera is then opened blind, the list is read again and, if the Brio shows up, it replaces the one opened.
+
+Only the TV window gets the camera permission, video only; every other permission request is denied. The geometry lives in `src/shared/capture/orientation.ts` (`frameTransform`), the only drawing call in `features/camera/utils/drawFrame.ts`: the preview passes its canvas size (cover fit), the still passes nothing (full resolution). Both go through the same matrix.
+
+Camera states on the TV, floating on glass over the black surface, reported to the laptop:
+
+| State | Message |
+| --- | --- |
+| opening | Abrindo a câmera… |
+| permission denied | Sem permissão para usar a câmera |
+| no camera | Nenhuma câmera encontrada |
+| in use by another program | A câmera está em uso por outro programa |
+| unplugged | A câmera foi desconectada |
+| other | Não foi possível abrir a câmera |
+
+The error states offer `Tentar novamente` (64 px target). A device plugged in while in error reopens the camera on its own. Under E2E, Chromium's fake device replaces the webcam: its moving pattern by default, a `.y4m` file with `FOTOMAGICA_FAKE_CAMERA=<path>`, or no camera at all with `FOTOMAGICA_FAKE_CAMERA=none`.
 
 The TV preview draws this frame on a canvas, with `requestAnimationFrame`. The camera opens once, on the TV. At the start of the event main hands a `MessageChannel` to both windows. On every frame the TV transfers an `ImageBitmap`, already rotated and mirrored, at the size of the laptop preview, and drops the frame if the laptop has not yet consumed the previous one. This does not go through `invoke` and does not write to disk. The full-resolution JPEG remains a single send, at the shutter.
 
@@ -334,7 +367,9 @@ A push that does not bump the version produces the installer as a workflow artif
 
 Pure rules, next to the file, in Vitest:
 
-- monitor choice
+- monitor choice and runtime placement of the TV window
+- camera rotation, mirror and cover fit; preview and still through the same transform
+- camera device choice and constraints
 - snap, including Alt and angle snap
 - folder name and `HH-mm-ss` name
 - template size

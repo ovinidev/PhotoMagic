@@ -4,7 +4,7 @@ Foto Mágica 2.0 is a party photobooth: vertical touch TV, webcam on top, operat
 
 This file is the agent guide. In [PilatePay](https://github.com/ovinidev/PilatePay) the equivalent is `AGENTS.md`. This repo's folder structure follows that one, read on 2026-11-14, with the addition of `src/main` and `src/preload` because here the app is Electron. PilatePay uses ESLint; here the linter is oxlint, by decision of this project.
 
-The foundation scaffold (shell windows, typed IPC, tooling, CI) is in place; product features are not built yet. The commands below are the contract. Do not invent another package manager, another linter or another E2E runner.
+The foundation scaffold (shell windows, typed IPC, tooling, CI) is in place, plus the dual windows (TV monitor choice and hot-plug) and the live camera on the TV. The other product features are not built yet. The commands below are the contract. Do not invent another package manager, another linter or another E2E runner.
 
 ## Language and tooling rules (read first)
 
@@ -54,7 +54,7 @@ pnpm playwright test <specs> --reporter=dot
 
 Do not run the full lint, build, unit or Playwright suite yourself. The Husky `pre-push` hook runs oxlint, typecheck, unit tests and Playwright; GitHub Actions runs the same contract (DESIGN §12). On Linux without a display the hook wraps Playwright in `xvfb-run`. Tail only failures; never paste long test or build logs.
 
-E2E does not use the webcam or the DS-RX1. It starts with `FOTOMAGICA_E2E=1` and `FOTOMAGICA_PRINTER=simulated`.
+E2E does not use the webcam or the DS-RX1. It starts with `FOTOMAGICA_E2E=1` and `FOTOMAGICA_PRINTER=simulated`. The camera is Chromium's fake device (`FOTOMAGICA_FAKE_CAMERA`: unset for its pattern, a `.y4m` path, or `none`) and the monitors are a fixture (`FOTOMAGICA_DISPLAYS`: `portrait-tv`, `landscape-tv`, `laptop-only`). See DESIGN §3 and §5.
 
 ## Folders
 
