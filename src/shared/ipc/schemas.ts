@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { COPIES } from '../constants'
 import type { DisplayInfo, GuestChoice } from '../displays'
-import { EVENT_NAME_MAX_LENGTH } from '../files'
+import { EVENT_NAME_MAX_LENGTH, isMontageFileName } from '../files'
 import { FRAMING_ROTATION_RANGE, PRINT_MODES, ZOOM_RANGE, type Framing } from '../layout'
 
 /** `app:get-version` takes no input. */
@@ -305,6 +305,35 @@ export const sessionPreviewSchema = z.strictObject({
 
 /** Payload of `session:shutter`, main → TV. Empty: the TV runs its own timer and capture. */
 export const shutterSchema = z.strictObject({})
+
+// ── Gallery (PRD §6.6, RF14) ─────────────────────────────────────────────────
+
+/** A montage name this app writes (`HH-mm-ss.jpg`); never a path. */
+export const montageFileNameSchema = z.string().max(32).refine(isMontageFileName, 'Expected an HH-mm-ss.jpg montage name')
+
+/** `gallery:list` output: the event folder's montages, newest first; empty with no event open. */
+export const galleryListSchema = z.strictObject({ fileNames: z.array(montageFileNameSchema).max(10_000) })
+
+export const galleryGetInputSchema = z.strictObject({ fileName: montageFileNameSchema, size: z.enum(['thumb', 'full']) })
+
+/** The montage JPEG, or `null` when the file is no longer there. The file itself is about 1 MB. */
+export const galleryImageSchema = z.strictObject({ jpeg: bytesSchema(40 * 1024 * 1024).nullable() })
+
+export const galleryReprintInputSchema = z.strictObject({ fileName: montageFileNameSchema })
+
+/** `gallery:reprint` output: sent, or why not (a print failure, or `missing` when the file is gone or no event is open). */
+export const galleryReprintResultSchema = z.discriminatedUnion('ok', [
+  z.strictObject({ ok: z.literal(true) }),
+  z.strictObject({ ok: z.literal(false), reason: z.union([printFailureReasonSchema, z.literal('missing')]), detail: z.string().max(1000) }),
+])
+
+/** `gallery:changed`, main → both windows, after a montage is written. */
+export const galleryChangedSchema = z.strictObject({})
+
+export type GalleryList = z.infer<typeof galleryListSchema>
+export type GalleryGetInput = z.infer<typeof galleryGetInputSchema>
+export type GalleryImage = z.infer<typeof galleryImageSchema>
+export type GalleryReprintResult = z.infer<typeof galleryReprintResultSchema>
 
 export type Timer = z.infer<typeof timerSchema>
 export type PrintFailureReason = z.infer<typeof printFailureReasonSchema>

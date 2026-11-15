@@ -23,6 +23,9 @@ export const IPC_CHANNELS = {
   layoutGet: 'layout:get',
   layoutSave: 'layout:save',
   printerStatus: 'printer:status',
+  galleryList: 'gallery:list',
+  galleryGet: 'gallery:get',
+  galleryReprint: 'gallery:reprint',
   // send: renderer → main, no answer
   cameraReport: 'camera:report',
   cameraRequestPreviewPort: 'camera:request-preview-port',
@@ -34,6 +37,7 @@ export const IPC_CHANNELS = {
   sessionState: 'session:state',
   sessionShutter: 'session:shutter',
   printerStatusChanged: 'printer:status-changed',
+  galleryChanged: 'gallery:changed',
 } as const
 
 /**

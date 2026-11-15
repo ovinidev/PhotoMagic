@@ -1,15 +1,17 @@
 import type { WebContents } from 'electron'
 import type { RuntimeFlags } from '@shared/runtime'
-import type { PrinterMonitor } from '../print'
+import type { Printer, PrinterMonitor } from '../print'
 import type { GuestWindowController } from '../windows'
 import { registerAppHandlers } from './app'
 import { registerCameraHandlers } from './camera'
 import { registerDisplayHandlers } from './display'
 import { registerEventHandlers, type EventDeps } from './event'
+import { registerGalleryHandlers } from './gallery'
 import { registerPrinterHandlers } from './printer'
 
 export { broadcastSession } from './event'
 export { broadcastPrinterStatus } from './printer'
+export { broadcastGalleryChanged } from './gallery'
 
 /** One module per area; each registers its own channels. */
 export function registerIpcHandlers(
@@ -18,6 +20,7 @@ export function registerIpcHandlers(
     tv: GuestWindowController
     isGuestWindow: (contents: WebContents) => boolean
     printerMonitor: PrinterMonitor
+    printer: Printer
   } & EventDeps,
 ): void {
   registerAppHandlers(deps)
@@ -25,4 +28,5 @@ export function registerIpcHandlers(
   registerCameraHandlers(deps)
   registerEventHandlers(deps)
   registerPrinterHandlers(deps)
+  registerGalleryHandlers(deps)
 }

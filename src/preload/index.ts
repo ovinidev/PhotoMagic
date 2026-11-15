@@ -84,6 +84,12 @@ const api: FotomagicaApi = {
     onShutter: (listener) => subscribe(IPC_CHANNELS.sessionShutter, () => listener()),
     sendPhoto: (photo) => send(IPC_CHANNELS.sessionPhoto, photo),
   },
+  gallery: {
+    list: () => invoke(IPC_CHANNELS.galleryList, undefined),
+    get: (input) => invoke(IPC_CHANNELS.galleryGet, input),
+    reprint: (fileName) => invoke(IPC_CHANNELS.galleryReprint, { fileName }),
+    onChanged: (listener) => subscribe(IPC_CHANNELS.galleryChanged, () => listener()),
+  },
   printer: {
     getStatus: () => invoke(IPC_CHANNELS.printerStatus, undefined),
     onStatus: (listener) => subscribe(IPC_CHANNELS.printerStatusChanged, listener),

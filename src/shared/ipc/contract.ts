@@ -7,6 +7,12 @@ import {
   displayStateSchema,
   eventStartInputSchema,
   eventStartResultSchema,
+  galleryChangedSchema,
+  galleryGetInputSchema,
+  galleryImageSchema,
+  galleryListSchema,
+  galleryReprintInputSchema,
+  galleryReprintResultSchema,
   layoutSaveInputSchema,
   layoutSaveResultSchema,
   layoutsSchema,
@@ -49,6 +55,9 @@ export const INVOKE_CONTRACT = {
   [IPC_CHANNELS.layoutGet]: { input: noInputSchema, output: layoutsSchema },
   [IPC_CHANNELS.layoutSave]: { input: layoutSaveInputSchema, output: layoutSaveResultSchema },
   [IPC_CHANNELS.printerStatus]: { input: noInputSchema, output: printerStatusSchema },
+  [IPC_CHANNELS.galleryList]: { input: noInputSchema, output: galleryListSchema },
+  [IPC_CHANNELS.galleryGet]: { input: galleryGetInputSchema, output: galleryImageSchema },
+  [IPC_CHANNELS.galleryReprint]: { input: galleryReprintInputSchema, output: galleryReprintResultSchema },
 } as const satisfies Record<string, { input: z.ZodType; output: z.ZodType }>
 
 /** Renderer → main, fire and forget. The preload validates before sending, main again on arrival. */
@@ -66,6 +75,7 @@ export const EVENT_CONTRACT = {
   [IPC_CHANNELS.sessionState]: sessionStateSchema,
   [IPC_CHANNELS.sessionShutter]: shutterSchema,
   [IPC_CHANNELS.printerStatusChanged]: printerStatusSchema,
+  [IPC_CHANNELS.galleryChanged]: galleryChangedSchema,
 } as const satisfies Record<string, z.ZodType>
 
 export type InvokeChannel = keyof typeof INVOKE_CONTRACT

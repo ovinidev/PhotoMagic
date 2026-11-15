@@ -22,6 +22,7 @@ export type BridgeStub = {
   pushSession: (state: SessionState) => void
   pushShutter: () => void
   pushPrinter: (status: PrinterStatus) => void
+  pushGallery: () => void
 }
 
 const CLOSED: DisplayState = { guest: { kind: 'missing' }, tv: { kind: 'closed' } }
@@ -49,6 +50,7 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
   const session = listeners<SessionState>()
   const shutter = listeners<void>()
   const printer = listeners<PrinterStatus>()
+  const gallery = listeners<void>()
   const o = overrides
 
   const api: MockedBridge = {
@@ -94,6 +96,12 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
       onShutter: vi.fn(o.session?.onShutter ?? ((listener: () => void) => shutter.add(listener))),
       sendPhoto: vi.fn(o.session?.sendPhoto ?? (() => {})),
     },
+    gallery: {
+      list: vi.fn(o.gallery?.list ?? (() => Promise.resolve({ fileNames: [] }))),
+      get: vi.fn(o.gallery?.get ?? (() => Promise.resolve({ jpeg: null }))),
+      reprint: vi.fn(o.gallery?.reprint ?? (() => Promise.resolve({ ok: true as const }))),
+      onChanged: vi.fn(o.gallery?.onChanged ?? ((listener: () => void) => gallery.add(listener))),
+    },
     printer: {
       getStatus: vi.fn(o.printer?.getStatus ?? (() => Promise.resolve<PrinterStatus>({ kind: 'ready' }))),
       onStatus: vi.fn(o.printer?.onStatus ?? printer.add),
@@ -101,7 +109,7 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
   }
 
   window.fotomagica = api
-  return { api, pushDisplay: display.push, pushCamera: camera.push, pushSession: session.push, pushShutter: () => shutter.push(), pushPrinter: printer.push }
+  return { api, pushDisplay: display.push, pushCamera: camera.push, pushSession: session.push, pushShutter: () => shutter.push(), pushPrinter: printer.push, pushGallery: () => gallery.push() }
 }
 
 /** An open event in 2 tiras, capturing, for renderer tests. */

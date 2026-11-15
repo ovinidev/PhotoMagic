@@ -5,6 +5,10 @@ import type {
   DisplayState,
   EventStartInput,
   EventStartResult,
+  GalleryGetInput,
+  GalleryImage,
+  GalleryList,
+  GalleryReprintResult,
   LayoutSaveInput,
   LayoutSaveResult,
   PrinterStatus,
@@ -85,6 +89,16 @@ export type FotomagicaApi = {
     onShutter: (listener: () => void) => Unsubscribe
     /** TV only: delivers photo `index`, already rotated and mirrored. Main ignores other windows. */
     sendPhoto: (photo: SessionPhoto) => void
+  }
+  gallery: {
+    /** The event folder's montages, newest first; only the app's `HH-mm-ss.jpg` files (RF14). */
+    list: () => Promise<GalleryList>
+    /** One montage, as the file or as a thumbnail. */
+    get: (input: GalleryGetInput) => Promise<GalleryImage>
+    /** `Imprimir novamente` from the gallery menu: resends that file, one copy, in the event's mode. */
+    reprint: (fileName: string) => Promise<GalleryReprintResult>
+    /** Pushed after a montage is written in the event folder. */
+    onChanged: (listener: () => void) => Unsubscribe
   }
   printer: {
     /** The DS-RX1 as the spooler reports it now (DESIGN §10). */

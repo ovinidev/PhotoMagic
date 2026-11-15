@@ -2,7 +2,7 @@ import { app, BrowserWindow, type WebContents } from 'electron'
 import type { DisplayFixture, SimulatedPrinterFlags } from '@shared/runtime'
 import { readRuntimeFlags } from '@shared/runtime'
 import { renderSheet } from './compose/renderSheet'
-import { broadcastPrinterStatus, broadcastSession, registerIpcHandlers } from './ipc'
+import { broadcastGalleryChanged, broadcastPrinterStatus, broadcastSession, registerIpcHandlers } from './ipc'
 import { applyCameraFixture, restrictPermissions } from './media'
 import { createPrinter, createPrinterMonitor, type Printer } from './print'
 import { createSession, saveMontage } from './session'
@@ -98,7 +98,11 @@ if (!app.requestSingleInstanceLock()) {
     const desktop = (flags.e2e && flags.fixtures.paths.desktop) || app.getPath('desktop')
     const session = createSession({
       render: renderSheet,
-      saveMontage: (folder, jpeg) => saveMontage(folder, jpeg),
+      saveMontage: async (folder, jpeg) => {
+        const saved = await saveMontage(folder, jpeg)
+        broadcastGalleryChanged()
+        return saved
+      },
       printer,
       onChange: broadcastSession,
       onError: (error) => console.error('[session] preview failed', error),
@@ -110,6 +114,7 @@ if (!app.requestSingleInstanceLock()) {
       tv,
       session,
       printerMonitor,
+      printer,
       userData,
       desktop,
       isGuestWindow,

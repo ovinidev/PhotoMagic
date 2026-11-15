@@ -33,6 +33,8 @@ export type Session = {
   state: () => SessionState
   preview: () => SessionPreview
   isOpen: () => boolean
+  /** The open event (folder and mode), for the gallery. */
+  openEvent: () => OpenEvent | null
   start: (event: OpenEvent) => SessionState
   end: () => SessionState
   addPhoto: (index: PhotoIndex, jpeg: Uint8Array) => SessionState
@@ -146,6 +148,7 @@ export function createSession(deps: SessionDeps): Session {
     state,
     preview: () => preview,
     isOpen: () => event !== null,
+    openEvent: () => event,
 
     start: (next) => {
       event = next
