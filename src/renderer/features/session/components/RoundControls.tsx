@@ -37,9 +37,16 @@ export function RoundControls({ session }: { session: EventSession }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <p role="status" aria-live="polite" data-testid="round-status" className={line.danger ? 'font-medium text-danger' : 'font-medium text-ink tabular-nums'}>
-        {line.text}
-      </p>
+      <div role="status" aria-live="polite">
+        <p data-testid="round-status" className={line.danger ? 'font-medium text-danger' : 'font-medium text-ink tabular-nums'}>
+          {line.text}
+        </p>
+        {session.phase.kind === 'print-failed' && session.phase.detail ? (
+          <p data-testid="round-status-detail" className="mt-1 text-sm text-ink-soft">
+            {PRINT_COPY.technicalDetail(session.phase.detail)}
+          </p>
+        ) : null}
+      </div>
       <div className="flex flex-wrap items-end gap-4">
         <Button disabled={!capturing} onClick={() => api.requestShutter()}>
           {SESSION_COPY.shutter}

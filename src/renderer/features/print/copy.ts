@@ -38,6 +38,8 @@ export const PRINT_COPY = {
     'not-found': 'Impressora DS-RX1 não encontrada',
     unknown: 'O driver não informou papel nem ribbon',
   } satisfies Record<PrinterStatus['kind'] | 'checking', string>,
+  /** The spooler's or driver's own words, for whoever supports the operator. Laptop only. */
+  technicalDetail: (detail: string) => `Detalhe técnico: ${detail}`,
   savedKept: (fileName: string) => `A montagem ${fileName} ficou salva na pasta do evento.`,
 } as const
 
