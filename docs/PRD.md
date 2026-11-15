@@ -211,6 +211,8 @@ After the third photo the TV shows the sheet preview, `Imprimir`, `Cancelar`, `M
 
 Lists the montages in the event folder. Opens from the thumbnail on the TV and from the laptop. Tapping or clicking opens fullscreen. The three-dot menu has `Imprimir novamente`.
 
+Assumption, until the owner says otherwise: `Imprimir novamente` from the gallery sends one copy, in the mode of the event that is open (the round's `Mais`/`Menos` belong to the round on screen, not to an older montage).
+
 ### 6.7 Webcam adjustments
 
 The panel asks for brightness, contrast, saturation, sharpness, white balance and gain. Backlight compensation only appears when the camera advertises that capability. The same panel opens on the TV, from the adjustments icon, and on the laptop. Both write the same state.
