@@ -20,8 +20,9 @@ declare global {
   var __fotomagicaE2E: { setDisplays: (fixture: DisplayFixture) => void } | undefined
 }
 
-// Chromium switches must be set before `ready`.
+// Chromium switches and the userData path must be set before `ready`.
 applyCameraFixture(flags)
+if (flags.e2e && flags.fixtures.paths.userData) app.setPath('userData', flags.fixtures.paths.userData)
 
 // One photobooth per laptop: a second launch focuses the window that is already open.
 if (!app.requestSingleInstanceLock()) {
