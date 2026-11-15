@@ -191,8 +191,40 @@ export type TemplateImportResult = z.infer<typeof templateImportResultSchema>
 export const timerSchema = z.union([z.literal(0), z.literal(5), z.literal(10)])
 export const copiesSchema = z.number().int().min(COPIES.min).max(COPIES.max)
 
-/** Why `Imprimir` did not finish: a printer state (DESIGN §10), or the JPG could not be written. */
-export const printFailureReasonSchema = z.enum(['offline', 'no-paper', 'no-ribbon', 'cut-unavailable', 'failed', 'save-failed'])
+/**
+ * The printer as the Windows spooler reports it (DESIGN §10). `offline` covers powered off and
+ * unplugged. `paused` is the Windows queue paused by hand. `error` is any other error flag (jam,
+ * door, generic). `not-found` means no queue whose name contains `DS-RX1`. `unknown` means the
+ * state could not be read: the UI says the driver did not report it instead of guessing.
+ */
+export const printerStatusSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('ready') }),
+  z.strictObject({ kind: z.literal('offline') }),
+  z.strictObject({ kind: z.literal('no-paper') }),
+  z.strictObject({ kind: z.literal('no-ribbon') }),
+  z.strictObject({ kind: z.literal('paused') }),
+  z.strictObject({ kind: z.literal('error'), detail: z.string().max(1000) }),
+  z.strictObject({ kind: z.literal('not-found') }),
+  z.strictObject({ kind: z.literal('unknown'), detail: z.string().max(1000) }),
+])
+
+/**
+ * Why `Imprimir` did not finish: a printer state (DESIGN §10), the cut the driver would not set,
+ * a send that failed with no state reported (`unreported`), any other failure, or the JPG could
+ * not be written.
+ */
+export const printFailureReasonSchema = z.enum([
+  'offline',
+  'no-paper',
+  'no-ribbon',
+  'paused',
+  'printer-error',
+  'not-found',
+  'cut-unavailable',
+  'unreported',
+  'failed',
+  'save-failed',
+])
 
 /**
  * Where the round is. `capturing` until the third photo, then `review` (the TV print screen),
@@ -264,6 +296,7 @@ export const shutterSchema = z.strictObject({})
 
 export type Timer = z.infer<typeof timerSchema>
 export type PrintFailureReason = z.infer<typeof printFailureReasonSchema>
+export type PrinterStatus = z.infer<typeof printerStatusSchema>
 export type RoundPhase = z.infer<typeof roundPhaseSchema>
 export type SessionState = z.infer<typeof sessionStateSchema>
 export type EventSession = Extract<SessionState, { kind: 'event' }>

@@ -131,9 +131,9 @@ The preload exposes `window.fotomagica`. Each method validates input and output 
 | invoke | `session:reprint` | `Imprimir novamente`: resends the round's JPG with the current copies |
 | invoke | `gallery:list` | Lists the JPGs in the event folder |
 | invoke | `webcam:get` / `webcam:set` | Persisted constraints |
-| invoke | `printer:status` | Current state |
+| invoke | `printer:status` | A fresh read of the printer state (`PrinterStatus`, §10) |
 | event | `session:state` | Main → both windows, on every round change |
-| event | `printer:status-changed` | Main → laptop and TV |
+| event | `printer:status-changed` | Main → laptop and TV, when the polled state changes |
 | invoke | `display:get-state` | TV monitor choice (`GuestChoice`) and TV window state (`closed`, `open` on a monitor, or `detached` because the TV went away) |
 | event | `display:state` | Main → both windows, on every monitor change and every TV window change |
 | send | `camera:report` | TV → main, the state of its `MediaStream`. Main ignores it from any other window |
@@ -296,10 +296,13 @@ type PrintMode = 'two-strips' | 'one-strip'
 
 type PrinterStatus =
   | { kind: 'ready' }
-  | { kind: 'offline' }
+  | { kind: 'offline' }        // powered off, unplugged, or "use printer offline"
   | { kind: 'no-paper' }
   | { kind: 'no-ribbon' }
-  | { kind: 'unknown'; detail: string }
+  | { kind: 'paused' }         // the Windows queue paused by hand
+  | { kind: 'error'; detail: string }   // jam, door open, generic error flag…
+  | { kind: 'not-found' }      // no queue whose name contains DS-RX1
+  | { kind: 'unknown'; detail: string } // the state could not be read
 
 type PrintTicket = {
   jpegPath: string
@@ -310,35 +313,63 @@ type PrintTicket = {
 
 type PrintResult =
   | { ok: true }
-  | { ok: false; reason: 'offline' | 'no-paper' | 'no-ribbon' | 'cut-unavailable' | 'failed'; detail: string }
+  | {
+      ok: false
+      reason: 'offline' | 'no-paper' | 'no-ribbon' | 'paused' | 'printer-error' | 'not-found'
+        | 'cut-unavailable' | 'unreported' | 'failed'
+      detail: string
+    }
 ```
+
+`PrinterStatus` lives in `src/shared/ipc/schemas.ts`, because `printer:status` carries it. The session adds `save-failed` (the JPG could not be written) to the failure reasons in the round phase.
 
 Two implementations of the same interface:
 
-- `SimulatedPrinter`, used with `FOTOMAGICA_PRINTER=simulated`. Copies the JPEG to `userData/simulated-prints/` and writes the ticket as JSON. `FOTOMAGICA_PRINTER_STATUS` forces `ready`, `offline`, `no-paper` or `no-ribbon`. `FOTOMAGICA_PRINTER_CUT=unsupported` returns `cut-unavailable`
-- `WindowsDnpPrinter`, the only one that talks to the spooler. Picks the queue whose name contains `DS-RX1`. Not implemented yet: until the printing milestone it answers `failed` ("Impressão na DS-RX1 ainda não implementada"), so on real hardware `Imprimir` saves the JPG and keeps the round on the print screen
+- `SimulatedPrinter`, used with `FOTOMAGICA_PRINTER=simulated`. Copies the JPEG to `userData/simulated-prints/` and writes the ticket as JSON. `FOTOMAGICA_PRINTER_STATUS` forces `ready`, `offline`, `no-paper` or `no-ribbon`. `FOTOMAGICA_PRINTER_CUT=unsupported` returns `cut-unavailable`. Under E2E, the test hook `__fotomagicaE2E.setPrinter` changes both at runtime, so a spec can put the paper back and tap `Tentar novamente`
+- `WindowsDnpPrinter`, the only one that talks to the spooler, described below
 
-Real printing is silent (`silent: true`, the queue's `deviceName`). The Windows dialog does not open. Paper 6.00" × 4.00" (152 × 102 mm), 300 DPI, Portrait orientation, same as figure 10. The bitmap is not rotated again.
+### The Windows printer
 
-The 2" cut is the flag the driver shows as `2inch cut`: `Disable` or `Enable (Printer V.1.10 or later)`.
+Real printing is silent, with no Windows dialog and no "printing page" window. Paper 6.00" × 4.00" (152 × 102 mm), 300 DPI, Portrait orientation, same as figure 10. The bitmap is not rotated again.
 
-- In `two-strips` main requests `Enable` and composes the five slots over that mode's template. If the driver does not accept turning the cut on, the result is `cut-unavailable` and the UI does not treat the sheet as printed.
-- In `one-strip` main requests `Disable` and composes the three slots over that mode's template, filling the 1844×1240 sheet. There is no blank half and no 6×2 paper. If the driver does not accept turning the cut off, the result is also `cut-unavailable`: the sheet must not come out cut by mistake.
+The 2" cut is the flag the driver shows as `2inch cut`: `Disable` or `Enable (Printer V.1.10 or later)`. It is a private driver setting, not a standard DEVMODE field. That rules out Electron's `webContents.print({ silent: true, deviceName })`: it can choose the queue, the paper and the orientation, but not a private driver option. The app therefore prints through the Windows **Print Schema**, where the driver publishes every option, private ones included:
+
+1. Main keeps one **Windows PowerShell 5.1** process alive (`src/main/print/dnp/dnp-helper.ps1`, bundled with Vite `?raw`, written to `userData/helpers/` at the first request and started with `-EncodedCommand`, which the execution policy does not block). PowerShell 5.1 and .NET Framework's `System.Printing` ship with Windows 10 and 11: nothing is installed, nothing needs the network, nothing is compiled at runtime. Requests and answers are one JSON line each (`dnp/protocol.ts`), in ASCII, so an accented event folder survives any console code page. A request that times out kills the helper; the next one starts a new one
+2. `list`: every local queue with its `PRINTER_STATUS` bits and the "use printer offline" switch. Main picks the first queue whose name contains `DS-RX1` (`dnp/spooler.ts`)
+3. `capabilities`: the queue's PrintCapabilities as features and options. Main chooses, in tested TypeScript (`dnp/capabilities.ts`): the cut feature (named like `2inch cut`, or else the single private feature mentioning "cut"), its `Enable…` or `Disable` option, the `PageMediaSize` option within 5 mm of 6×4 (by size, not name), `psk:Portrait`, and the 300×300 `PageResolution` option when the driver names one. Cached until a print fails
+4. `print`: the helper merges those options into the queue's user ticket with `MergeAndValidatePrintTicket`, then reads back the validated ticket. If the driver changed the cut, the paper or the orientation while resolving conflicts, nothing is spooled and the answer says which. Otherwise it converts the ticket to the driver's DEVMODE (`PrintTicketConverter`, private part included) and prints the JPG with `System.Drawing.Printing`: `StandardPrintController`, one page per copy in a single job, the image covering the page from the physical corner. If the page the driver gives is the other way round from the 1844×1240 bitmap, it stops instead of rotating or stretching
+
+- In `two-strips` main requests `Enable` and composes the five slots over that mode's template. If the driver does not offer or does not keep the cut on, the result is `cut-unavailable` and the UI does not treat the sheet as printed.
+- In `one-strip` main requests `Disable` and composes the three slots over that mode's template, filling the 1844×1240 sheet. There is no blank half and no 6×2 paper. If the driver does not offer or does not keep the cut off, the result is also `cut-unavailable`: the sheet must not come out cut by mistake.
 
 ![Figure 11 — 2inch cut in the DS-RX1 driver](assets/briefing/image2.png)
 
-Status, from whatever Windows exposes (flags such as offline and out of paper, and whatever else the DS-RX1 queue fills in):
+Before spooling, main reads the status. Offline, no paper, no ribbon, paused, an error flag or no DS-RX1 queue stop the print with that reason, so the sheet does not sit in the Windows queue. `unknown` goes ahead. If spooling fails, main reads the status again: a flag that now explains it becomes the reason, and no flag becomes `unreported` ("the driver did not report"). The driver's own words travel as `detail`, shown on the laptop as `Detalhe técnico: …` and never on the TV.
 
-| State | Message |
-| --- | --- |
-| offline / powered off | Impressora desligada |
-| out of paper | Impressora sem papel |
-| out of ribbon | Impressora sem ribbon |
-| flag missing | O driver não informou papel nem ribbon |
+Limits, which the owner checks on the device:
+
+- "Printed" means the job was accepted by the spooler. The app does not follow the job to the end of the sheet. A sheet that fails after spooling shows in the printer line (polled) and is fixed with `Imprimir novamente`
+- Paper and ribbon only show if the DS-RX1 driver sets the spooler flags. `NO_TONER` is read as out of ribbon, because it is the spooler's only consumable flag. If the driver sets none of them, the line says `Impressora pronta` while the spooler reports no error; the PRD's "the driver did not report" applies when a print fails with no flag
+- The cut is found by its name in the driver. A driver version that names it differently, or exposes two cut settings, gives `cut-unavailable` rather than a guess
+
+Status, from the spooler, polled every 5 s (every 250 ms for the simulation) and after every print, pushed with `printer:status-changed`:
+
+| State | Spooler | Message |
+| --- | --- | --- |
+| offline / powered off | `OFFLINE`, `NOT_AVAILABLE`, work offline | Impressora desligada |
+| out of paper | `PAPER_OUT` | Impressora sem papel |
+| out of ribbon | `NO_TONER` | Impressora sem ribbon |
+| queue paused | `PAUSED` | A fila da impressora está pausada no Windows |
+| other error | `PAPER_JAM`, `DOOR_OPEN`, `ERROR`… | A impressora informou um erro |
+| no DS-RX1 queue | | Impressora DS-RX1 não encontrada |
+| could not read / spooler unknown | `SERVER_UNKNOWN`, helper failure | O driver não informou papel nem ribbon |
+| no flag | | Impressora pronta |
+
+A failed send with no flag reads `Não foi possível imprimir. O driver não informou papel nem ribbon`. The laptop shows the printer line during the event. The TV print screen shows the state above its buttons when the printer is not ready, before anyone taps `Imprimir`.
 
 Other options visible in the driver (border, glossy overcoat, print re-try, page layout) are not changed by this app.
 
-Order of `Imprimir`: compose, write the JPG to the event folder, then send. If sending fails, the file stays and the round remains on the print screen. If the write fails, there is no printing and the screen does not announce success.
+Order of `Imprimir`: compose, write the JPG to the event folder, then send. If sending fails, the file stays and the round remains on the print screen with `Tentar novamente`, which resends that same file. If the write fails, there is no printing and the screen does not announce success.
 
 Copies: the ticket carries 1 to 10, a ceiling approved by the owner. Each copy is one 6×4 sheet. In `two-strips` the blade splits the sheet. In `one-strip` the sheet comes out whole, with the three photos.
 
@@ -374,7 +405,7 @@ Two workflows implement this contract. `.github/workflows/ci.yml` runs the check
 - `pnpm exec playwright install --with-deps chromium` when the runner is Linux
 - `pnpm test:e2e` with `FOTOMAGICA_E2E=1` and `FOTOMAGICA_PRINTER=simulated`, under `xvfb-run`. Playwright's global setup runs `electron-vite build` first. Each test gets its own `FOTOMAGICA_USER_DATA` and `FOTOMAGICA_DESKTOP` folders (read only under E2E), so E2E never touches the real `userData` or Desktop. `FOTOMAGICA_PRINTER_STATUS` and `FOTOMAGICA_PRINTER_CUT` drive the simulated printer's failures. A full-resolution capture takes 3–4 s under xvfb, so the round specs allow 15 s per photo
 
-The pull-request E2E can run on `ubuntu-latest`: the printer is simulated, the camera is a fixture and the second monitor is injected. What is Windows-specific (DEVMODE, signing, NSIS) stays in the packaging job.
+The pull-request E2E can run on `ubuntu-latest`: the printer is simulated, the camera is a fixture and the second monitor is injected. What is Windows-specific (DEVMODE, signing, NSIS) stays in the packaging job. The PowerShell helper is not run in CI; it is checked on the DS-RX1 by the owner.
 
 **On push to `main`, an extra job on `windows-latest`**
 
@@ -396,6 +427,7 @@ Pure rules, next to the file, in Vitest:
 - template size
 - `cover` fit with a bar at the top (RF08)
 - ticket mapping: `two-strips` requests cut on, `one-strip` requests cut off and composes three slots over the whole sheet
+- DS-RX1 queue choice, spooler flags to printer status, the cut / 6×4 / Portrait / 300 DPI choice from PrintCapabilities, the helper line protocol and process bridge, and `WindowsDnpPrinter` against a fake helper (refusals before spooling, cut changed by the driver, spool error with and without a flag)
 
 E2E, in `e2e/`, one spec per flow, on real Electron:
 
@@ -404,7 +436,7 @@ E2E, in `e2e/`, one spec per flow, on real Electron:
 | `create-event.spec.ts` | Name, correct and wrong template, folder |
 | `layout-editor.spec.ts` | Editor after import with the five cards, drag with live panel and one write on release, snap and Alt, rotation and resize, numeric edit, the two independent layouts across a relaunch, and the event using its layout |
 | `capture-round.spec.ts` | Three photos, counter, timer, cancel |
-| `print.spec.ts` | Simulated ticket, copies, status failure, single file |
+| `print.spec.ts` | Simulated ticket, copies, status failure, printer line and TV warning, `Tentar novamente` after the paper or the cut is fixed, single file |
 | `gallery.spec.ts` | List, fullscreen, reprint |
 | `resilience.spec.ts` | Webcam disappears mid-round, TV keeps responding, ending closes the TV |
 
@@ -434,7 +466,8 @@ src/
     ipc/                 handlers, one module per area
     session/             round state
     compose/             sharp shell around renderSheet
-    print/               types.ts, SimulatedPrinter.ts, WindowsDnpPrinter.ts
+    print/               types.ts, SimulatedPrinter.ts, WindowsDnpPrinter.ts, monitor.ts
+      dnp/               spooler flags, PrintCapabilities choice, helper protocol and bridge, dnp-helper.ps1
     persist/             config.json and the per-mode templates
     updater/
   preload/
@@ -449,7 +482,7 @@ src/
       layout/            editor and handles
       session/           laptop event screen: live preview and guide, montage preview, round controls
       camera/            TV: live view, shutter, timer, laptop preview sender; laptop TV and camera status
-      print/             TV print screen
+      print/             TV print screen, printer status line and hook
       gallery/
       webcam/            constraints panel
     shared/

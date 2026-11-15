@@ -21,6 +21,7 @@ export const IPC_CHANNELS = {
   sessionNewRound: 'session:new-round',
   layoutGet: 'layout:get',
   layoutSave: 'layout:save',
+  printerStatus: 'printer:status',
   // send: renderer → main, no answer
   cameraReport: 'camera:report',
   cameraRequestPreviewPort: 'camera:request-preview-port',
@@ -31,6 +32,7 @@ export const IPC_CHANNELS = {
   cameraStatus: 'camera:status',
   sessionState: 'session:state',
   sessionShutter: 'session:shutter',
+  printerStatusChanged: 'printer:status-changed',
 } as const
 
 /**

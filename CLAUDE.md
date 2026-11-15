@@ -4,7 +4,7 @@ Foto Mágica 2.0 is a party photobooth: vertical touch TV, webcam on top, operat
 
 This file is the agent guide. In [PilatePay](https://github.com/ovinidev/PilatePay) the equivalent is `AGENTS.md`. This repo's folder structure follows that one, read on 2026-11-14, with the addition of `src/main` and `src/preload` because here the app is Electron. PilatePay uses ESLint; here the linter is oxlint, by decision of this project.
 
-The foundation scaffold (shell windows, typed IPC, tooling, CI) is in place, plus the dual windows (TV monitor choice and hot-plug), the live camera on the TV, create event (name, mode, per-mode template), the capture round, the montage, the print screen with the simulated printer, and the slot editor for both layouts. Not built yet: round framing, the gallery, webcam adjustments, printer status and real DS-RX1 printing. The commands below are the contract. Do not invent another package manager, another linter or another E2E runner.
+The foundation scaffold (shell windows, typed IPC, tooling, CI) is in place, plus the dual windows (TV monitor choice and hot-plug), the live camera on the TV, create event (name, mode, per-mode template), the capture round, the montage, the print screen with the simulated printer, printer status and DS-RX1 printing through the Windows PowerShell PrintTicket helper (DESIGN §10; still to be confirmed on the device), and the slot editor for both layouts. Not built yet: round framing, the gallery and webcam adjustments. The commands below are the contract. Do not invent another package manager, another linter or another E2E runner.
 
 ## Language and tooling rules (read first)
 
