@@ -27,3 +27,16 @@ export {
   type Rect,
   type SlotPlan,
 } from './geometry'
+export {
+  HANDLE_SIGNS,
+  MIN_SLOT_SIZE,
+  RESIZE_HANDLES,
+  angleTowards,
+  crossesCutLine,
+  moveSlot,
+  resizeSlot,
+  rotateVector,
+  roundSlot,
+  type ResizeHandle,
+} from './gesture'
+export { ANGLE_SNAP_TOLERANCE, SNAP_TOLERANCE, snapAngle, snapMove, snapResize, snapTargets, type SnapOptions, type SnapTargets } from './snap'

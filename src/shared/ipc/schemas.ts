@@ -117,7 +117,7 @@ export const photoIndexSchema = z.union([z.literal(1), z.literal(2), z.literal(3
 /** One slot of a layout. Minimum size 40×40 (DESIGN §7). */
 export const slotSchema = z.strictObject({
   id: z.string().min(1).max(32),
-  photo: photoIndexSchema,
+  photo: photoIndexSchema.nullable(),
   left: z.number().finite(),
   top: z.number().finite(),
   width: z.number().finite().min(40),
