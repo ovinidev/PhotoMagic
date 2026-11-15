@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { SEED_LAYOUTS } from '../layout'
 import {
   EVENT_CONTRACT,
   INVOKE_CONTRACT,
@@ -105,5 +106,21 @@ describe('event and round payloads', () => {
 
   it('rejects a slot smaller than 40×40', () => {
     expect(slotSchema.safeParse({ ...session.slots[0], width: 39 }).success).toBe(false)
+  })
+})
+
+describe('layout payloads (RF03)', () => {
+  const save = INVOKE_CONTRACT[IPC_CHANNELS.layoutSave].input
+
+  it('accepts one mode and its slots, including a slot with no photo', () => {
+    const slots = SEED_LAYOUTS['one-strip'].map((slot, i) => (i === 0 ? { ...slot, photo: null } : slot))
+    expect(save.safeParse({ mode: 'one-strip', slots }).success).toBe(true)
+  })
+
+  it('rejects a slot under 40×40, a photo outside 1..3 and an unknown mode', () => {
+    const [slot] = SEED_LAYOUTS['two-strips']
+    expect(save.safeParse({ mode: 'two-strips', slots: [{ ...slot, width: 39 }] }).success).toBe(false)
+    expect(save.safeParse({ mode: 'two-strips', slots: [{ ...slot, photo: 4 }] }).success).toBe(false)
+    expect(save.safeParse({ mode: 'three-strips', slots: [slot] }).success).toBe(false)
   })
 })

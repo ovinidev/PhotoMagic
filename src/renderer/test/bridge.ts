@@ -1,4 +1,5 @@
 import { vi, type Mock } from 'vitest'
+import { SEED_LAYOUTS } from '@shared/layout'
 import type { CameraStatus, DisplayState, FotomagicaApi, SessionState, Templates } from '@shared/ipc'
 
 type Listener<T> = (value: T) => void
@@ -65,6 +66,12 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
     template: {
       getAll: vi.fn(o.template?.getAll ?? (() => Promise.resolve(NO_TEMPLATES))),
       import: vi.fn(o.template?.import ?? (() => Promise.resolve({ ok: false as const, reason: 'unreadable' as const }))),
+    },
+    layout: {
+      get: vi.fn(o.layout?.get ?? (() => Promise.resolve(SEED_LAYOUTS))),
+      save: vi.fn<FotomagicaApi['layout']['save']>(
+        o.layout?.save ?? ((input) => Promise.resolve({ ok: true, layouts: { 'two-strips': [...SEED_LAYOUTS['two-strips']], 'one-strip': [...SEED_LAYOUTS['one-strip']], [input.mode]: input.slots } })),
+      ),
     },
     event: {
       start: vi.fn(o.event?.start ?? (() => Promise.resolve({ ok: false as const, reason: 'missing' as const }))),

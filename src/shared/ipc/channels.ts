@@ -19,6 +19,8 @@ export const IPC_CHANNELS = {
   sessionPrint: 'session:print',
   sessionReprint: 'session:reprint',
   sessionNewRound: 'session:new-round',
+  layoutGet: 'layout:get',
+  layoutSave: 'layout:save',
   // send: renderer → main, no answer
   cameraReport: 'camera:report',
   cameraRequestPreviewPort: 'camera:request-preview-port',
