@@ -1,1 +1,1 @@
-export { CreateEventCard } from './components/CreateEventCard'
+export { CreateEventForm } from './components/CreateEventForm'
