@@ -16,7 +16,7 @@ function setup(session: EventSession) {
   const capture = vi.fn(async () => JPEG)
   const waits: Array<() => void> = []
   const wait = vi.fn(() => new Promise<void>((resolve) => waits.push(resolve)))
-  const hook = renderHook((props: { session: EventSession }) => useShutter({ session: props.session, videoRef: video, capture, wait }), {
+  const hook = renderHook((props: { session: EventSession }) => useShutter({ session: props.session, videoRef: video, capture, wait, frameReady: async () => {} }), {
     initialProps: { session },
   })
   return { hook, capture, wait, waits }

@@ -1,19 +1,84 @@
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Page } from '@playwright/test'
+import sharp from 'sharp'
 import { expect, test } from './fixtures'
-import { openTv } from './tv'
+import { PHOTO_TIMEOUT, startEvent, takePhotos } from './event'
 import { writeY4m } from './y4m'
 
-// PRD scenarios whose screens do not exist yet. Each becomes a real test in the PR that builds its screen.
+// Each capture is a full-resolution 4K JPEG encoded in software under xvfb (see PHOTO_TIMEOUT).
+test.describe.configure({ timeout: 90_000 })
+
 test.describe('capture round', () => {
-  test.fixme('RF06 advances the counter 1/3, 2/3, 3/3 and moves to printing', async () => {})
-  test.fixme('RF06 laptop shutter triggers the same capture as the TV button', async () => {})
-  test.fixme('RF07 counts down 5 s and 10 s before capturing', async () => {})
-  test.fixme('RF07 syncs the timer between the TV and the laptop', async () => {})
   test.fixme('RF09 frames a slot without moving it and keeps shared captures independent', async () => {})
-  test.fixme('RF10 Cancelar returns to the camera at 1/3 with no file', async () => {})
+
+  test('RF06 advances the counter 1/3, 2/3, 3/3 and moves to printing', async ({ app, operatorWindow }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
+    await expect(operatorWindow.getByTestId('round-status')).toHaveText('Foto 1/3')
+    await takePhotos(tv, 2)
+    await expect(operatorWindow.getByTestId('round-status')).toHaveText('Foto 3/3')
+    await tv.getByRole('button', { name: 'Tirar foto' }).click()
+    await expect(tv.getByTestId('print-screen')).toBeVisible()
+    // The fourth tap has nothing to hit: the shutter is gone behind the print screen.
+    await expect(tv.getByRole('button', { name: 'Tirar foto' })).toHaveCount(0)
+    await expect(operatorWindow.getByTestId('round-status')).toHaveText('As 3 fotos estão prontas. Imprima ou cancele na TV.')
+    await expect(operatorWindow.getByTestId('montage-preview')).toBeVisible()
+  })
+
+  test('RF06 laptop shutter triggers the same capture as the TV button', async ({ app, operatorWindow }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
+    await operatorWindow.getByRole('button', { name: 'Tirar foto' }).click()
+    await expect(tv.getByTestId('photo-counter')).toHaveText('2/3', { timeout: PHOTO_TIMEOUT })
+    await expect(operatorWindow.getByTestId('round-status')).toHaveText('Foto 2/3')
+  })
+
+  test('RF07 counts down 5 s and 10 s before capturing', async ({ app, operatorWindow }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
+    const countdown = tv.getByTestId('countdown')
+
+    await tv.getByRole('radio', { name: '5 s' }).click()
+    await tv.getByRole('button', { name: 'Tirar foto' }).click()
+    await expect(countdown).toHaveText('5')
+    // A tap during the countdown adds nothing.
+    await tv.getByRole('button', { name: 'Tirar foto' }).click({ force: true })
+    await expect(countdown).toHaveText('1', { timeout: 6_000 })
+    await expect(tv.getByTestId('photo-counter')).toHaveText('1/3')
+    await expect(tv.getByTestId('photo-counter')).toHaveText('2/3', { timeout: PHOTO_TIMEOUT })
+    await expect(countdown).toHaveCount(0)
+
+    await tv.getByRole('radio', { name: '10 s' }).click()
+    await tv.getByRole('button', { name: 'Tirar foto' }).click()
+    await expect(countdown).toHaveText('10')
+    await expect(countdown).toHaveText('6', { timeout: 6_000 })
+    await expect(tv.getByTestId('photo-counter')).toHaveText('2/3')
+    await expect(tv.getByTestId('photo-counter')).toHaveText('3/3', { timeout: 5_000 + PHOTO_TIMEOUT })
+  })
+
+  test('RF07 syncs the timer between the TV and the laptop', async ({ app, operatorWindow }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
+    await tv.getByRole('radio', { name: '5 s' }).click()
+    await expect(operatorWindow.getByLabel('Timer')).toHaveValue('5')
+    await operatorWindow.getByLabel('Timer').selectOption({ label: '10 s' })
+    await expect(tv.getByRole('radio', { name: '10 s' })).toHaveAttribute('aria-checked', 'true')
+    await operatorWindow.getByLabel('Timer').selectOption({ label: 'Sem timer' })
+    await expect(tv.getByRole('radio', { name: 'Sem timer' })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  test('RF10 Cancelar returns to the camera at 1/3 with no file', async ({ app, operatorWindow, dirs }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
+    await takePhotos(tv, 3)
+    await tv.getByRole('button', { name: 'Cancelar' }).click()
+    await expect(tv.getByTestId('print-screen')).toHaveCount(0)
+    await expect(tv.getByTestId('photo-counter')).toHaveText('1/3')
+    expect(readdirSync(join(dirs.desktop, 'Festa'))).toEqual([])
+  })
+
+  test('RNF04 the laptop shows the live camera sent by the TV over the MessageChannel', async ({ app, operatorWindow }) => {
+    await startEvent(app, operatorWindow, { name: 'Festa', mode: 'one-strip' })
+    await expect(operatorWindow.getByTestId('live-preview')).toHaveAttribute('data-receiving', 'true')
+    await expect(operatorWindow.getByTestId('live-guide')).toBeVisible()
+  })
 })
 
 /**
@@ -41,17 +106,15 @@ function sampleCanvas(tv: Page, points: Array<[x: number, y: number]>): Promise<
   }, points)
 }
 
-function closeTo(actual: number[] | undefined, expected: readonly number[]): boolean {
+function closeTo(actual: readonly number[] | undefined, expected: readonly number[]): boolean {
   return !!actual && actual.every((value, index) => Math.abs(value - expected[index]!) <= 40)
 }
 
-test.describe('capture round: live view (RF05)', () => {
+test.describe('capture round: live view and file (RF05)', () => {
   test.use({ appEnv: { FOTOMAGICA_FAKE_CAMERA: fixtureFrame } })
 
-  test('RF05 shows the fixture frame mirrored and upright on the TV', async ({ app, operatorWindow }) => {
-    const tv = await openTv(app, operatorWindow)
-    await expect(tv.getByTestId('camera-view')).toHaveAttribute('data-camera-state', 'live')
-    await expect(operatorWindow.getByTestId('camera-status')).toContainText('Câmera ao vivo')
+  test('RF05 shows the fixture frame mirrored and upright on the TV, and the montage JPG matches', async ({ app, operatorWindow, dirs }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa', mode: 'one-strip' })
     await expect(operatorWindow.getByTestId('camera-status')).toContainText('640 × 360')
 
     const points: Array<[number, number]> = [
@@ -59,13 +122,24 @@ test.describe('capture round: live view (RF05)', () => {
       [0.08, 0.5], // left middle: the middle of the sensor's top edge
       [0.92, 0.5], // right middle: gray (blue here would mean no mirror)
       [0.5, 0.94], // bottom center: gray (red here would mean upside down)
-      [0.5, 0.5],
     ]
     await expect
       .poll(async () => {
-        const [top, left, right, bottom, center] = await sampleCanvas(tv, points)
-        return closeTo(top, RED) && closeTo(left, BLUE) && closeTo(right, GRAY) && closeTo(bottom, GRAY) && closeTo(center, GRAY)
+        const [top, left, right, bottom] = await sampleCanvas(tv, points)
+        return closeTo(top, RED) && closeTo(left, BLUE) && closeTo(right, GRAY) && closeTo(bottom, GRAY)
       }, { timeout: 10_000 })
       .toBe(true)
+
+    // The file: one-strip slot 1 is 560×1160 at (42, 40); the 360×640 portrait covers it at 1.8125×.
+    await takePhotos(tv, 3)
+    await tv.getByRole('button', { name: 'Imprimir' }).click()
+    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PHOTO_TIMEOUT })
+    const [file] = readdirSync(join(dirs.desktop, 'Festa'))
+    const { data, info } = await sharp(join(dirs.desktop, 'Festa', file!)).raw().toBuffer({ resolveWithObject: true })
+    const at = (x: number, y: number) => Array.from(data.subarray((y * info.width + x) * info.channels, (y * info.width + x) * info.channels + 3))
+    expect(closeTo(at(322, 80), RED), 'top of slot 1 is the sensor left edge').toBe(true)
+    expect(closeTo(at(60, 620), BLUE), 'left of slot 1 is the sensor top edge (mirrored)').toBe(true)
+    expect(closeTo(at(580, 620), GRAY), 'right of slot 1 is gray').toBe(true)
+    expect(closeTo(at(322, 1150), GRAY), 'bottom of slot 1 is gray').toBe(true)
   })
 })

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import type { EventSession } from '@shared/ipc'
 import { PHOTOS_PER_ROUND, type PhotoIndex } from '@shared/layout'
 import { captureStill, type VideoFrameSource } from '../utils/captureStill'
+import { waitForFrame } from '../utils/waitForFrame'
 
 /** If main has not counted the photo after this long, the shutter unlocks so the guests can tap again. */
 const PHOTO_ACK_TIMEOUT_MS = 5000
@@ -23,6 +24,7 @@ type Options = {
   /** Injected in tests. */
   capture?: (video: VideoFrameSource) => Promise<Uint8Array>
   wait?: (ms: number) => Promise<void>
+  frameReady?: (video: HTMLVideoElement) => Promise<void>
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
@@ -33,7 +35,7 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
  * as the preview), delivered to main as photo `taken + 1`. One capture at a time; main also ignores a
  * photo that is not the next one, so a double tap never adds a fourth photo.
  */
-export function useShutter({ session, videoRef, capture = captureStill, wait = sleep }: Options): ShutterState {
+export function useShutter({ session, videoRef, capture = captureStill, wait = sleep, frameReady = waitForFrame }: Options): ShutterState {
   const [countdown, setCountdown] = useState<number | null>(null)
   const [flashing, setFlashing] = useState(false)
   const [pending, setPending] = useState<PhotoIndex | null>(null)
@@ -85,6 +87,7 @@ export function useShutter({ session, videoRef, capture = captureStill, wait = s
         }
         if (!mounted.current) return
         setCountdown(null)
+        await frameReady(video)
         setFlashing(true)
         setTimeout(() => mounted.current && setFlashing(false), FLASH_MS)
         const jpeg = await capture(video)
@@ -92,7 +95,8 @@ export function useShutter({ session, videoRef, capture = captureStill, wait = s
         setTimeout(() => {
           if (pendingRef.current === index) release()
         }, PHOTO_ACK_TIMEOUT_MS)
-      } catch {
+      } catch (error) {
+        console.error('[shutter] capture failed', error)
         if (mounted.current) {
           setCountdown(null)
           setFailed(true)
@@ -100,7 +104,7 @@ export function useShutter({ session, videoRef, capture = captureStill, wait = s
         release()
       }
     })()
-  }, [videoRef, capture, wait, release])
+  }, [videoRef, capture, wait, frameReady, release])
 
   // The laptop's `Tirar foto` runs the same path (DESIGN §4).
   useEffect(() => window.fotomagica.session.onShutter(trigger), [trigger])

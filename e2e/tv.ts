@@ -24,15 +24,6 @@ export async function tvPlacement(operatorWindow: Page) {
   return tv.kind === 'open' ? { kind: tv.kind, bounds: { x: tv.display.x, y: tv.display.y, width: tv.display.width, height: tv.display.height } } : tv
 }
 
-/** Clicks `Abrir câmera na TV` (or the landscape confirmation) and returns the TV page. */
-export async function openTv(app: ElectronApplication, operatorWindow: Page, button = 'Abrir câmera na TV'): Promise<Page> {
-  const opened = app.waitForEvent('window')
-  await operatorWindow.getByRole('button', { name: button }).click()
-  const tv = await opened
-  await tv.waitForLoadState('domcontentloaded')
-  return tv
-}
-
 /** Plugs, unplugs or rotates the fixture TV at runtime (test hook installed by main under E2E). */
 export function setDisplays(app: ElectronApplication, fixture: 'portrait-tv' | 'landscape-tv' | 'laptop-only'): Promise<void> {
   return app.evaluate((_electron, next) => {

@@ -40,13 +40,19 @@ export async function startEvent(app: ElectronApplication, operatorWindow: Page,
   return tv
 }
 
+/**
+ * One full-resolution capture: the fake camera honors the 3840×2160 request, and under xvfb the canvas
+ * JPEG encode runs in software (about 3–4 s per photo). Generous so a loaded runner does not flake.
+ */
+export const PHOTO_TIMEOUT = 15_000
+
 /** Taps the white button `count` times with the timer off, waiting for each photo to count. */
 export async function takePhotos(tv: Page, count: number): Promise<void> {
   for (let photo = 1; photo <= count; photo++) {
     await tv.getByRole('button', { name: 'Tirar foto' }).click()
-    if (photo < 3) await expect(tv.getByTestId('photo-counter')).toHaveText(`${photo + 1}/3`)
+    if (photo < 3) await expect(tv.getByTestId('photo-counter')).toHaveText(`${photo + 1}/3`, { timeout: PHOTO_TIMEOUT })
   }
-  if (count === 3) await expect(tv.getByTestId('print-screen')).toBeVisible()
+  if (count === 3) await expect(tv.getByTestId('print-screen')).toBeVisible({ timeout: PHOTO_TIMEOUT })
 }
 
 /** The simulated tickets written so far, oldest first. */
