@@ -4,7 +4,7 @@ import { TIMER_OPTIONS } from '@shared/round'
 import { cn } from '@renderer/shared/utils/cn'
 import { CAPTURE_COPY } from '../copy'
 import type { ShutterState } from '../hooks/useShutter'
-import { GLASS } from './glass'
+import { GLASS } from '@renderer/shared/utils/glass'
 
 /**
  * TV capture chrome over the live image (DESIGN §14): the countdown in the middle, the `1/3` counter

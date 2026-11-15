@@ -6,7 +6,7 @@ import { usePreviewSender } from '../hooks/usePreviewSender'
 import { useShutter } from '../hooks/useShutter'
 import { CameraPreview } from './CameraPreview'
 import { CaptureControls } from './CaptureControls'
-import { GLASS } from './glass'
+import { GLASS } from '@renderer/shared/utils/glass'
 
 function CameraMessage({ title, detail, children }: { title: string; detail?: string; children?: ReactNode }) {
   return (
