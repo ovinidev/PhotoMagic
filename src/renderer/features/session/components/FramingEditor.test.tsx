@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { EventSession } from '@shared/ipc'
+import { TWO_STRIPS_SEED } from '@shared/layout'
 import { eventState, stubBridge } from '@renderer/test/bridge'
 import { useFramingEditor } from './FramingEditor'
 
@@ -58,8 +59,27 @@ describe('useFramingEditor (RF09)', () => {
     for (const mask of screen.getAllByTestId('framing-photo-mask')) {
       expect(mask).toHaveClass('overflow-hidden')
     }
-    const baixo = screen.getByRole('button', { name: 'Enquadrar Baixo 1' }).querySelector('img')!
+    const baixo = document.querySelector('[data-mask-for="bottom-1"] [data-testid="framing-photo"]') as HTMLImageElement
     expect(baixo.style.transform).toMatch(/^translate\(-50%, -50%\) translate\(-?[\d.]+%, -?[\d.]+%\) rotate\(0deg\)$/)
+    vi.unstubAllGlobals()
+  })
+
+  it('clips a moved, enlarged slot to its fixed gray box and fills the box with the photo', async () => {
+    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 1080, height: 1920, close: () => {} })))
+    stubBridge({ session: { getPhoto: () => Promise.resolve(new Uint8Array([1, 2, 3])) } })
+    const base = eventState({ taken: 1 })
+    const slots = TWO_STRIPS_SEED.map((slot) => (slot.id === 'bottom-1' ? { ...slot, left: 20, top: 500, width: 900, height: 700 } : slot))
+    render(<Harness session={{ ...base, slots }} />)
+    await screen.findAllByTestId('framing-photo')
+    const mask = document.querySelector<HTMLElement>('[data-mask-for="bottom-1"]')!
+    // Baixo 1's gray box, 62/733 602×402 on the 1844×1240 sheet, not the moved slot.
+    expect(parseFloat(mask.style.left)).toBeCloseTo((62 / 1844) * 100, 3)
+    expect(parseFloat(mask.style.width)).toBeCloseTo((602 / 1844) * 100, 3)
+    expect(mask).toHaveClass('overflow-hidden')
+    expect(mask.style.borderRadius).not.toBe('')
+    expect(mask.querySelector('[data-testid="framing-photo-fill"]')).not.toBeNull()
+    // A slot on its seed needs no fill.
+    expect(document.querySelector('[data-mask-for="top-1"] [data-testid="framing-photo-fill"]')).toBeNull()
     vi.unstubAllGlobals()
   })
 })

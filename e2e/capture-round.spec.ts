@@ -47,15 +47,15 @@ test.describe('capture round', () => {
     }).toBeGreaterThan(before.previewRevision)
   })
 
-  test('RF09 draws the framed photo locally, clipped to its slot: nothing outside the slot changes', async ({ app, operatorWindow }) => {
+  test('RF09 draws the framed photo locally, clipped to its fixed box: nothing outside the box changes', async ({ app, operatorWindow }) => {
     const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
     await takePhotos(tv, 3)
     await expect(tv.getByTestId('print-preview')).toBeVisible()
     const overlay = operatorWindow.getByTestId('framing-overlay')
     const bottom1 = operatorWindow.getByRole('button', { name: 'Enquadrar Baixo 1' })
-    const photo = bottom1.getByTestId('framing-photo')
+    const mask = overlay.locator('[data-mask-for="bottom-1"]')
+    const photo = mask.getByTestId('framing-photo')
     await expect(photo).toBeVisible()
-    const mask = bottom1.getByTestId('framing-photo-mask')
     expect(await mask.evaluate((node) => getComputedStyle(node).overflow)).toBe('hidden')
     expect(parseFloat(await mask.evaluate((node) => getComputedStyle(node).borderTopLeftRadius))).toBeGreaterThan(0)
 

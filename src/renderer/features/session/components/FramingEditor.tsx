@@ -3,6 +3,8 @@ import { SHEET } from '@shared/constants'
 import type { EventSession } from '@shared/ipc'
 import {
   DEFAULT_FRAMING,
+  fixedBox,
+  onSeed,
   panFraming,
   photoPlacement,
   photoPlacementCss,
@@ -12,6 +14,8 @@ import {
   wheelZoomFactor,
   zoomFraming,
   type Framing,
+  type GuideBox,
+  type PrintMode,
   type Slot,
 } from '@shared/layout'
 import { LAYOUT_COPY } from '@renderer/features/layout'
@@ -37,29 +41,73 @@ function filledSlots(session: EventSession): Slot[] {
 
 const pct = (value: number, total: number) => `${(value / total) * 100}%`
 
+/** A rounded corner of `radius` sheet px as a CSS radius, in percent of a `width × height` box. */
+function cssRadius(radius: number, width: number, height: number): string | undefined {
+  const r = Math.min(radius, width / 2, height / 2)
+  return r > 0 ? `${pct(r, width)} / ${pct(r, height)}` : undefined
+}
+
 /** The slot's rounded corners as a CSS radius, in percent of the box so it scales with the preview. */
 function cornerRadius(slot: Slot): string | undefined {
-  const radius = Math.min(slot.radius ?? 0, slot.width / 2, slot.height / 2)
-  return radius > 0 ? `${pct(radius, slot.width)} / ${pct(radius, slot.height)}` : undefined
+  return cssRadius(slot.radius ?? 0, slot.width, slot.height)
 }
 
 /**
- * The capture inside one slot, placed by the same plan the composer runs (`planSlot` then
- * `photoPlacement`), inside a box that clips to the slot and its rounded corners: the photo is never
- * drawn outside the slot. Drawn here so a drag follows the pointer without waiting for main.
+ * The capture placed in one slot by the same plan the composer runs (`planSlot` then
+ * `photoPlacement`), drawn inside a box the size of the slot, turned by its angle and clipped to its
+ * rounded corners. Positioned in percent of the fixed `box` it sits in.
  */
-function SlotPhoto({ slot, photo, framing }: { slot: Slot; photo: RoundPhoto; framing: Framing }) {
+function PlacedPhoto({ slot, box, photo, framing, testId }: { slot: Slot; box: GuideBox; photo: RoundPhoto; framing: Framing; testId: string }) {
   const css = photoPlacementCss(photoPlacement(planSlot(slot, photo, framing)), slot)
   return (
-    <span data-testid="framing-photo-mask" className="pointer-events-none absolute inset-0 overflow-hidden" style={{ borderRadius: cornerRadius(slot) }}>
+    <span
+      className="absolute overflow-hidden"
+      style={{
+        left: pct(slot.left - box.rect.left, box.rect.width),
+        top: pct(slot.top - box.rect.top, box.rect.height),
+        width: pct(slot.width, box.rect.width),
+        height: pct(slot.height, box.rect.height),
+        transform: `rotate(${slot.angle}deg)`,
+        borderRadius: cornerRadius(slot),
+      }}
+    >
       <img
         src={photo.url}
         alt=""
         draggable={false}
-        data-testid="framing-photo"
+        data-testid={testId}
         className="absolute top-1/2 left-1/2 max-w-none select-none"
         style={{ width: css.width, height: css.height, transform: css.transform }}
       />
+    </span>
+  )
+}
+
+/**
+ * One slot's photo as the montage draws it (DESIGN §6): clipped to the slot's fixed gray box and
+ * its rounded corners, whatever the slot's own position and size; where the slot does not cover
+ * the box, the photo cover-fitted to the box (the seed slot's plan) fills it. Drawn here so a drag
+ * follows the pointer without waiting for main.
+ */
+function BoxPhoto({ mode, slot, index, photo, framing }: { mode: PrintMode; slot: Slot; index: number; photo: RoundPhoto; framing: Framing }) {
+  const fixed = fixedBox(mode, slot.id, index)
+  if (!fixed) return null
+  const { box, seedSlot } = fixed
+  return (
+    <span
+      data-testid="framing-photo-mask"
+      data-mask-for={slot.id}
+      className="pointer-events-none absolute overflow-hidden"
+      style={{
+        left: pct(box.rect.left, SHEET.width),
+        top: pct(box.rect.top, SHEET.height),
+        width: pct(box.rect.width, SHEET.width),
+        height: pct(box.rect.height, SHEET.height),
+        borderRadius: cssRadius(box.radius, box.rect.width, box.rect.height),
+      }}
+    >
+      {onSeed(slot, seedSlot) ? null : <PlacedPhoto slot={seedSlot} box={box} photo={photo} framing={framing} testId="framing-photo-fill" />}
+      <PlacedPhoto slot={slot} box={box} photo={photo} framing={framing} testId="framing-photo" />
     </span>
   )
 }
@@ -162,9 +210,13 @@ export function useFramingEditor(session: EventSession): { overlay: ReactNode; c
   const overlay = (
       <div ref={overlayRef} data-testid="framing-overlay" className="absolute inset-0">
         {filled.map((slot) => {
+          const photo = slot.photo === null ? undefined : photos[slot.photo]
+          const index = session.slots.findIndex((each) => each.id === slot.id)
+          return photo ? <BoxPhoto key={`photo-${slot.id}`} mode={session.mode} slot={slot} index={index} photo={photo} framing={framingOf(slot.id)} /> : null
+        })}
+        {filled.map((slot) => {
           const isSelected = slot.id === selected
           const label = LAYOUT_COPY.slotLabel(slot.id)
-          const photo = slot.photo === null ? undefined : photos[slot.photo]
           return (
             <button
               key={slot.id}
@@ -185,7 +237,6 @@ export function useFramingEditor(session: EventSession): { overlay: ReactNode; c
                 transform: `rotate(${slot.angle}deg)`,
               }}
             >
-              {photo ? <SlotPhoto slot={slot} photo={photo} framing={framingOf(slot.id)} /> : null}
               <span
                 aria-hidden
                 className={cn(
