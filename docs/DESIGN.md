@@ -597,13 +597,12 @@ Empty, error and loading states exist on every laptop screen. Empty gallery: "Ne
 Logical frame 1080×1920.
 
 - The image fills the core, edge to edge, already mirrored
-- Top glass bar: adjustments icon (in place of the flash) and the rule-of-thirds grid toggle. No flip-camera icon
+- Top glass bar: adjustments icon (in place of the flash). No grid toggle and no flip-camera icon; the bars are dark and translucent
 - Bottom glass bar: 96 px circular thumbnail of the last montage on the left; the white button in the center, 96 px in diameter inside a ring; the timer (off, 5 s, 10 s) as three targets to the right of the button, each at least 64 px
 - `1/3` counter above the button, in white, weight 600
 - Countdown in the center of the image, about 18% of the logical height
 - `backdrop-filter: blur(24px)`. If the compositor has no blur, the bar falls back to `rgba(28, 28, 30, 0.72)`, opaque enough for the label to stay legible
 
-The rule-of-thirds grid is white hairlines at 20% opacity. When off, it disappears completely.
 
 The webcam panel opens from the adjustments icon as a strong-glass sheet under the top bar, with the same controls as the laptop card. The gallery grid and the fullscreen view are rendered into `document.body`, because the bottom bar's `backdrop-filter` would make `position: fixed` relative to the bar.
 
