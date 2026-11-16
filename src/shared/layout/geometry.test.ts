@@ -9,6 +9,8 @@ import {
   nearestQuarterTurn,
   normalizeAngle,
   planSlot,
+  photoPlacement,
+  photoPlacementCss,
   slotBounds,
   slotCrop,
 } from './geometry'
@@ -186,5 +188,51 @@ describe('slotCrop and guideCrop', () => {
 
   it('is null when no slot uses the photo', () => {
     expect(guideCrop(TWO_STRIPS_SEED.slice(3), 3, FRAME)).toBeNull()
+  })
+})
+
+describe('photoPlacement (local framing preview, DESIGN §8)', () => {
+  const photo = { width: 1080, height: 1920 }
+  const framings = [
+    DEFAULT_FRAMING,
+    { zoom: 2.4, panX: 1, panY: -1, rotation: 0 },
+    { zoom: 1, panX: -1, panY: 1, rotation: 37 },
+    { zoom: 1.7, panX: 0.6, panY: -0.3, rotation: -125 },
+  ]
+
+  /** True when the box point (bx, by), from the box center, falls on the placed photo. */
+  const onPhoto = (placement: ReturnType<typeof photoPlacement>, bx: number, by: number) => {
+    const radians = (-placement.rotation * Math.PI) / 180
+    const dx = bx - placement.x
+    const dy = by - placement.y
+    const u = dx * Math.cos(radians) - dy * Math.sin(radians)
+    const v = dx * Math.sin(radians) + dy * Math.cos(radians)
+    return Math.abs(u) <= placement.width / 2 + 1e-6 && Math.abs(v) <= placement.height / 2 + 1e-6
+  }
+
+  it('centers the upright photo, stood up against the slot angle, at the default framing', () => {
+    const placement = photoPlacement(planSlot(TWO_STRIPS_SEED[0]!, photo))
+    expect(placement.rotation).toBe(90)
+    expect(placement.x).toBeCloseTo(0, 6)
+    expect(placement.y).toBeCloseTo(0, 6)
+  })
+
+  it('always covers the whole slot box: panned, zoomed or turned, no corner is left empty', () => {
+    for (const slot of [...TWO_STRIPS_SEED, ...ONE_STRIP_SEED]) {
+      for (const framing of framings) {
+        const plan = planSlot(slot, photo, framing)
+        const placement = photoPlacement(plan)
+        const hw = plan.box.width / 2
+        const hh = plan.box.height / 2
+        for (const [bx, by] of [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh], [0, 0]] as const) {
+          expect(onPhoto(placement, bx, by), `${slot.id} ${JSON.stringify(framing)}`).toBe(true)
+        }
+      }
+    }
+  })
+
+  it('writes the placement as size-independent CSS', () => {
+    const css = photoPlacementCss({ width: 800, height: 400, x: 80, y: -20, rotation: 90 }, { width: 400, height: 200 })
+    expect(css).toEqual({ width: '200%', height: '200%', transform: 'translate(-50%, -50%) translate(10%, -5%) rotate(90deg)' })
   })
 })

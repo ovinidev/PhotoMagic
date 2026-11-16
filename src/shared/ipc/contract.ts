@@ -1,6 +1,8 @@
 import type { z } from 'zod'
 import { IPC_CHANNELS } from './channels'
 import {
+  getPhotoInputSchema,
+  sessionPhotoBytesSchema,
   appGetVersionInputSchema,
   appVersionSchema,
   cameraStatusSchema,
@@ -53,6 +55,7 @@ export const INVOKE_CONTRACT = {
   [IPC_CHANNELS.eventEnd]: { input: noInputSchema, output: sessionStateSchema },
   [IPC_CHANNELS.sessionGetState]: { input: noInputSchema, output: sessionStateSchema },
   [IPC_CHANNELS.sessionGetPreview]: { input: noInputSchema, output: sessionPreviewSchema },
+  [IPC_CHANNELS.sessionGetPhoto]: { input: getPhotoInputSchema, output: sessionPhotoBytesSchema },
   [IPC_CHANNELS.sessionSetTimer]: { input: setTimerInputSchema, output: sessionStateSchema },
   [IPC_CHANNELS.sessionSetCopies]: { input: setCopiesInputSchema, output: sessionStateSchema },
   [IPC_CHANNELS.sessionSetFraming]: { input: setFramingInputSchema, output: sessionStateSchema },

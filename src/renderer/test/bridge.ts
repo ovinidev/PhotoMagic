@@ -95,6 +95,7 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
       getState: vi.fn(o.session?.getState ?? (() => Promise.resolve(IDLE))),
       onState: vi.fn(o.session?.onState ?? session.add),
       getPreview: vi.fn(o.session?.getPreview ?? (() => Promise.resolve({ revision: 0, jpeg: null }))),
+      getPhoto: vi.fn(o.session?.getPhoto ?? (() => Promise.resolve(null))),
       setTimer: vi.fn(o.session?.setTimer ?? (() => Promise.resolve(IDLE))),
       setCopies: vi.fn(o.session?.setCopies ?? (() => Promise.resolve(IDLE))),
       setFraming: vi.fn(o.session?.setFraming ?? (() => Promise.resolve(IDLE))),

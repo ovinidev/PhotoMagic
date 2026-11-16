@@ -23,10 +23,13 @@ export {
   nearestQuarterTurn,
   normalizeAngle,
   planSlot,
+  photoPlacement,
+  photoPlacementCss,
   slotBounds,
   slotCenter,
   slotCrop,
   type Framing,
+  type PhotoPlacement,
   type Rect,
   type SlotPlan,
 } from './geometry'

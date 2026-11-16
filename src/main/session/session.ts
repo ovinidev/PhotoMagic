@@ -32,6 +32,8 @@ export type SessionDeps = {
 export type Session = {
   state: () => SessionState
   preview: () => SessionPreview
+  /** One capture of the round, or `null` when it is not taken (or no event is open). */
+  photo: (index: PhotoIndex) => Uint8Array | null
   isOpen: () => boolean
   /** The open event (folder and mode), for the gallery. */
   openEvent: () => OpenEvent | null
@@ -147,6 +149,7 @@ export function createSession(deps: SessionDeps): Session {
   return {
     state,
     preview: () => preview,
+    photo: (index) => (event ? (round.photos.get(index) ?? null) : null),
     isOpen: () => event !== null,
     openEvent: () => event,
 

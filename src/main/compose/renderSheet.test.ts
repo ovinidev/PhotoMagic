@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
-import { ONE_STRIP_SEED, TWO_STRIPS_CLIENT_BOXES, TWO_STRIPS_SEED, clipToSheet, slotBounds, type PhotoIndex, type Slot } from '@shared/layout'
+import { ONE_STRIP_SEED, TWO_STRIPS_CLIENT_BOXES, TWO_STRIPS_SEED, clipToSheet, photoPlacement, planSlot, slotBounds, slotCenter, type Framing, type PhotoIndex, type Slot } from '@shared/layout'
 import { PREVIEW_WIDTH, renderSheet } from './renderSheet'
 
 type Rgb = [number, number, number]
@@ -194,6 +194,107 @@ describe('renderSheet over the client 2 tiras artwork', () => {
       }
       // Just outside the box the artwork is untouched (white paper there).
       expect(near(at(box.left + box.width / 2, box.top + box.height + 6), [255, 255, 255])).toBe(true)
+    }
+  })
+})
+
+describe('renderSheet keeps each photo inside its slot (RF09, DESIGN §8)', () => {
+  const GRADIENT = { width: 360, height: 640 }
+
+  /** A portrait whose color says where each pixel came from: red grows left to right, green top to bottom. */
+  async function gradient(): Promise<Buffer> {
+    const data = Buffer.alloc(GRADIENT.width * GRADIENT.height * 3)
+    for (let v = 0; v < GRADIENT.height; v += 1) {
+      for (let u = 0; u < GRADIENT.width; u += 1) {
+        const at = (v * GRADIENT.width + u) * 3
+        data[at] = Math.round((255 * u) / (GRADIENT.width - 1))
+        data[at + 1] = Math.round((255 * v) / (GRADIENT.height - 1))
+        data[at + 2] = 128
+      }
+    }
+    return sharp(data, { raw: { ...GRADIENT, channels: 3 } }).png().toBuffer()
+  }
+
+  /** A busy template, so any photo pixel drawn over it would change it. */
+  async function stripes(): Promise<Buffer> {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1844" height="1240"><rect width="1844" height="1240" fill="#3060a0"/>${Array.from({ length: 46 }, (_, i) => `<rect x="${i * 40}" width="20" height="1240" fill="#f0d020"/>`).join('')}</svg>`
+    return sharp(Buffer.from(svg)).png().toBuffer()
+  }
+
+  /** The point (x, y) of the sheet in the slot's own box axes, from the box center. */
+  function inBox(slot: Slot, x: number, y: number) {
+    const center = slotCenter(slot)
+    const radians = (-slot.angle * Math.PI) / 180
+    const dx = x - center.x
+    const dy = y - center.y
+    return { x: dx * Math.cos(radians) - dy * Math.sin(radians), y: dx * Math.sin(radians) + dy * Math.cos(radians) }
+  }
+
+  /** True when the sheet point lies within `margin` px of the slot's rounded box. */
+  function nearSlot(slot: Slot, x: number, y: number, margin: number) {
+    const point = inBox(slot, x, y)
+    const r = slot.radius ?? 0
+    const qx = Math.max(0, Math.abs(point.x) - (slot.width / 2 - r))
+    const qy = Math.max(0, Math.abs(point.y) - (slot.height / 2 - r))
+    return Math.hypot(qx, qy) - r <= margin
+  }
+
+  const moved: Record<string, Framing> = {
+    'top-1': { zoom: 2.5, panX: 1, panY: -1, rotation: 0 },
+    'top-2': { zoom: 1.8, panX: -0.7, panY: 0.4, rotation: 23 },
+    'bottom-1': { zoom: 3, panX: -1, panY: 1, rotation: -140 },
+    'bottom-2': { zoom: 1.4, panX: 0.5, panY: -0.5, rotation: 90 },
+  }
+
+  it('leaves every pixel outside the slots equal to the template when photos are moved, zoomed and turned', async () => {
+    const tpl = await stripes()
+    const photo = await gradient()
+    const empty = await sharp(await renderSheet({ template: tpl, slots: TWO_STRIPS_SEED, photos: {} }, { kind: 'montage' })).raw().toBuffer()
+    const framed = await sharp(
+      await renderSheet({ template: tpl, slots: TWO_STRIPS_SEED, photos: { 1: photo, 2: photo, 3: photo }, framings: moved }, { kind: 'montage' }),
+    )
+      .raw()
+      .toBuffer()
+    let checked = 0
+    let changed = 0
+    for (let y = 0; y < 1240; y += 1) {
+      for (let x = 0; x < 1844; x += 1) {
+        // JPEG blocks are 8 px: pixels sharing a block with the photo edge may move a little.
+        if (TWO_STRIPS_SEED.some((slot) => nearSlot(slot, x, y, 10))) continue
+        const at = (y * 1844 + x) * 3
+        checked += 1
+        // A photo pixel over the stripes would be off by far more; a few levels are JPEG ringing.
+        if ([0, 1, 2].some((c) => Math.abs(empty[at + c]! - framed[at + c]!) > 12)) changed += 1
+      }
+    }
+    expect(checked).toBeGreaterThan(1_000_000)
+    expect(changed).toBe(0)
+  })
+
+  it('draws each photo exactly where the shared placement (the laptop CSS transform) puts it', async () => {
+    const photo = await gradient()
+    const at = await pixels(await renderSheet({ template: await stripes(), slots: TWO_STRIPS_SEED, photos: { 1: photo, 2: photo, 3: photo }, framings: moved }, { kind: 'montage' }))
+    for (const slot of TWO_STRIPS_SEED) {
+      const placement = photoPlacement(planSlot(slot, GRADIENT, moved[slot.id]))
+      const radians = (-placement.rotation * Math.PI) / 180
+      const center = slotCenter(slot)
+      for (const [fx, fy] of [[0, 0], [-0.3, -0.3], [0.3, -0.25], [0.25, 0.3], [-0.3, 0.2]] as const) {
+        // A point of the box (fractions from its center), on the sheet…
+        const bx = fx * slot.width
+        const by = fy * slot.height
+        const turn = (slot.angle * Math.PI) / 180
+        const x = center.x + bx * Math.cos(turn) - by * Math.sin(turn)
+        const y = center.y + bx * Math.sin(turn) + by * Math.cos(turn)
+        if (x < 0 || y < 0 || x >= 1844 || y >= 1240) continue
+        // …and the photo pixel the placement puts there.
+        const dx = bx - placement.x
+        const dy = by - placement.y
+        const u = ((dx * Math.cos(radians) - dy * Math.sin(radians)) / placement.width + 0.5) * GRADIENT.width
+        const v = ((dx * Math.sin(radians) + dy * Math.cos(radians)) / placement.height + 0.5) * GRADIENT.height
+        const [r, g] = at(x, y)
+        expect(Math.abs(r - (255 * u) / (GRADIENT.width - 1)), `${slot.id} red at ${fx},${fy}`).toBeLessThanOrEqual(8)
+        expect(Math.abs(g - (255 * v) / (GRADIENT.height - 1)), `${slot.id} green at ${fx},${fy}`).toBeLessThanOrEqual(8)
+      }
     }
   })
 })

@@ -75,6 +75,7 @@ const api: FotomagicaApi = {
     getState: () => invoke(IPC_CHANNELS.sessionGetState, undefined),
     onState: (listener) => subscribe(IPC_CHANNELS.sessionState, listener),
     getPreview: () => invoke(IPC_CHANNELS.sessionGetPreview, undefined),
+    getPhoto: (index) => invoke(IPC_CHANNELS.sessionGetPhoto, { index }),
     setTimer: (timer) => invoke(IPC_CHANNELS.sessionSetTimer, { timer }),
     setCopies: (copies) => invoke(IPC_CHANNELS.sessionSetCopies, { copies }),
     setFraming: (input) => invoke(IPC_CHANNELS.sessionSetFraming, input),
