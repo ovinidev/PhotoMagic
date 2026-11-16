@@ -55,7 +55,7 @@ export function CreateEventForm({ onEditLayout, logo }: { onEditLayout?: (mode: 
   }
 
   return (
-    <section aria-labelledby="create-event-title" className="w-full rounded-[var(--radius-card)] border border-line bg-bg-raised px-8 py-6 text-base">
+    <section aria-labelledby="create-event-title" data-testid="create-event-card" className="w-full min-w-0 rounded-[var(--radius-card)] border border-line bg-bg-raised px-8 py-6 text-base">
       <div className="flex items-center gap-5">
         {logo}
         <h1 id="create-event-title" className="text-2xl font-semibold text-ink">
@@ -63,14 +63,14 @@ export function CreateEventForm({ onEditLayout, logo }: { onEditLayout?: (mode: 
         </h1>
       </div>
       <form
-        className="mt-5 grid gap-8 lg:grid-cols-2 lg:gap-10"
+        className="mt-5 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10"
         onSubmit={(event) => {
           event.preventDefault()
           void start()
         }}
       >
         {/* Wide windows: the details on the left, the sheet preview large on the right (DESIGN §14). */}
-        <div className="flex flex-col gap-5">
+        <div className="flex min-w-0 flex-col gap-5">
         <div className="flex flex-col gap-2">
           <label htmlFor={nameId} className="text-base font-medium text-ink">
             {EVENTS_COPY.name}
@@ -153,7 +153,7 @@ export function CreateEventForm({ onEditLayout, logo }: { onEditLayout?: (mode: 
         </div>
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 flex-col gap-3" data-testid="template-column">
         <TemplatePicker
           key={mode}
           mode={mode}
@@ -163,7 +163,7 @@ export function CreateEventForm({ onEditLayout, logo }: { onEditLayout?: (mode: 
           importState={imports[mode]}
           actions={
             onEditLayout ? (
-              <Button variant="ghost" onClick={() => onEditLayout(mode)}>
+              <Button variant="ghost" className="h-auto min-w-0 max-w-full whitespace-normal text-left" onClick={() => onEditLayout(mode)}>
                 {EVENTS_COPY.editLayout(modeLabel)}
               </Button>
             ) : null
