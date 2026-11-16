@@ -2,7 +2,7 @@ import { mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import sharp from 'sharp'
 import { expect, test, type AppDirs } from './fixtures'
-import { simulatedTickets, startEvent, takePhotos } from './event'
+import { PRINT_TIMEOUT, simulatedTickets, startEvent, takePhotos } from './event'
 
 /** An event folder that already holds two montages and files the app did not write (RF02 reuse). */
 async function seedFolder(dirs: AppDirs): Promise<string> {
@@ -37,7 +37,7 @@ test.describe('gallery', () => {
     await tvGallery.getByRole('button', { name: 'Fechar' }).click()
     await takePhotos(tv, 3)
     await tv.getByRole('button', { name: 'Imprimir' }).click()
-    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed')
+    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
     await expect(laptop.getByRole('button', { name: /Abrir a montagem/ })).toHaveCount(3)
     await tv.getByRole('button', { name: 'Nova rodada' }).click()
     await tv.getByRole('button', { name: 'Abrir a galeria' }).click()

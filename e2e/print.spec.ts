@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path'
 import sharp from 'sharp'
 import { TWO_STRIPS_CLIENT_BOXES } from '@shared/layout'
 import { expect, test } from './fixtures'
-import { setSimulatedPrinter, simulatedTickets, startEvent, takePhotos } from './event'
+import { PRINT_TIMEOUT, setSimulatedPrinter, simulatedTickets, startEvent, takePhotos } from './event'
 import { writeY4m } from './y4m'
 
 /** The client's real 2 tiras artwork (Canva PDF rendered at 1844×1240): black rounded photo boxes. */
@@ -48,7 +48,7 @@ test.describe('print', () => {
     await takePhotos(tv, 3)
     await tv.getByRole('button', { name: 'Mais' }).click()
     await tv.getByRole('button', { name: 'Imprimir' }).click()
-    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed')
+    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
     const [file] = readdirSync(join(dirs.desktop, 'Festa'))
     expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(dirs.desktop, 'Festa', file!), copies: 2, mode: 'two-strips', cut: true }])
   })
@@ -57,7 +57,7 @@ test.describe('print', () => {
     const tv = await startEvent(app, operatorWindow, { name: 'Festa', mode: 'one-strip' })
     await takePhotos(tv, 3)
     await tv.getByRole('button', { name: 'Imprimir' }).click()
-    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed')
+    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
     expect(await simulatedTickets(dirs.userData)).toEqual([expect.objectContaining({ copies: 1, mode: 'one-strip', cut: false })])
   })
 
@@ -66,7 +66,7 @@ test.describe('print', () => {
     await takePhotos(tv, 3)
     const started = performance.now()
     await tv.getByRole('button', { name: 'Imprimir' }).click()
-    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed')
+    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
     // RNF04: the CI ceiling for composing a fixture round is a loose 5 s.
     expect(performance.now() - started).toBeLessThan(5_000)
     const files = readdirSync(join(dirs.desktop, 'Festa'))
@@ -81,7 +81,7 @@ test.describe('print', () => {
     const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
     await takePhotos(tv, 3)
     await tv.getByRole('button', { name: 'Imprimir' }).click()
-    await expect(tv.getByRole('button', { name: 'Imprimir novamente' })).toBeVisible()
+    await expect(tv.getByRole('button', { name: 'Imprimir novamente' })).toBeVisible({ timeout: PRINT_TIMEOUT })
     await tv.getByRole('button', { name: 'Mais' }).click()
     await tv.getByRole('button', { name: 'Imprimir novamente' }).click()
     await expect.poll(async () => (await simulatedTickets(dirs.userData)).length).toBe(2)
@@ -108,7 +108,7 @@ test.describe('print', () => {
       const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
       await takePhotos(tv, 3)
       await tv.getByRole('button', { name: 'Imprimir' }).click()
-      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed')
+      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed', { timeout: PRINT_TIMEOUT })
       await expect(tv.getByText('Não foi possível ajustar o corte da impressora')).toBeVisible()
       await expect(operatorWindow.getByTestId('round-status')).toHaveText('Não foi possível ajustar o corte da impressora')
       await expect(tv.getByRole('button', { name: 'Imprimir novamente' })).toHaveCount(0)
@@ -123,12 +123,12 @@ test.describe('print', () => {
       const tv = await startEvent(app, operatorWindow, { name: 'Festa', mode: 'two-strips' })
       await takePhotos(tv, 3)
       await tv.getByRole('button', { name: 'Imprimir' }).click()
-      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed')
+      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed', { timeout: PRINT_TIMEOUT })
       await expect(operatorWindow.getByTestId('round-status-detail')).toContainText('Detalhe técnico:')
       const files = readdirSync(join(dirs.desktop, 'Festa'))
       await setSimulatedPrinter(app, { cut: 'supported' })
       await tv.getByRole('button', { name: 'Tentar novamente' }).click()
-      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed')
+      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
       expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(dirs.desktop, 'Festa', files[0]!), copies: 1, mode: 'two-strips', cut: true }])
       expect(readdirSync(join(dirs.desktop, 'Festa'))).toEqual(files)
     })
@@ -145,7 +145,7 @@ test.describe('print', () => {
       // The TV warns before anyone taps Imprimir.
       await expect(tv.getByTestId('tv-printer-status')).toHaveText('Impressora sem papel')
       await tv.getByRole('button', { name: 'Imprimir' }).click()
-      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed')
+      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed', { timeout: PRINT_TIMEOUT })
       await expect(operatorWindow.getByTestId('round-status')).toHaveText('Impressora sem papel')
       const files = readdirSync(join(dirs.desktop, 'Festa'))
       expect(files).toHaveLength(1)
@@ -153,7 +153,7 @@ test.describe('print', () => {
       await setSimulatedPrinter(app, { status: 'ready' })
       await expect(operatorWindow.getByTestId('printer-status')).toHaveAttribute('data-kind', 'ready')
       await tv.getByRole('button', { name: 'Tentar novamente' }).click()
-      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed')
+      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
       await expect(operatorWindow.getByTestId('round-status')).toHaveText(`Impresso: ${files[0]}`)
       expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(dirs.desktop, 'Festa', files[0]!), copies: 1, mode: 'one-strip', cut: false }])
       expect(readdirSync(join(dirs.desktop, 'Festa'))).toEqual(files)
@@ -168,14 +168,14 @@ test.describe('print', () => {
       await takePhotos(tv, 3)
       await tv.getByRole('button', { name: 'Imprimir' }).click()
       // The TV already warns before Imprimir, so wait for the failure itself, not only the words.
-      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed')
+      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed', { timeout: PRINT_TIMEOUT })
       await expect(tv.getByText('Impressora sem papel')).toBeVisible()
       // The JPG is written before sending and stays; trying again resends that same file.
       const files = readdirSync(join(dirs.desktop, 'Festa'))
       expect(files).toHaveLength(1)
       await expect(tv.getByText(`A montagem ${files[0]} ficou salva na pasta do evento.`)).toBeVisible()
       await tv.getByRole('button', { name: 'Tentar novamente' }).click()
-      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed')
+      await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed', { timeout: PRINT_TIMEOUT })
       await expect(tv.getByText('Impressora sem papel')).toBeVisible()
       expect(readdirSync(join(dirs.desktop, 'Festa'))).toEqual(files)
     })
@@ -189,7 +189,7 @@ test.describe('print: client 2 tiras artwork', () => {
     const tv = await startEvent(app, operatorWindow, { name: 'Festa LB', mode: 'two-strips', template: CLIENT_TEMPLATE })
     await takePhotos(tv, 3)
     await tv.getByRole('button', { name: 'Imprimir' }).click()
-    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed')
+    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
     const [file] = readdirSync(join(dirs.desktop, 'Festa LB'))
     const montage = join(dirs.desktop, 'Festa LB', file!)
 

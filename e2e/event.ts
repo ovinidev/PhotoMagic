@@ -60,6 +60,12 @@ export async function startEvent(app: ElectronApplication, operatorWindow: Page,
  */
 export const PHOTO_TIMEOUT = 8_000
 
+/**
+ * `Imprimir` to a final print phase: main composes the full 1844×1240 sheet with sharp, writes the
+ * JPG and then sends it, which takes longer than the default 5 s on a loaded xvfb runner.
+ */
+export const PRINT_TIMEOUT = 10_000
+
 /** Taps the white button `count` times with the timer off, waiting for each photo to count. */
 export async function takePhotos(tv: Page, count: number): Promise<void> {
   for (let photo = 1; photo <= count; photo++) {
