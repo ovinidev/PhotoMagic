@@ -33,6 +33,11 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Foto Mágica
+  uninstallDisplayName: Foto Mágica
+  installerIcon: assets/brand/icon.ico
+  uninstallerIcon: assets/brand/icon.ico
+  # An update downloaded in the background installs silently on quit (DESIGN §11); keep the user's data.
+  deleteAppDataOnUninstall: false
   # Stable asset name: releases/latest/download/FotoMagica-Setup.exe
   artifactName: FotoMagica-Setup.${ext}
 

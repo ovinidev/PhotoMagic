@@ -6,6 +6,11 @@
   "description": "Foto Mágica 2.0 — party photobooth for a vertical touch TV and the DNP DS-RX1",
   "author": "Vinicius (@ovinidev)",
   "license": "UNLICENSED",
+  "homepage": "https://github.com/ovinidev/PhotoMagic",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ovinidev/PhotoMagic.git"
+  },
   "main": "./out/main/index.js",
   "packageManager": "pnpm@10.34.6",
   "engines": {
