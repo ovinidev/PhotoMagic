@@ -2,8 +2,8 @@ import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
-import { ONE_STRIP_SEED, TWO_STRIPS_CLIENT_BOXES, TWO_STRIPS_SEED, clipToSheet, photoPlacement, planSlot, slotBounds, slotCenter, type Framing, type PhotoIndex, type Slot } from '@shared/layout'
-import { PREVIEW_WIDTH, renderSheet } from './renderSheet'
+import { ONE_STRIP_SEED, TWO_STRIPS_CLIENT_BOXES, TWO_STRIPS_SEED, clipToSheet, guideBoxes, type GuideBox, photoPlacement, planSlot, slotBounds, slotCenter, type Framing, type PhotoIndex, type Slot } from '@shared/layout'
+import { PREVIEW_WIDTH, composeSheet, renderSheet } from './renderSheet'
 
 type Rgb = [number, number, number]
 
@@ -52,7 +52,7 @@ async function allPhotos() {
 
 describe('renderSheet (RF08, RF12)', () => {
   it('writes a 1844×1240 JPEG at 300 DPI', async () => {
-    const jpeg = await renderSheet({ template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
+    const jpeg = await renderSheet({ mode: 'two-strips', template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
     const meta = await sharp(jpeg).metadata()
     expect(meta).toMatchObject({ format: 'jpeg', width: 1844, height: 1240, density: 300 })
   })
@@ -60,8 +60,8 @@ describe('renderSheet (RF08, RF12)', () => {
   it.each([
     ['two-strips', TWO_STRIPS_SEED],
     ['one-strip', ONE_STRIP_SEED],
-  ] as const)('puts each photo upright in its slots, bar on top, in %s', async (_mode, slots) => {
-    const jpeg = await renderSheet({ template: await template(), slots, photos: await allPhotos() }, { kind: 'montage' })
+  ] as const)('puts each photo upright in its slots, bar on top, in %s', async (mode, slots) => {
+    const jpeg = await renderSheet({ mode, template: await template(), slots, photos: await allPhotos() }, { kind: 'montage' })
     const at = await pixels(jpeg)
     for (const slot of slots) {
       const box = visible(slot)
@@ -78,7 +78,7 @@ describe('renderSheet (RF08, RF12)', () => {
   })
 
   it('crops the center of the portrait in a horizontal slot: bar only in the top part', async () => {
-    const jpeg = await renderSheet({ template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
+    const jpeg = await renderSheet({ mode: 'two-strips', template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
     const at = await pixels(jpeg)
     const bottom1 = TWO_STRIPS_SEED[3]!
     // Cover fit: the portrait is scaled to the slot width, so the slot shows a centered band of it.
@@ -92,7 +92,7 @@ describe('renderSheet (RF08, RF12)', () => {
   })
 
   it('leaves the template visible where a photo is still missing', async () => {
-    const jpeg = await renderSheet({ template: await template(), slots: TWO_STRIPS_SEED, photos: { 1: await capture(1) } }, { kind: 'montage' })
+    const jpeg = await renderSheet({ mode: 'two-strips', template: await template(), slots: TWO_STRIPS_SEED, photos: { 1: await capture(1) } }, { kind: 'montage' })
     const at = await pixels(jpeg)
     const top3 = visible(TWO_STRIPS_SEED[2]!)
     expect(near(at(top3.left + top3.width / 2, top3.top + top3.height / 2), GRAY)).toBe(true)
@@ -102,14 +102,14 @@ describe('renderSheet (RF08, RF12)', () => {
 
   it('leaves a slot set to Nenhuma empty, showing the template', async () => {
     const slots = ONE_STRIP_SEED.map((slot) => (slot.id === 'photo-2' ? { ...slot, photo: null } : slot))
-    const jpeg = await renderSheet({ template: await template(), slots, photos: await allPhotos() }, { kind: 'montage' })
+    const jpeg = await renderSheet({ mode: 'one-strip', template: await template(), slots, photos: await allPhotos() }, { kind: 'montage' })
     const at = await pixels(jpeg)
     expect(near(at(922, 1000), GRAY)).toBe(true)
     expect(near(at(322, 1000), BODY[1])).toBe(true)
   })
 
   it('fills the one-strip sheet with no white half', async () => {
-    const jpeg = await renderSheet({ template: await template(), slots: ONE_STRIP_SEED, photos: await allPhotos() }, { kind: 'montage' })
+    const jpeg = await renderSheet({ mode: 'one-strip', template: await template(), slots: ONE_STRIP_SEED, photos: await allPhotos() }, { kind: 'montage' })
     const at = await pixels(jpeg)
     for (const x of [322, 922, 1522]) expect(near(at(x, 1000), [255, 255, 255])).toBe(false)
   })
@@ -119,7 +119,7 @@ describe('renderSheet (RF08, RF12)', () => {
     const bottom1 = TWO_STRIPS_SEED[3]!
     // Pan to the top of the portrait: the bar now fills Baixo 1 down to its middle.
     const framings = { 'bottom-1': { zoom: 1, panX: 0, panY: -1, rotation: 0 } }
-    const at = await pixels(await renderSheet({ template: await template(), slots: TWO_STRIPS_SEED, photos, framings }, { kind: 'montage' }))
+    const at = await pixels(await renderSheet({ mode: 'two-strips', template: await template(), slots: TWO_STRIPS_SEED, photos, framings }, { kind: 'montage' }))
     expect(near(at(bottom1.left + 250, bottom1.top + 140), BAR)).toBe(true)
     // Cima 1 uses the same capture and keeps its default framing: bar on top, body below.
     const top1 = visible(TWO_STRIPS_SEED[0]!)
@@ -129,7 +129,7 @@ describe('renderSheet (RF08, RF12)', () => {
   it('rotates the photo inside the slot and leaves no template corner showing (RF09)', async () => {
     const bottom1 = TWO_STRIPS_SEED[3]!
     const framings = { 'bottom-1': { zoom: 1, panX: 0, panY: 0, rotation: 15 } }
-    const at = await pixels(await renderSheet({ template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos(), framings }, { kind: 'montage' }))
+    const at = await pixels(await renderSheet({ mode: 'two-strips', template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos(), framings }, { kind: 'montage' }))
     // Probed just inside the seed's rounded corner (radius 30: the arc is 9 px in along the diagonal).
     for (const [x, y] of [
       [bottom1.left + 12, bottom1.top + 12],
@@ -144,7 +144,7 @@ describe('renderSheet (RF08, RF12)', () => {
   })
 
   it('renders the preview from the same composition, scaled down', async () => {
-    const preview = await renderSheet({ template: null, slots: ONE_STRIP_SEED, photos: await allPhotos() }, { kind: 'preview' })
+    const preview = await renderSheet({ mode: 'one-strip', template: null, slots: ONE_STRIP_SEED, photos: await allPhotos() }, { kind: 'preview' })
     const meta = await sharp(preview).metadata()
     expect(meta).toMatchObject({ format: 'jpeg', width: PREVIEW_WIDTH, height: Math.round((PREVIEW_WIDTH * 1240) / 1844) })
   })
@@ -157,7 +157,7 @@ describe('renderSheet over the client 2 tiras artwork', () => {
   const ink = ([r, g, b]: Rgb) => Math.abs(r - g) < 14 && Math.abs(g - b) < 14 && r < 225
 
   it('fills every black photo box: no black corner or edge shows, the art around stays', async () => {
-    const jpeg = await renderSheet({ template: await readFile(CLIENT), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
+    const jpeg = await renderSheet({ mode: 'two-strips', template: await readFile(CLIENT), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
     const { data, info } = await sharp(jpeg).raw().toBuffer({ resolveWithObject: true })
     const at = (x: number, y: number): Rgb => {
       const i = (y * info.width + x) * info.channels
@@ -249,9 +249,9 @@ describe('renderSheet keeps each photo inside its slot (RF09, DESIGN §8)', () =
   it('leaves every pixel outside the slots equal to the template when photos are moved, zoomed and turned', async () => {
     const tpl = await stripes()
     const photo = await gradient()
-    const empty = await sharp(await renderSheet({ template: tpl, slots: TWO_STRIPS_SEED, photos: {} }, { kind: 'montage' })).raw().toBuffer()
+    const empty = await sharp(await renderSheet({ mode: 'two-strips', template: tpl, slots: TWO_STRIPS_SEED, photos: {} }, { kind: 'montage' })).raw().toBuffer()
     const framed = await sharp(
-      await renderSheet({ template: tpl, slots: TWO_STRIPS_SEED, photos: { 1: photo, 2: photo, 3: photo }, framings: moved }, { kind: 'montage' }),
+      await renderSheet({ mode: 'two-strips', template: tpl, slots: TWO_STRIPS_SEED, photos: { 1: photo, 2: photo, 3: photo }, framings: moved }, { kind: 'montage' }),
     )
       .raw()
       .toBuffer()
@@ -273,7 +273,7 @@ describe('renderSheet keeps each photo inside its slot (RF09, DESIGN §8)', () =
 
   it('draws each photo exactly where the shared placement (the laptop CSS transform) puts it', async () => {
     const photo = await gradient()
-    const at = await pixels(await renderSheet({ template: await stripes(), slots: TWO_STRIPS_SEED, photos: { 1: photo, 2: photo, 3: photo }, framings: moved }, { kind: 'montage' }))
+    const at = await pixels(await renderSheet({ mode: 'two-strips', template: await stripes(), slots: TWO_STRIPS_SEED, photos: { 1: photo, 2: photo, 3: photo }, framings: moved }, { kind: 'montage' }))
     for (const slot of TWO_STRIPS_SEED) {
       const placement = photoPlacement(planSlot(slot, GRADIENT, moved[slot.id]))
       const radians = (-placement.rotation * Math.PI) / 180
@@ -296,5 +296,87 @@ describe('renderSheet keeps each photo inside its slot (RF09, DESIGN §8)', () =
         expect(Math.abs(g - (255 * v) / (GRADIENT.height - 1)), `${slot.id} green at ${fx},${fy}`).toBeLessThanOrEqual(8)
       }
     }
+  })
+})
+
+describe('renderSheet clips every photo to its fixed gray box (DESIGN §6)', () => {
+  /** A portrait gradient whose blue is always 128: no template pixel below has that blue. */
+  async function gradient(): Promise<Buffer> {
+    const { width, height } = PHOTO
+    const data = Buffer.alloc(width * height * 3)
+    for (let v = 0; v < height; v += 1) {
+      for (let u = 0; u < width; u += 1) {
+        const at = (v * width + u) * 3
+        data[at] = Math.round((255 * u) / (width - 1))
+        data[at + 1] = Math.round((255 * v) / (height - 1))
+        data[at + 2] = 128
+      }
+    }
+    return sharp(data, { raw: { width, height, channels: 3 } }).png().toBuffer()
+  }
+
+  async function stripes(): Promise<Buffer> {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1844" height="1240"><rect width="1844" height="1240" fill="#3060a0"/>${Array.from({ length: 62 }, (_, i) => `<rect y="${i * 20}" width="1844" height="10" fill="#f0d020"/>`).join('')}</svg>`
+    return sharp(Buffer.from(svg)).png().toBuffer()
+  }
+
+  /** Signed distance (px) from the sheet point to the rounded gray box: negative inside. */
+  function distance(box: GuideBox, x: number, y: number) {
+    const { left, top, width, height } = box.rect
+    const px = Math.abs(x + 0.5 - (left + width / 2))
+    const py = Math.abs(y + 0.5 - (top + height / 2))
+    const r = box.radius
+    const qx = px - (width / 2 - r)
+    const qy = py - (height / 2 - r)
+    return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r
+  }
+
+  // The owner's case: cards enlarged, moved off their boxes, shrunk and turned in the editor.
+  const edited: Slot[] = TWO_STRIPS_SEED.map((slot) => {
+    switch (slot.id) {
+      case 'top-1':
+        return { ...slot, left: slot.left - 80, top: slot.top - 60, width: slot.width + 300, height: slot.height + 260 }
+      case 'top-2':
+        return { ...slot, left: slot.left + 300, top: slot.top + 120, angle: 280 }
+      case 'top-3':
+        return { ...slot, left: slot.left + 150, top: slot.top + 150, width: 200, height: 150 }
+      case 'bottom-1':
+        return { ...slot, left: 20, top: 500, width: 900, height: 700 }
+      default:
+        return { ...slot, angle: 37 }
+    }
+  })
+
+  it.each([
+    ['the seed slots', TWO_STRIPS_SEED],
+    ['enlarged, moved, shrunk and turned slots', edited],
+  ] as const)('with %s, leaves every pixel outside the boxes equal to the template and covers each box', async (_name, slots) => {
+    const tpl = await stripes()
+    const photo = await gradient()
+    const framings = { 'top-1': { zoom: 2, panX: 1, panY: -1, rotation: 20 } }
+    const empty = (await composeSheet({ mode: 'two-strips', template: tpl, slots, photos: {} })).data
+    const sheet = await composeSheet({ mode: 'two-strips', template: tpl, slots, photos: { 1: photo, 2: photo, 3: photo }, framings })
+    const boxes = guideBoxes('two-strips')
+    let outside = 0
+    let inside = 0
+    const leaks: string[] = []
+    const holes: string[] = []
+    for (let y = 0; y < 1240; y += 1) {
+      for (let x = 0; x < 1844; x += 1) {
+        const d = Math.min(...boxes.map((box) => distance(box, x, y)))
+        const at = (y * 1844 + x) * sheet.info.channels
+        if (d > 1) {
+          outside += 1
+          if ([0, 1, 2].some((c) => sheet.data[at + c] !== empty[at + c]) && leaks.length < 5) leaks.push(`${x},${y}`)
+        } else if (d < -1.5) {
+          inside += 1
+          if (Math.abs(sheet.data[at + 2]! - 128) > 4 && holes.length < 5) holes.push(`${x},${y}`)
+        }
+      }
+    }
+    expect(outside).toBeGreaterThan(900_000)
+    expect(inside).toBeGreaterThan(900_000)
+    expect(leaks).toEqual([])
+    expect(holes).toEqual([])
   })
 })

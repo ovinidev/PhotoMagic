@@ -99,6 +99,7 @@ export function createSession(deps: SessionDeps): Session {
   }
 
   const sheetInput = (open: OpenEvent, current: Round): SheetInput => ({
+    mode: open.mode,
     template: open.template,
     slots: open.slots,
     photos: Object.fromEntries(current.photos),

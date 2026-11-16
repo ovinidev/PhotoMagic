@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SHEET } from '../constants'
-import { guideBoxes } from './guides'
+import { fixedBox, guideBoxes } from './guides'
 import { CLIENT_BOX_BLEED, CLIENT_BOX_RADIUS, TWO_STRIPS_CLIENT_BOXES } from './seed'
 
 describe('guideBoxes', () => {
@@ -32,5 +32,19 @@ describe('guideBoxes', () => {
       expect(box.rect.left + box.rect.width).toBeLessThanOrEqual(SHEET.width)
       expect(box.rect.top + box.rect.height).toBeLessThanOrEqual(SHEET.height)
     }
+  })
+})
+
+describe('fixedBox', () => {
+  it('assigns each slot the gray box with its id, whatever the slot moved to', () => {
+    const moved = { id: 'bottom-2', photo: 2 as const, left: 1000, top: 100, width: 900, height: 700, angle: 10 }
+    const fixed = fixedBox('two-strips', moved.id, 0)!
+    expect(fixed.box).toEqual(guideBoxes('two-strips')[4])
+    expect(fixed.seedSlot.id).toBe('bottom-2')
+  })
+
+  it('falls back to the box at the slot index for an unknown id, and to none past the boxes', () => {
+    expect(fixedBox('one-strip', 'other', 1)?.box.id).toBe('photo-2')
+    expect(fixedBox('one-strip', 'other', 3)).toBeNull()
   })
 })
