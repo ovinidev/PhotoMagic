@@ -2,11 +2,11 @@ import { app, BrowserWindow, type WebContents } from 'electron'
 import type { DisplayFixture, SimulatedPrinterFlags } from '@shared/runtime'
 import { readRuntimeFlags } from '@shared/runtime'
 import { renderSheet } from './compose/renderSheet'
-import { broadcastGalleryChanged, broadcastPrinterStatus, broadcastSession, registerIpcHandlers } from './ipc'
+import { broadcastGalleryChanged, broadcastPrinterStatus, broadcastSession, broadcastUpdateStatus, registerIpcHandlers } from './ipc'
 import { applyCameraFixture, restrictPermissions } from './media'
 import { createPrinter, createPrinterMonitor, type Printer } from './print'
 import { createSession, saveMontage } from './session'
-import { scheduleUpdateCheck } from './updater'
+import { createUpdater } from './updater'
 import {
   createFixtureDisplaySource,
   createGuestWindow,
@@ -108,6 +108,8 @@ if (!app.requestSingleInstanceLock()) {
       onError: (error) => console.error('[session] preview failed', error),
     })
 
+    const updater = createUpdater({ flags, userData, onChange: broadcastUpdateStatus })
+
     restrictPermissions(isGuestWindow)
     registerIpcHandlers({
       flags,
@@ -115,6 +117,7 @@ if (!app.requestSingleInstanceLock()) {
       session,
       printerMonitor,
       printer,
+      updateStatus: updater.status,
       userData,
       desktop,
       isGuestWindow,
@@ -129,7 +132,7 @@ if (!app.requestSingleInstanceLock()) {
       tv.close()
     })
 
-    // The check runs only with no event open (DESIGN §11).
-    scheduleUpdateCheck({ flags, isEventOpen: session.isOpen })
+    // The check runs only with no event open and a network (DESIGN §11); it never holds up startup.
+    updater.checkOnStartup({ isEventOpen: session.isOpen })
   })
 }
