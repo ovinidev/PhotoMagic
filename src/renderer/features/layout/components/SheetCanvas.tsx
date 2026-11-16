@@ -175,7 +175,7 @@ export function SheetCanvas({
               'absolute cursor-move outline-none select-none',
               selected ? 'z-20 outline-2 outline-offset-0 outline-dashed outline-selection' : 'z-10 outline-1 outline-ink/30 outline-solid',
             )}
-            style={{ ...slotStyle(slot), backgroundColor: color.fill }}
+            style={{ ...slotStyle(slot), backgroundColor: `color-mix(in srgb, ${color.fill} 82%, transparent)` }}
             onPointerDown={(event) => begin(event, slot, 'move')}
             onFocus={() => onSelect(slot.id)}
           >

@@ -22,6 +22,7 @@ import type {
   Templates,
   Timer,
   UpdateStatus,
+  ZoomState,
   WebcamReport,
   WebcamState,
 } from './schemas'
@@ -125,5 +126,13 @@ export type FotomagicaApi = {
     getStatus: () => Promise<UpdateStatus>
     /** Pushed whenever the update status changes. */
     onStatus: (listener: (status: UpdateStatus) => void) => Unsubscribe
+  }
+  zoom: {
+    /** The laptop window zoom: automatic factor, the operator's zoom and their product (DESIGN §3). */
+    get: () => Promise<ZoomState>
+    /** One operator step (Ctrl + / Ctrl − / Ctrl 0); saved on this computer. */
+    step: (step: 'in' | 'out' | 'reset') => Promise<ZoomState>
+    /** Pushed when the window is resized or the operator zooms. */
+    onState: (listener: (state: ZoomState) => void) => Unsubscribe
   }
 }

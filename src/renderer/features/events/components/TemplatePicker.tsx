@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, type ReactNode } from 'react'
 import type { TemplateInfo } from '@shared/ipc'
 import type { PrintMode } from '@shared/layout'
 import { SheetGuides } from '@renderer/features/layout'
@@ -22,6 +22,7 @@ export function TemplatePicker({
   template,
   importState,
   onFile,
+  actions,
 }: {
   mode: PrintMode
   modeLabel: string
@@ -29,6 +30,8 @@ export function TemplatePicker({
   template: TemplateInfo | null
   importState: ImportState
   onFile: (file: File) => void
+  /** Extra buttons on the import row, e.g. `Editar posições das fotos`. */
+  actions?: ReactNode
 }) {
   const inputId = useId()
   const url = useObjectUrl(template?.preview ?? null)
@@ -37,7 +40,7 @@ export function TemplatePicker({
 
   return (
     <fieldset className="flex flex-col gap-3">
-      <legend className="mb-2 text-sm font-medium text-ink">{EVENTS_COPY.template(modeLabel)}</legend>
+      <legend className="mb-2 text-base font-medium text-ink">{EVENTS_COPY.template(modeLabel)}</legend>
       <div className="flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[var(--radius-field)] border border-line bg-bg">
         {templates.status === 'loading' ? (
           <p className="text-sm text-ink-soft">{EVENTS_COPY.templatesLoading}</p>
@@ -52,10 +55,11 @@ export function TemplatePicker({
           </div>
         )}
       </div>
-      <div className="flex items-center justify-between gap-4">
-        <p className="truncate text-sm text-ink-soft" data-testid="template-file-name">
+      <p className="truncate text-sm text-ink-soft" data-testid="template-file-name">
           {template ? `${template.fileName} · ${template.width} × ${template.height} px` : templates.status === 'ready' ? EVENTS_COPY.templateDefault : ''}
-        </p>
+      </p>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {actions}
         <label
           htmlFor={inputId}
           aria-disabled={loading}

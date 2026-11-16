@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, type IpcMainEvent, type WebContents } from 'electron'
+import { BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent, type WebContents } from 'electron'
 import {
   EVENT_CONTRACT,
   INVOKE_CONTRACT,
@@ -18,12 +18,12 @@ import {
  */
 export function handleInvoke<C extends InvokeChannel>(
   channel: C,
-  handler: (input: InvokeInput<C>) => InvokeOutput<C> | Promise<InvokeOutput<C>>,
+  handler: (input: InvokeInput<C>, event: IpcMainInvokeEvent) => InvokeOutput<C> | Promise<InvokeOutput<C>>,
 ): void {
   const { input: inputSchema, output: outputSchema } = INVOKE_CONTRACT[channel]
-  ipcMain.handle(channel, async (_event, payload: unknown) => {
+  ipcMain.handle(channel, async (event, payload: unknown) => {
     const input = inputSchema.parse(payload) as InvokeInput<C>
-    return outputSchema.parse(await handler(input))
+    return outputSchema.parse(await handler(input, event))
   })
 }
 

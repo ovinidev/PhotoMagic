@@ -100,7 +100,9 @@ Monitors change at runtime (`display-added`, `display-removed`, `display-metrics
 
 `event:start` opens the TV window through this controller and `event:end` closes it; there is no separate IPC to open the TV, so the TV never shows without an event. The create-event form shows the TV state and, for a landscape TV, a checkbox the operator ticks to open anyway (RF04). The TV window closing for any reason ends the event.
 
-The operator window opens on the primary monitor, with a frame and a comfortable size (minimum 1280×800). The TV window has no frame, ignores accidental close and covers the `bounds` of the chosen monitor. Main closes it, on `Encerrar evento` or when quitting the app.
+The operator window opens on the primary monitor, with a frame, at 1280×800 or the work area if smaller (minimum 1024×640, so it fits a 1366×768 laptop), and maximized when the screen is at least 1366 px wide. E2E keeps a fixed 1280×800.
+
+Laptop zoom is pure, in `src/shared/zoom.ts`, and applied by `src/main/windows/operatorZoom.ts` with `webContents.setZoomFactor` on the laptop window only: `autoZoom(content size)` (1 up to 1280×760, growing with the smaller of the width and height ratios up to 2, so a maximized 1920×1080 window is about 1.34) times the operator's zoom. The operator's zoom steps like a browser (67% to 200%) with Ctrl + / Ctrl − / Ctrl 0, Ctrl + wheel and the `−` / percentage / `+` buttons in the laptop footer, and is saved as `zoom` in `config.json` on that computer. The footer percentage shows only the operator's zoom. The TV window is never zoomed by this: its factor is the logical-frame scale below, and its visual (pinch) zoom is locked to 1. The TV window has no frame, ignores accidental close and covers the `bounds` of the chosen monitor. Main closes it, on `Encerrar evento` or when quitting the app.
 
 The reference TV is 1080×1920. If Windows reports another portrait height (for example 2160×3840 at different DIPs), the TV UI scales from a logical frame of 1080×1920 to keep the same 64 px targets proportional to the screen. The computation of that scale is a pure function, with a test.
 
@@ -141,6 +143,9 @@ The preload exposes `window.fotomagica`. Each method validates input and output 
 | event | `printer:status-changed` | Main → laptop and TV, when the polled state changes |
 | invoke | `update:get-status` | Background auto-update state (`UpdateStatus`, §11): `idle`, `downloading` with version and percent, or `ready` (installs on quit) |
 | event | `update:status` | Main → both windows, on every update status change; only the laptop shows it |
+| invoke | `zoom:get` | Laptop zoom state `{ user, auto, effective }` (§3) |
+| invoke | `zoom:step` | `in`, `out` or `reset` of the operator's zoom; saved in `config.json` |
+| event | `zoom:state` | Main → laptop, when the zoom changes (step or window resize) |
 | invoke | `display:get-state` | TV monitor choice (`GuestChoice`) and TV window state (`closed`, `open` on a monitor, or `detached` because the TV went away) |
 | event | `display:state` | Main → both windows, on every monitor change and every TV window change |
 | send | `camera:report` | TV → main, the state of its `MediaStream`. Main ignores it from any other window |
@@ -272,6 +277,8 @@ The tolerance is 8 px in sheet space, not screen pixels. Rotation also snaps to 
 
 Minimum slot size: 40×40 px, so the handle does not invert the rectangle.
 
+The sheet sits in a scrollable viewport with its own zoom (`ZoomableSheet`, pure math in `features/layout/utils/canvasZoom.ts`): 100% fits the whole sheet, `−` / `+` step by 1.25× up to 400%, the percentage fits again, and Ctrl + wheel zooms toward the cursor (that wheel is not the app zoom). The sheet is laid out at `fit × zoom` CSS pixels, never a CSS transform, so the pointer-to-sheet conversion and the 8 px snap tolerance stay exact at any zoom. When zoomed, dragging the background or the middle button pans; the cards keep their own gestures. The standard boxes of the mode are drawn grey under the cards, since artwork often has no boxes.
+
 Every commit (a released gesture, a confirmed number, a photo choice, `Restaurar padrão`, Undo, Redo) is one history step of the layout on screen and one `layout:save`. The history lives in the editor only (up to 100 steps) and is not saved. The operator window has no menu (`removeMenu`): with Electron's default menu, releasing Alt would reveal the menu bar and shift the editor in the middle of a gesture.
 
 The editor is a full-window dialog over the home page (the form underneath keeps its state). It opens after a template is accepted and from `Editar posições das fotos`. With an event open the home page is not rendered, so the editor is unreachable; main also refuses `layout:save` while the session is open.
@@ -290,7 +297,7 @@ Unlike the slot editor, framing does go to main during the gesture, because the 
 
 | Data | Location |
 | --- | --- |
-| Both layouts, both templates, webcam values and the controls the camera last advertised | `app.getPath('userData')/config.json` |
+| Both layouts, both templates, webcam values, the controls the camera last advertised and the laptop zoom | `app.getPath('userData')/config.json` |
 | Each mode's template file (`two-strips.png` or `.jpg`, `one-strip.…`) | `app.getPath('userData')/templates/` |
 | JPG montage | `app.getPath('desktop')/<event name>/HH-mm-ss.jpg` |
 | Auto-update log (§11) | `app.getPath('userData')/logs/updater.log` |
@@ -572,9 +579,9 @@ Inter, weights 400, 500 and 600, local files. The words FOTO MÁGICA in the inte
 
 Background `--bg`, cards `--bg-raised`, 1 px `--line` border, 12 px radius on cards and 8 px on fields. The primary button is black with light text. The secondary button is ghost, with a `--line` border. Visible focus: 2 px `--ink` ring, 2 px offset.
 
-At startup, until main says whether an event is open, the window shows the full logo centered. Header with the symbol and the event name when there is one. The home screen centers the full logo, the name, the mode (2 tiras or 1 tira) and the file for that mode. A single column, maximum width 720 px, because it is a short form and not a dashboard.
+At startup, until main says whether an event is open, the window shows the full logo centered. Header with the symbol and the event name when there is one. The home screen centers the full logo, the name, the mode (2 tiras or 1 tira) and the file for that mode. Maximum width 1280 px: on wide windows (Tailwind `lg`) the form is two columns, the details (name, mode, TV, `Iniciar evento`) on the left and the large sheet preview with the template file on the right; narrower, one column. Text, inputs and buttons are a step larger than the shadcn defaults (16 px labels, 48 px fields), and the app zoom (§3) grows everything with the window.
 
-The editor is the exception to width: the 1844×1240 sheet scales to fit the window, with the numbers panel in a fixed 520 px column on the left: a table with one row per slot, in the same order as the current app (Image, Left, Top, Width, Height, Angle), so all the slots of the layout are visible at once, as in the current app's dialog.
+The editor is the exception to width: the 1844×1240 sheet scales to fit the window, with the numbers panel in a fixed 640 px column on the left (16 px text, 48 px fields): a table with one row per slot, in the same order as the current app (Image, Left, Top, Width, Height, Angle), so all the slots of the layout are visible at once, as in the current app's dialog.
 
 Empty, error and loading states exist on every laptop screen. Empty gallery: "Nenhuma montagem ainda". Template error: the dimensions read and the expected ones. Loading the file: the button shows waiting and does not fire twice.
 

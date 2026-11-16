@@ -9,6 +9,7 @@ import { canRedo, canUndo, commit, redo, replaceSlot, startHistory, undo, type H
 import { createRegistry } from '../utils/livePaint'
 import { SheetCanvas } from './SheetCanvas'
 import { SlotTable } from './SlotTable'
+import { ZoomableSheet } from './ZoomableSheet'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error' | 'event-open'
 
@@ -106,8 +107,8 @@ function EditorBody({ layouts, initialMode, titleId }: { layouts: Layouts; initi
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[520px_minmax(0,1fr)] gap-6 overflow-auto p-6">
-        <aside className="flex flex-col gap-4">
+      <div className="grid min-h-0 flex-1 grid-cols-[640px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-6 p-6">
+        <aside className="flex min-h-0 flex-col gap-4 overflow-auto">
           {/* key: the rows remount per mode, so the fields register the slots on screen. */}
           <SlotTable key={mode} slots={slots} selectedId={selected[mode]} registry={registry} onSelect={select} onCommit={commitSlot} />
           <p
@@ -126,8 +127,8 @@ function EditorBody({ layouts, initialMode, titleId }: { layouts: Layouts; initi
                     : ''}
           </p>
         </aside>
-        <section className="flex min-w-0 flex-col gap-3 pb-10">
-          <div className="mx-auto w-full" style={{ maxWidth: 'calc((100vh - 230px) * 1844 / 1240)' }}>
+        <section className="flex min-h-0 min-w-0 flex-col gap-3">
+          <ZoomableSheet key={mode}>
             <SheetCanvas
               key={mode}
               mode={mode}
@@ -138,9 +139,9 @@ function EditorBody({ layouts, initialMode, titleId }: { layouts: Layouts; initi
               onSelect={select}
               onCommit={commitSlot}
             />
-          </div>
+          </ZoomableSheet>
           {crossing.length > 0 ? (
-            <p role="alert" data-testid="cut-warning" className="mx-auto mt-6 text-sm text-danger">
+            <p role="alert" data-testid="cut-warning" className="mx-auto text-base text-danger">
               {LAYOUT_COPY.cutWarning(crossing)}
             </p>
           ) : null}

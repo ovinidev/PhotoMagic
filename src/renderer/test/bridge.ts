@@ -1,6 +1,6 @@
 import { vi, type Mock } from 'vitest'
 import { SEED_LAYOUTS } from '@shared/layout'
-import type { CameraStatus, DisplayState, FotomagicaApi, PrinterStatus, SessionState, Templates, UpdateStatus, WebcamState } from '@shared/ipc'
+import type { CameraStatus, DisplayState, FotomagicaApi, PrinterStatus, SessionState, Templates, UpdateStatus, WebcamState, ZoomState } from '@shared/ipc'
 
 type Listener<T> = (value: T) => void
 
@@ -25,11 +25,13 @@ export type BridgeStub = {
   pushGallery: () => void
   pushWebcam: (state: WebcamState) => void
   pushUpdate: (status: UpdateStatus) => void
+  pushZoom: (state: ZoomState) => void
 }
 
 const CLOSED: DisplayState = { guest: { kind: 'missing' }, tv: { kind: 'closed' } }
 const NO_TEMPLATES: Templates = { 'two-strips': null, 'one-strip': null }
 const IDLE: SessionState = { kind: 'idle' }
+const DEFAULT_ZOOM: ZoomState = { user: 1, auto: 1, effective: 1 }
 const NO_WEBCAM: WebcamState = { values: { controls: {} }, capabilities: null, live: false }
 
 function listeners<T>() {
@@ -56,6 +58,7 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
   const gallery = listeners<void>()
   const webcam = listeners<WebcamState>()
   const update = listeners<UpdateStatus>()
+  const zoom = listeners<ZoomState>()
   const o = overrides
 
   const api: MockedBridge = {
@@ -121,10 +124,15 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
       getStatus: vi.fn(o.update?.getStatus ?? (() => Promise.resolve<UpdateStatus>({ kind: 'idle' }))),
       onStatus: vi.fn(o.update?.onStatus ?? update.add),
     },
+    zoom: {
+      get: vi.fn(o.zoom?.get ?? (() => Promise.resolve<ZoomState>(DEFAULT_ZOOM))),
+      step: vi.fn(o.zoom?.step ?? (() => Promise.resolve<ZoomState>(DEFAULT_ZOOM))),
+      onState: vi.fn(o.zoom?.onState ?? zoom.add),
+    },
   }
 
   window.fotomagica = api
-  return { api, pushDisplay: display.push, pushCamera: camera.push, pushSession: session.push, pushShutter: () => shutter.push(), pushPrinter: printer.push, pushGallery: () => gallery.push(), pushWebcam: webcam.push, pushUpdate: update.push }
+  return { api, pushDisplay: display.push, pushCamera: camera.push, pushSession: session.push, pushShutter: () => shutter.push(), pushPrinter: printer.push, pushGallery: () => gallery.push(), pushWebcam: webcam.push, pushUpdate: update.push, pushZoom: zoom.push }
 }
 
 /** An open event in 2 tiras, capturing, for renderer tests. */

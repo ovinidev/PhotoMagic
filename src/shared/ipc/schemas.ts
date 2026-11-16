@@ -29,6 +29,17 @@ export const updateStatusSchema = z.discriminatedUnion('kind', [
 
 export type UpdateStatus = z.infer<typeof updateStatusSchema>
 
+/** `zoom:*` (DESIGN §3): the laptop window zoom, the automatic factor times the operator's. */
+export const zoomStateSchema = z.strictObject({
+  user: z.number().positive(),
+  auto: z.number().positive(),
+  effective: z.number().positive(),
+})
+
+export const zoomStepInputSchema = z.strictObject({ step: z.enum(['in', 'out', 'reset']) })
+
+export type ZoomState = z.infer<typeof zoomStateSchema>
+
 /** Channels that take no input. */
 export const noInputSchema = z.undefined()
 

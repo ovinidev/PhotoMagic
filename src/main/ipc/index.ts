@@ -2,7 +2,7 @@ import type { WebContents } from 'electron'
 import type { UpdateStatus } from '@shared/ipc'
 import type { RuntimeFlags } from '@shared/runtime'
 import type { Printer, PrinterMonitor } from '../print'
-import type { GuestWindowController } from '../windows'
+import type { GuestWindowController, OperatorZoom } from '../windows'
 import { registerAppHandlers } from './app'
 import { registerCameraHandlers } from './camera'
 import { registerDisplayHandlers } from './display'
@@ -11,11 +11,13 @@ import { registerGalleryHandlers } from './gallery'
 import { registerPrinterHandlers } from './printer'
 import { registerUpdateHandlers } from './update'
 import { registerWebcamHandlers } from './webcam'
+import { registerZoomHandlers } from './zoom'
 
 export { broadcastSession } from './event'
 export { broadcastPrinterStatus } from './printer'
 export { broadcastGalleryChanged } from './gallery'
 export { broadcastUpdateStatus } from './update'
+export { broadcastZoomState } from './zoom'
 
 /** One module per area; each registers its own channels. */
 export function registerIpcHandlers(
@@ -26,6 +28,7 @@ export function registerIpcHandlers(
     printerMonitor: PrinterMonitor
     printer: Printer
     updateStatus: () => UpdateStatus
+    zoom: OperatorZoom
   } & EventDeps,
 ): void {
   registerAppHandlers(deps)
@@ -36,4 +39,5 @@ export function registerIpcHandlers(
   registerGalleryHandlers(deps)
   registerWebcamHandlers(deps)
   registerUpdateHandlers(deps)
+  registerZoomHandlers(deps)
 }

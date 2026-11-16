@@ -2,7 +2,7 @@ import { app, BrowserWindow, type WebContents } from 'electron'
 import type { DisplayFixture, SimulatedPrinterFlags } from '@shared/runtime'
 import { readRuntimeFlags } from '@shared/runtime'
 import { renderSheet } from './compose/renderSheet'
-import { broadcastGalleryChanged, broadcastPrinterStatus, broadcastSession, broadcastUpdateStatus, registerIpcHandlers } from './ipc'
+import { broadcastGalleryChanged, broadcastPrinterStatus, broadcastSession, broadcastUpdateStatus, broadcastZoomState, registerIpcHandlers } from './ipc'
 import { applyCameraFixture, restrictPermissions } from './media'
 import { createPrinter, createPrinterMonitor, type Printer } from './print'
 import { createSession, saveMontage } from './session'
@@ -12,6 +12,7 @@ import {
   createGuestWindow,
   createGuestWindowController,
   createOperatorWindow,
+  createOperatorZoom,
   createScreenDisplaySource,
   type DisplaySource,
 } from './windows'
@@ -109,6 +110,8 @@ if (!app.requestSingleInstanceLock()) {
     })
 
     const updater = createUpdater({ flags, userData, onChange: broadcastUpdateStatus })
+    // Laptop window only: the automatic factor for its size times the operator's saved zoom.
+    const zoom = createOperatorZoom({ userData, onChange: broadcastZoomState })
 
     restrictPermissions(isGuestWindow)
     registerIpcHandlers({
@@ -118,6 +121,7 @@ if (!app.requestSingleInstanceLock()) {
       printerMonitor,
       printer,
       updateStatus: updater.status,
+      zoom,
       userData,
       desktop,
       isGuestWindow,
@@ -125,7 +129,8 @@ if (!app.requestSingleInstanceLock()) {
       operatorContents: () => (operatorWindow && !operatorWindow.isDestroyed() ? operatorWindow.webContents : null),
     })
 
-    operatorWindow = createOperatorWindow()
+    operatorWindow = createOperatorWindow({ fitToScreen: !flags.e2e })
+    zoom.attach(operatorWindow)
     operatorWindow.on('closed', () => {
       operatorWindow = null
       // The TV never outlives the laptop window: closing it ends the app.
