@@ -2,7 +2,9 @@ import logoUrl from '@brand/logo.png'
 import markUrl from '@brand/mark.png'
 import { EndEventButton, RoundScreen, SESSION_COPY } from '@renderer/features/session'
 import { useSessionState } from '@renderer/shared/hooks/useSessionState'
+import type { UpdateStatus } from '@shared/ipc'
 import { useAppVersion, type AppVersionState } from './hooks/useAppVersion'
+import { useUpdateStatus } from './hooks/useUpdateStatus'
 import { HomePage } from './pages/HomePage'
 
 function VersionLabel({ state }: { state: AppVersionState }) {
@@ -13,6 +15,26 @@ function VersionLabel({ state }: { state: AppVersionState }) {
       return <span className="text-danger">Não foi possível ler a versão do app</span>
     case 'ready':
       return <span className="tabular-nums">Versão {state.value.version}</span>
+  }
+}
+
+/** Discreet line next to the version (RNF09): nothing unless an update is downloading or waiting for quit. */
+function UpdateLabel({ status }: { status: UpdateStatus }) {
+  switch (status.kind) {
+    case 'idle':
+      return null
+    case 'downloading':
+      return (
+        <span data-testid="update-status" className="tabular-nums">
+          Baixando atualização {status.version} ({status.percent}%)
+        </span>
+      )
+    case 'ready':
+      return (
+        <span data-testid="update-status">
+          Atualização {status.version} pronta: será instalada ao fechar o app
+        </span>
+      )
   }
 }
 
@@ -31,6 +53,7 @@ function Splash() {
  */
 export function OperatorApp() {
   const version = useAppVersion()
+  const update = useUpdateStatus()
   const [sessionView] = useSessionState()
   const session = sessionView.status === 'ready' && sessionView.value.kind === 'event' ? sessionView.value : null
 
@@ -54,8 +77,11 @@ export function OperatorApp() {
       <main className="flex flex-1 justify-center">
         {sessionView.status === 'loading' ? <Splash /> : session ? <RoundScreen session={session} /> : <HomePage />}
       </main>
-      <footer className="px-6 py-3 text-right text-xs text-ink-soft" data-testid="app-version">
-        <VersionLabel state={version} />
+      <footer className="flex justify-end gap-4 px-6 py-3 text-xs text-ink-soft">
+        <UpdateLabel status={update} />
+        <span data-testid="app-version">
+          <VersionLabel state={version} />
+        </span>
       </footer>
     </div>
   )

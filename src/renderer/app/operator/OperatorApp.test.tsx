@@ -26,6 +26,22 @@ describe('OperatorApp', () => {
     expect(await screen.findByText('Não foi possível ler a versão do app')).toBeInTheDocument()
   })
 
+  it('shows a discreet update line only while an update downloads or waits for quit', async () => {
+    const { pushUpdate } = stubBridge()
+    render(<OperatorApp />)
+    expect(await screen.findByText('Versão 0.1.0')).toBeInTheDocument()
+    expect(screen.queryByTestId('update-status')).toBeNull()
+
+    act(() => pushUpdate({ kind: 'downloading', version: '0.2.0', percent: 42 }))
+    expect(screen.getByTestId('update-status')).toHaveTextContent('Baixando atualização 0.2.0 (42%)')
+
+    act(() => pushUpdate({ kind: 'ready', version: '0.2.0' }))
+    expect(screen.getByTestId('update-status')).toHaveTextContent('Atualização 0.2.0 pronta: será instalada ao fechar o app')
+
+    act(() => pushUpdate({ kind: 'idle' }))
+    expect(screen.queryByTestId('update-status')).toBeNull()
+  })
+
   it('switches to the event screen when main opens an event, and back on Encerrar evento', async () => {
     const { pushSession, api } = stubBridge()
     render(<OperatorApp />)
