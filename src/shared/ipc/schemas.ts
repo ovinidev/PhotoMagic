@@ -153,6 +153,13 @@ export const slotSchema = z.strictObject({
   radius: z.number().finite().min(0).max(500).optional(),
 })
 
+/** A fixed photo box on the sheet: axis-aligned rectangle and corner radius (DESIGN §6). */
+export const guideBoxSchema = z.strictObject({
+  id: z.string().min(1).max(32),
+  rect: z.strictObject({ left: z.number().finite(), top: z.number().finite(), width: z.number().positive(), height: z.number().positive() }),
+  radius: z.number().nonnegative(),
+})
+
 export const slotListSchema = z.array(slotSchema).min(1).max(12)
 
 /** `layout:get` output: both layouts (RF03). */
@@ -295,6 +302,8 @@ export const sessionStateSchema = z.discriminatedUnion('kind', [
     previewRevision: z.number().int().nonnegative(),
     /** The slots of the event's mode, for the laptop guide. */
     slots: slotListSchema,
+    /** The template's dark boxes in seed order, the fixed boxes of the round; `null` uses the seed boxes. */
+    boxes: z.array(guideBoxSchema).max(12).nullable(),
     /** The round's framing per slot id; a slot missing here has the default framing (RF09). */
     framings: z.record(z.string().min(1).max(32), framingSchema),
     phase: roundPhaseSchema,

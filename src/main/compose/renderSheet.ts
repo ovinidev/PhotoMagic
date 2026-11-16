@@ -18,6 +18,8 @@ export type SheetInput = {
   photos: Partial<Record<PhotoIndex, Uint8Array>>
   /** Per-slot framing by slot id; a missing entry is the default (zoom 1, centered). */
   framings?: Readonly<Record<string, Framing>>
+  /** The template's own dark boxes (`detectTemplateBoxes`), used as the fixed boxes; `null` or missing uses the seed's. */
+  boxes?: readonly GuideBox[] | null
 }
 
 export type SheetOutput = { kind: 'montage' } | { kind: 'preview' }
@@ -26,8 +28,8 @@ type Raw = { data: Buffer; info: { width: number; height: number; channels: numb
 
 /**
  * Composes the sheet (DESIGN §6): each slot's photo, cover-fitted and rotated by the pure `planSlot`,
- * over the mode's template, clipped to the slot's fixed gray box (`fixedBox`, rounded corners
- * included). The slot only places the photo; whatever falls outside its box is dropped, and where
+ * over the mode's template, clipped to the slot's fixed box (`fixedBox`: the template's detected dark
+ * box, or the seed's gray box; rounded corners included). The slot only places the photo; whatever falls outside its box is dropped, and where
  * the slot does not cover its box the box shows the same photo cover-fitted to the box (the seed
  * slot's plan, with the same framing), so no template shows inside a box. `montage` is the file:
  * JPEG quality 95, 1844×1240, 300 DPI. `preview` is the same composition scaled to 922 px wide.
@@ -53,7 +55,7 @@ export async function composeSheet(input: SheetInput): Promise<Raw> {
     if (slot.photo === null) continue
     const photo = input.photos[slot.photo]
     if (!photo) continue
-    const fixed = fixedBox(input.mode, slot.id, index)
+    const fixed = fixedBox(input.mode, slot.id, index, input.boxes)
     if (!fixed) continue
     let size = sizes.get(slot.photo)
     if (!size) {

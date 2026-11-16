@@ -1,7 +1,10 @@
 // Dev-only check (not shipped): renders a 2 tiras montage through renderSheet over a template with
 // black rounded boxes, with the slots dragged and rotated off the boxes like the operator did, and
 // counts the defects: black left inside a box, or photo drawn outside a box.
-// Usage: node scripts/dev/box-clip.mjs <template.png> <out.png>
+// Usage: node scripts/dev/box-clip.mjs <template.png> <out.png> [shifted]
+// `shifted` ignores the template's art and draws black boxes away from the seed positions (other
+// places, sizes and corner radius), to check that the montage follows the template's own boxes.
+import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createJiti } from 'jiti'
 import sharp from 'sharp'
@@ -11,7 +14,11 @@ const jiti = createJiti(import.meta.url, { alias: { '@shared': resolve(root, 'sr
 const { composeSheet } = await jiti.import(resolve(root, 'src/main/compose/renderSheet.ts'))
 const { TWO_STRIPS_CLIENT_BOXES, CLIENT_BOX_RADIUS } = await jiti.import(resolve(root, 'src/shared/layout/index.ts'))
 
-const [templatePath, outPath] = process.argv.slice(2)
+// Box detection, when this checkout has it (the app passes its result as the fixed boxes).
+const detectPath = resolve(root, 'src/main/compose/detectBoxes.ts')
+const detect = existsSync(detectPath) ? (await jiti.import(detectPath)).detectTemplateBoxes : async () => null
+
+const [templatePath, outPath, variant] = process.argv.slice(2)
 if (!templatePath || !outPath) throw new Error('usage: box-clip.mjs <template.png> <out.png>')
 const W = 1844
 const H = 1240
@@ -19,8 +26,17 @@ const H = 1240
 // The template; if it has no dark boxes, draw black rounded boxes at the seed positions on white.
 let template = await sharp(templatePath).resize(W, H, { fit: 'fill' }).flatten({ background: '#fff' }).png().toBuffer()
 const dark = await darkMask(template)
-if (dark.count < 10000) {
-  const rects = TWO_STRIPS_CLIENT_BOXES.map((b) => `<rect x="${b.left}" y="${b.top}" width="${b.width}" height="${b.height}" rx="33" fill="#000"/>`).join('')
+const SHIFTED_BOXES = [
+  { left: 90, top: 80, width: 380, height: 500 },
+  { left: 520, top: 80, width: 380, height: 500 },
+  { left: 950, top: 80, width: 380, height: 500 },
+  { left: 90, top: 690, width: 620, height: 470 },
+  { left: 760, top: 690, width: 570, height: 470 },
+]
+if (variant === 'shifted' || dark.count < 10000) {
+  const drawn = variant === 'shifted' ? SHIFTED_BOXES : TWO_STRIPS_CLIENT_BOXES
+  const rx = variant === 'shifted' ? 60 : 33
+  const rects = drawn.map((b) => `<rect x="${b.left}" y="${b.top}" width="${b.width}" height="${b.height}" rx="${rx}" fill="#000"/>`).join('')
   template = await sharp({ create: { width: W, height: H, channels: 3, background: '#fff' } })
     .composite([{ input: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${rects}</svg>`) }])
     .png()
@@ -42,13 +58,15 @@ const slots = [
   { id: 'bottom-2', photo: 2, left: 760, top: 600, width: 560, height: 380, angle: 0, radius: CLIENT_BOX_RADIUS },
 ]
 
-const sheet = await composeSheet({ mode: 'two-strips', template, slots, photos: { 1: photo, 2: photo, 3: photo } })
+const boxes = await detect(template, 'two-strips')
+const sheet = await composeSheet({ mode: 'two-strips', template, slots, photos: { 1: photo, 2: photo, 3: photo }, boxes })
 await sharp(sheet.data, { raw: { width: sheet.info.width, height: sheet.info.height, channels: sheet.info.channels } }).png().toFile(outPath)
 
-// Pixel check. Inside = the template's dark pixels shrunk by 3 px; outside = farther than 3 px from any.
+// Pixel check (on the template the montage used, so recompute its dark mask). Inside = the template's dark pixels shrunk by 3 px; outside = farther than 3 px from any.
 const tpl = await sharp(template).removeAlpha().raw().toBuffer()
-const near = dilate(dark.mask, 3)
-const core = erode(dark.mask, 3)
+const drawnDark = await darkMask(template)
+const near = dilate(drawnDark.mask, 3)
+const core = erode(drawnDark.mask, 3)
 let blackInside = 0
 let photoOutside = 0
 const ch = sheet.info.channels
@@ -61,7 +79,7 @@ for (let i = 0; i < W * H; i++) {
   }
 }
 const pass = blackInside === 0 && photoOutside === 0
-console.log(JSON.stringify({ out: outPath, blackInside, photoOutside, verdict: pass ? 'PASS' : 'FAIL' }))
+console.log(JSON.stringify({ out: outPath, detectedBoxes: boxes ? boxes.length : 0, blackInside, photoOutside, verdict: pass ? 'PASS' : 'FAIL' }))
 process.exitCode = pass ? 0 : 1
 
 async function darkMask(png) {

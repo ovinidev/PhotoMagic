@@ -89,8 +89,8 @@ function PlacedPhoto({ slot, box, photo, framing, testId }: { slot: Slot; box: G
  * the box, the photo cover-fitted to the box (the seed slot's plan) fills it. Drawn here so a drag
  * follows the pointer without waiting for main.
  */
-function BoxPhoto({ mode, slot, index, photo, framing }: { mode: PrintMode; slot: Slot; index: number; photo: RoundPhoto; framing: Framing }) {
-  const fixed = fixedBox(mode, slot.id, index)
+function BoxPhoto({ mode, boxes, slot, index, photo, framing }: { mode: PrintMode; boxes: readonly GuideBox[] | null; slot: Slot; index: number; photo: RoundPhoto; framing: Framing }) {
+  const fixed = fixedBox(mode, slot.id, index, boxes)
   if (!fixed) return null
   const { box, seedSlot } = fixed
   return (
@@ -212,7 +212,7 @@ export function useFramingEditor(session: EventSession): { overlay: ReactNode; c
         {filled.map((slot) => {
           const photo = slot.photo === null ? undefined : photos[slot.photo]
           const index = session.slots.findIndex((each) => each.id === slot.id)
-          return photo ? <BoxPhoto key={`photo-${slot.id}`} mode={session.mode} slot={slot} index={index} photo={photo} framing={framingOf(slot.id)} /> : null
+          return photo ? <BoxPhoto key={`photo-${slot.id}`} mode={session.mode} boxes={session.boxes} slot={slot} index={index} photo={photo} framing={framingOf(slot.id)} /> : null
         })}
         {filled.map((slot) => {
           const isSelected = slot.id === selected

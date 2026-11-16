@@ -19,15 +19,35 @@ export function guideBoxes(mode: PrintMode): readonly GuideBox[] {
 /**
  * The fixed box a slot belongs to (DESIGN §6, fixed masks): the gray guide box with the slot's id
  * (Cima 1/2/3, Baixo 1/2, Foto 1/2/3), or, for an unknown id, the box at the slot's index. Together
- * with `seedSlot`, the seed slot that box comes from. `null` when the slot has no box: it shows
+ * with `seedSlot`, the slot that sits exactly on that box. `null` when the slot has no box: it shows
  * nothing. The montage, the laptop framing preview and the TV preview clip every photo to this box,
  * whatever the slot's own position and size: nothing is ever drawn outside a gray box.
+ *
+ * `boxes` are the dark boxes found on the event's template (main, `detectTemplateBoxes`), in seed
+ * order. When there is one per seed slot they replace the seed boxes; otherwise the seed is used.
  */
-export function fixedBox(mode: PrintMode, slotId: string, index: number): { box: GuideBox; seedSlot: Slot } | null {
+export function fixedBox(mode: PrintMode, slotId: string, index: number, boxes?: readonly GuideBox[] | null): { box: GuideBox; seedSlot: Slot } | null {
   const seed = SEED_LAYOUTS[mode]
-  const seedSlot = seed.find((slot) => slot.id === slotId) ?? seed[index]
+  const found = seed.findIndex((slot) => slot.id === slotId)
+  const at = found === -1 ? index : found
+  const seedSlot = seed[at]
   if (!seedSlot) return null
+  const detected = boxes && boxes.length === seed.length ? boxes[at] : undefined
+  if (detected) return { box: { ...detected, id: seedSlot.id }, seedSlot: slotOnBox(seedSlot, detected) }
   return { box: { id: seedSlot.id, rect: slotBounds(seedSlot), radius: seedSlot.radius ?? 0 }, seedSlot }
+}
+
+/**
+ * The seed slot moved and resized onto `box`, keeping its angle: centered on the box, with the box's
+ * size (width and height swapped for a quarter turn) and corner radius.
+ */
+export function slotOnBox(seedSlot: Slot, box: GuideBox): Slot {
+  const quarter = Math.abs(seedSlot.angle % 180) === 90
+  const width = quarter ? box.rect.height : box.rect.width
+  const height = quarter ? box.rect.width : box.rect.height
+  const cx = box.rect.left + box.rect.width / 2
+  const cy = box.rect.top + box.rect.height / 2
+  return { ...seedSlot, left: cx - width / 2, top: cy - height / 2, width, height, radius: box.radius }
 }
 
 /** True when the slot sits exactly on its seed slot (same place, size and angle): the default card. */

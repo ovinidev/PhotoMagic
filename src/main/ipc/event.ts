@@ -4,6 +4,7 @@ import { MessageChannelMain, type WebContents } from 'electron'
 import { checkEventName } from '@shared/files'
 import type { Layouts } from '@shared/layout'
 import { IPC_CHANNELS, PORT_CHANNELS, type EventStartResult, type SessionState } from '@shared/ipc'
+import { detectTemplateBoxes } from '../compose/detectBoxes'
 import { importTemplate, listTemplates, readConfig, readTemplate, saveLayout } from '../persist'
 import type { Session } from '../session'
 import type { GuestWindowController } from '../windows'
@@ -63,7 +64,9 @@ export function registerEventHandlers(deps: EventDeps): void {
       return { ok: false, reason: 'folder-failed' }
     }
     const { layouts } = await readConfig(deps.userData)
-    return { ok: true, session: session.start({ name: checked.name, mode, folder, slots: layouts[mode], template: template?.bytes ?? null }) }
+    // The template's own black boxes, when it has one per slot, are the fixed boxes (DESIGN §6).
+    const boxes = template ? await detectTemplateBoxes(template.bytes, mode).catch(() => null) : null
+    return { ok: true, session: session.start({ name: checked.name, mode, folder, slots: layouts[mode], template: template?.bytes ?? null, boxes }) }
   })
 
   handleInvoke(IPC_CHANNELS.eventEnd, () => {
