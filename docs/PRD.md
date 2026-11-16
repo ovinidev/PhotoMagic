@@ -417,6 +417,8 @@ Given the printer offline, out of paper or out of ribbon, `Imprimir` does not di
 
 The TV window is not a modal that only Alt+F4 can bring down. `Encerrar evento` on the laptop always closes it.
 
+Given two fingers held still on the TV for about 2 seconds, the TV window closes and a brief pt-BR hint shows while they are held; the event and the round stay open and the laptop offers `Abrir TV`. One finger, however long, or a quick tap never closes it.
+
 ### RNF11 — Local storage
 
 Layout, webcam adjustments and the chosen printer survive closing and opening the app. Uninstalling is not required to clear this; the location is Electron's `userData`.

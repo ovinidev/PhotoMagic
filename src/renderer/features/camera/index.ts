@@ -1,4 +1,5 @@
 export { CameraView } from './components/CameraView'
+export { CloseHoldLayer } from './components/CloseHoldLayer'
 export { CameraStatusLine } from './components/CameraStatusLine'
 export { TvStatus } from './components/TvStatus'
 export { useDisplayState, type DisplayStateView } from './hooks/useDisplayState'

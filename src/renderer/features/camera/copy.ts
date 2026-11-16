@@ -42,6 +42,11 @@ export const TV_COPY = {
     title: 'A TV não está na vertical',
     detail: 'A câmera foi feita para a TV em pé. Gire a tela nas configurações de vídeo do Windows ou inicie assim mesmo.',
   },
+  hidden: {
+    title: 'Tela da TV fechada',
+    detail: 'Fechada com dois dedos na TV. O evento continua; abra de novo quando quiser.',
+    reopen: 'Abrir TV',
+  },
   open: { title: 'Câmera aberta na TV', detail: (size: string) => `Tela da TV em ${size}.` },
   detached: {
     missing: { title: 'A TV foi desconectada', detail: 'A tela da câmera volta sozinha quando a TV for conectada de novo.' },
@@ -53,6 +58,10 @@ export const TV_COPY = {
 } as const
 
 /** pt-BR copy of the TV capture surface (PRD §6.4, DESIGN §14). */
+export const CLOSE_HOLD_COPY = {
+  hint: 'Continue segurando com dois dedos para fechar a tela',
+} as const
+
 export const CAPTURE_COPY = {
   shutter: 'Tirar foto',
   timer: 'Timer',

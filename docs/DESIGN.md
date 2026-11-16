@@ -104,6 +104,8 @@ The operator window opens on the primary monitor, with a frame, at 1280×800 or 
 
 Laptop zoom is pure, in `src/shared/zoom.ts`, and applied by `src/main/windows/operatorZoom.ts` with `webContents.setZoomFactor` on the laptop window only: `autoZoom(content size)` (1 up to 1280×760, growing with the smaller of the width and height ratios up to 2, so a maximized 1920×1080 window is about 1.34) times the operator's zoom. The operator's zoom steps like a browser (67% to 200%) with Ctrl + / Ctrl − / Ctrl 0, Ctrl + wheel and the `−` / percentage / `+` buttons in the laptop footer, and is saved as `zoom` in `config.json` on that computer. The footer percentage shows only the operator's zoom. The TV window is never zoomed by this: its factor is the logical-frame scale below, and its visual (pinch) zoom is locked to 1. The TV window has no frame, ignores accidental close and covers the `bounds` of the chosen monitor. Main closes it, on `Encerrar evento` or when quitting the app.
 
+On the TV, two fingers held still for 2 s hide the TV window (`display:hide-tv`, accepted only from the TV). The rule is pure, in `src/shared/closeHold.ts`: exactly two fingers, each within 40 px of where it landed; one finger, a third finger, a quick tap, a swipe or a pinch never fire, and every finger must lift before another hold. After 300 ms a pt-BR hint, `Continue segurando com dois dedos para fechar a tela`, shows a filling bar. Hiding is not closing: the TV window state becomes `hidden`, the event, the camera and the round stay, and a monitor change does not bring it back. The laptop TV line says `Tela da TV fechada` with an `Abrir TV` button (`display:show-tv`, accepted only from the laptop), which puts it back on the TV, or reports it detached if no TV is eligible.
+
 The reference TV is 1080×1920. If Windows reports another portrait height (for example 2160×3840 at different DIPs), the TV UI scales from a logical frame of 1080×1920 to keep the same 64 px targets proportional to the screen. The computation of that scale is a pure function, with a test.
 
 Samsung UN49MU6120, equipment label:
@@ -146,7 +148,9 @@ The preload exposes `window.fotomagica`. Each method validates input and output 
 | invoke | `zoom:get` | Laptop zoom state `{ user, auto, effective }` (§3) |
 | invoke | `zoom:step` | `in`, `out` or `reset` of the operator's zoom; saved in `config.json` |
 | event | `zoom:state` | Main → laptop, when the zoom changes (step or window resize) |
-| invoke | `display:get-state` | TV monitor choice (`GuestChoice`) and TV window state (`closed`, `open` on a monitor, or `detached` because the TV went away) |
+| invoke | `display:get-state` | TV monitor choice (`GuestChoice`) and TV window state (`closed`, `open` on a monitor, `detached` because the TV went away, or `hidden` by the two-finger hold) |
+| invoke | `display:hide-tv` | TV → main: the two-finger hold hides the TV window; the event goes on (§3) |
+| invoke | `display:show-tv` | Laptop → main: `Abrir TV` puts a hidden TV window back on the TV |
 | event | `display:state` | Main → both windows, on every monitor change and every TV window change |
 | send | `camera:report` | TV → main, the state of its `MediaStream`. Main ignores it from any other window |
 | invoke | `camera:get-status` | Last camera state reported by the TV (`idle` while the TV window is closed) |
