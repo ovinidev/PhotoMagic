@@ -6,6 +6,8 @@ export const IPC_CHANNELS = {
   // invoke: renderer asks, main answers
   appGetVersion: 'app:get-version',
   displayGetState: 'display:get-state',
+  displayHideTv: 'display:hide-tv',
+  displayShowTv: 'display:show-tv',
   cameraGetStatus: 'camera:get-status',
   templateGetAll: 'template:get-all',
   templateImport: 'template:import',
@@ -28,6 +30,9 @@ export const IPC_CHANNELS = {
   galleryReprint: 'gallery:reprint',
   webcamGet: 'webcam:get',
   webcamSet: 'webcam:set',
+  updateGetStatus: 'update:get-status',
+  zoomGet: 'zoom:get',
+  zoomStep: 'zoom:step',
   // send: renderer → main, no answer
   cameraReport: 'camera:report',
   cameraRequestPreviewPort: 'camera:request-preview-port',
@@ -42,6 +47,8 @@ export const IPC_CHANNELS = {
   printerStatusChanged: 'printer:status-changed',
   galleryChanged: 'gallery:changed',
   webcamState: 'webcam:state',
+  updateStatus: 'update:status',
+  zoomState: 'zoom:state',
 } as const
 
 /**

@@ -36,6 +36,19 @@ describe('CreateEventForm (RF01, RF04)', () => {
     expect(api.event.start).toHaveBeenCalledWith({ name: 'Aniversário AJ', mode: 'two-strips', allowLandscape: false })
   })
 
+  it('starts with no template on the plain white default sheet with the standard boxes (PRD §6.1)', async () => {
+    const { api } = stubBridge({ display: { getState: () => Promise.resolve(PORTRAIT) } })
+    render(<CreateEventForm />)
+    const sheet = await screen.findByTestId('template-default')
+    expect(sheet.querySelectorAll('rect')).toHaveLength(5)
+    expect(screen.getByText('Fundo branco (padrão) · 1844 × 1240 px')).toBeInTheDocument()
+
+    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Festa')
+    await waitFor(() => expect(start()).toBeEnabled())
+    await userEvent.click(start())
+    expect(api.event.start).toHaveBeenCalledWith({ name: 'Festa', mode: 'two-strips', allowLandscape: false })
+  })
+
   it.each([
     ['   ', null],
     ['CON', 'Esse nome é reservado pelo Windows. Escolha outro.'],
@@ -54,7 +67,7 @@ describe('CreateEventForm (RF01, RF04)', () => {
       template: { import: () => Promise.resolve({ ok: false as const, reason: 'size' as const, width: 1200, height: 1800 }) },
     })
     render(<CreateEventForm />)
-    expect(await screen.findByText(/Nenhum template para 2 tiras/)).toBeInTheDocument()
+    expect(await screen.findByTestId('template-default')).toBeInTheDocument()
     await userEvent.type(screen.getByLabelText('Nome do evento'), 'Festa')
     await userEvent.upload(screen.getByTestId('template-input'), file('errado.png'))
     expect(await screen.findByText('O arquivo tem 1200 × 1800 px. O template precisa ter 1844 × 1240 px.')).toBeInTheDocument()
@@ -73,7 +86,7 @@ describe('CreateEventForm (RF01, RF04)', () => {
     render(<CreateEventForm />)
     await screen.findByAltText('Template do modo 2 tiras')
     await userEvent.click(screen.getByRole('radio', { name: /1 tira/ }))
-    expect(screen.getByText(/Nenhum template para 1 tira/)).toBeInTheDocument()
+    expect(screen.getByTestId('template-default')).toBeInTheDocument()
     await userEvent.upload(screen.getByTestId('template-input'), file('Inteira.png'))
     expect(await screen.findByText('Inteira.png · 1844 × 1240 px')).toBeInTheDocument()
     expect(api.template.import).toHaveBeenCalledWith(expect.objectContaining({ mode: 'one-strip' }))
@@ -88,7 +101,7 @@ describe('CreateEventForm (RF01, RF04)', () => {
     })
     const onEditLayout = vi.fn()
     render(<CreateEventForm onEditLayout={onEditLayout} />)
-    await screen.findByText(/Nenhum template para 2 tiras/)
+    await screen.findByTestId('template-default')
     await userEvent.click(screen.getByRole('radio', { name: /1 tira/ }))
     await userEvent.upload(screen.getByTestId('template-input'), file('Inteira.png'))
     await waitFor(() => expect(onEditLayout).toHaveBeenCalledWith('one-strip'))
@@ -102,7 +115,7 @@ describe('CreateEventForm (RF01, RF04)', () => {
     stubBridge({ template: { import: () => Promise.resolve({ ok: false as const, reason: 'format' as const }) } })
     const onEditLayout = vi.fn()
     render(<CreateEventForm onEditLayout={onEditLayout} />)
-    await screen.findByText(/Nenhum template para 2 tiras/)
+    await screen.findByTestId('template-default')
     await userEvent.upload(screen.getByTestId('template-input'), file('errado.png'))
     expect(await screen.findByText('Use um arquivo PNG ou JPG.')).toBeInTheDocument()
     expect(onEditLayout).not.toHaveBeenCalled()

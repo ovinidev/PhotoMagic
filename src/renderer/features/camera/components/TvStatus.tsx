@@ -1,3 +1,4 @@
+import { Button } from '@renderer/shared/components/ui/button'
 import { cn } from '@renderer/shared/utils/cn'
 import { TV_COPY } from '../copy'
 import type { DisplayStateView } from '../hooks/useDisplayState'
@@ -12,6 +13,7 @@ export function describeTv(view: DisplayStateView): View {
   if (view.status === 'error') return { tone: 'danger', ...TV_COPY.readError }
   const { guest, tv } = view.value
   if (tv.kind === 'open') return { tone: 'ok', title: TV_COPY.open.title, detail: TV_COPY.open.detail(size(tv.display)) }
+  if (tv.kind === 'hidden') return { tone: 'warning', title: TV_COPY.hidden.title, detail: TV_COPY.hidden.detail }
   if (tv.kind === 'detached') return { tone: 'danger', ...TV_COPY.detached[tv.reason] }
   switch (guest.kind) {
     case 'portrait':
@@ -25,7 +27,10 @@ export function describeTv(view: DisplayStateView): View {
 
 const DOT = { ok: 'bg-ok', warning: 'bg-danger', danger: 'bg-danger', neutral: 'bg-ink-soft/40' } as const
 
-/** Laptop: one line with the TV monitor and window state. `Iniciar evento` opens the TV; this only reports. */
+/**
+ * Laptop: one line with the TV monitor and window state. `Iniciar evento` opens the TV; the only
+ * action here is `Abrir TV` after the guests hid it with the two-finger hold (DESIGN §3).
+ */
 export function TvStatus({ view }: { view: DisplayStateView }) {
   const line = describeTv(view)
   return (
@@ -34,6 +39,11 @@ export function TvStatus({ view }: { view: DisplayStateView }) {
       <div>
         <p className={cn('font-medium', line.tone === 'danger' ? 'text-danger' : 'text-ink')}>{line.title}</p>
         <p className="text-sm text-ink-soft tabular-nums">{line.detail}</p>
+        {view.status === 'ready' && view.value.tv.kind === 'hidden' ? (
+          <Button className="mt-2" onClick={() => void window.fotomagica.display.showTv().catch(() => {})}>
+            {TV_COPY.hidden.reopen}
+          </Button>
+        ) : null}
       </div>
     </div>
   )

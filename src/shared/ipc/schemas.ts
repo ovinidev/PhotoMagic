@@ -16,6 +16,30 @@ export const appVersionSchema = z.strictObject({
 
 export type AppVersion = z.infer<typeof appVersionSchema>
 
+/**
+ * `update:status` (DESIGN §11): what electron-updater is doing in the background. `idle` covers
+ * "not checked", "up to date" and every failure (offline is the normal case at a party), so the
+ * laptop only ever shows a download in progress or one waiting for the next quit.
+ */
+export const updateStatusSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('idle') }),
+  z.strictObject({ kind: z.literal('downloading'), version: z.string().min(1), percent: z.number().min(0).max(100) }),
+  z.strictObject({ kind: z.literal('ready'), version: z.string().min(1) }),
+])
+
+export type UpdateStatus = z.infer<typeof updateStatusSchema>
+
+/** `zoom:*` (DESIGN §3): the laptop window zoom, the automatic factor times the operator's. */
+export const zoomStateSchema = z.strictObject({
+  user: z.number().positive(),
+  auto: z.number().positive(),
+  effective: z.number().positive(),
+})
+
+export const zoomStepInputSchema = z.strictObject({ step: z.enum(['in', 'out', 'reset']) })
+
+export type ZoomState = z.infer<typeof zoomStateSchema>
+
 /** Channels that take no input. */
 export const noInputSchema = z.undefined()
 
@@ -41,12 +65,14 @@ export const tvUnavailableReasonSchema = z.enum(['missing', 'landscape'])
 
 /**
  * The TV window: not created, on screen on a monitor, or created but hidden because its monitor
- * went away (it comes back when an eligible TV is connected again).
+ * went away (it comes back when an eligible TV is connected again), or `hidden` by the two-finger
+ * hold on the TV: the event goes on and the laptop reopens it (DESIGN §3).
  */
 export const tvWindowStateSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('closed') }),
   z.strictObject({ kind: z.literal('open'), display: displayInfoSchema }),
   z.strictObject({ kind: z.literal('detached'), reason: tvUnavailableReasonSchema }),
+  z.strictObject({ kind: z.literal('hidden') }),
 ])
 
 /** `display:get-state` output and `display:state` payload. */
@@ -282,7 +308,7 @@ export const eventStartInputSchema = z.strictObject({
   allowLandscape: z.boolean(),
 })
 
-export const eventStartErrorSchema = z.enum(['invalid-name', 'no-template', 'missing', 'landscape', 'folder-failed', 'already-open'])
+export const eventStartErrorSchema = z.enum(['invalid-name', 'missing', 'landscape', 'folder-failed', 'already-open'])
 
 export const eventStartResultSchema = z.discriminatedUnion('ok', [
   z.strictObject({ ok: z.literal(true), session: sessionStateSchema }),

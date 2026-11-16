@@ -22,7 +22,9 @@ export const EVENTS_COPY = {
     'one-strip': { label: '1 tira', detail: 'Folha inteira, sem corte. Três fotos.' },
   } satisfies Record<PrintMode, { label: string; detail: string }>,
   template: (mode: string) => `Template do modo ${mode}`,
-  templateEmpty: (mode: string) => `Nenhum template para ${mode}. Importe um PNG ou JPG de 1844 × 1240 px.`,
+  templateDefault: 'Fundo branco (padrão) · 1844 × 1240 px',
+  templateDefaultHint: 'Sem template, a montagem usa fundo branco com as fotos nas posições padrão. Importe um PNG ou JPG de 1844 × 1240 px para trocar o fundo.',
+  templateDefaultAlt: (mode: string) => `Fundo branco padrão do modo ${mode}, com as posições das fotos`,
   templateImport: 'Importar template',
   templateReplace: 'Trocar template',
   templateLoading: 'Lendo o template…',
@@ -42,7 +44,6 @@ export const EVENTS_COPY = {
   starting: 'Iniciando…',
   startErrors: {
     'invalid-name': 'Confira o nome do evento.',
-    'no-template': 'Importe o template deste modo antes de iniciar.',
     missing: 'A TV não foi encontrada. Conecte a TV e tente de novo.',
     landscape: 'A TV não está na vertical. Confirme para abrir assim mesmo.',
     'folder-failed': 'Não foi possível criar a pasta na Área de Trabalho.',

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { slotListSchema, webcamCapabilitiesSchema, webcamValuesSchema } from '@shared/ipc'
 import { SEED_LAYOUTS, type Layouts, type PrintMode, type Slot } from '@shared/layout'
 import { NO_WEBCAM_VALUES, type WebcamCapabilities, type WebcamValues } from '@shared/webcam'
+import { DEFAULT_USER_ZOOM, sanitizeUserZoom } from '@shared/zoom'
 
 /**
  * `userData/config.json` (DESIGN §9): both layouts, both templates and the webcam adjustments. Read with Zod; a missing or
@@ -25,6 +26,8 @@ export type Config = {
   templates: Partial<Record<PrintMode, TemplateRef>>
   /** The operator's webcam values and the controls the camera last advertised (RF15, RNF11). */
   webcam: { values: WebcamValues; capabilities: WebcamCapabilities | null }
+  /** The operator's laptop zoom on this computer (DESIGN §3), times the automatic factor. */
+  zoom: number
 }
 
 const noWebcam = (): Config['webcam'] => ({ values: { controls: {} }, capabilities: null })
@@ -48,13 +51,14 @@ const configSchema = z.object({
       capabilities: webcamCapabilitiesSchema.nullable().catch(null),
     })
     .catch(noWebcam),
+  zoom: z.number().optional().catch(undefined),
 })
 
 export const CONFIG_FILE = 'config.json'
 export const TEMPLATES_DIR = 'templates'
 
 export function defaultConfig(): Config {
-  return { layouts: { ...SEED_LAYOUTS }, templates: {}, webcam: noWebcam() }
+  return { layouts: { ...SEED_LAYOUTS }, templates: {}, webcam: noWebcam(), zoom: DEFAULT_USER_ZOOM }
 }
 
 /** Parses whatever is on disk; never throws. */
@@ -66,7 +70,7 @@ export function parseConfig(raw: unknown): Config {
     const ref = parsed.data.templates[mode]
     if (ref) templates[mode] = ref
   }
-  return { layouts: parsed.data.layouts, templates, webcam: parsed.data.webcam as Config['webcam'] }
+  return { layouts: parsed.data.layouts, templates, webcam: parsed.data.webcam as Config['webcam'], zoom: sanitizeUserZoom(parsed.data.zoom) }
 }
 
 export async function readConfig(userData: string): Promise<Config> {

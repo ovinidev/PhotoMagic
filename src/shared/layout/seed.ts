@@ -53,12 +53,14 @@ export const TWO_STRIPS_CLIENT_BOXES = [
 
 /**
  * One-strip seed (PRD §6.2): three portraits side by side covering the whole sheet, 42 px side and
- * 40 px top/bottom margins, 40 px gaps. Pending validation: not measured on any artwork.
+ * 40 px top/bottom margins, 40 px gaps, with the same rounded corners as the client's 2 tiras boxes
+ * (the artwork usually has no boxes, so these are the standard boxes). Pending validation: not
+ * measured on any artwork.
  */
 export const ONE_STRIP_SEED: readonly Slot[] = [
-  { id: 'photo-1', photo: 1, left: 42, top: 40, width: 560, height: 1160, angle: 0 },
-  { id: 'photo-2', photo: 2, left: 642, top: 40, width: 560, height: 1160, angle: 0 },
-  { id: 'photo-3', photo: 3, left: 1242, top: 40, width: 560, height: 1160, angle: 0 },
+  { id: 'photo-1', photo: 1, left: 42, top: 40, width: 560, height: 1160, angle: 0, radius: CLIENT_BOX_RADIUS },
+  { id: 'photo-2', photo: 2, left: 642, top: 40, width: 560, height: 1160, angle: 0, radius: CLIENT_BOX_RADIUS },
+  { id: 'photo-3', photo: 3, left: 1242, top: 40, width: 560, height: 1160, angle: 0, radius: CLIENT_BOX_RADIUS },
 ]
 
 export const SEED_LAYOUTS: Layouts = {

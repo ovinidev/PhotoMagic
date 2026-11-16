@@ -74,7 +74,7 @@ function SlotNumber({
       aria-label={label}
       data-testid={`field-${slot.id}-${field}`}
       className={cn(
-        'h-11 w-full min-w-0 rounded-[var(--radius-field)] border border-line bg-bg-raised px-2 text-right text-sm text-ink tabular-nums',
+        'h-12 w-full min-w-0 rounded-[var(--radius-field)] border border-line bg-bg-raised px-2 text-right text-base text-ink tabular-nums',
         'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ink',
       )}
       onFocus={onSelect}
@@ -121,16 +121,16 @@ export function SlotTable({
 }) {
   const { columns } = LAYOUT_COPY
   return (
-    <table className="w-full table-fixed border-separate border-spacing-x-1 border-spacing-y-1 text-sm" data-testid="slot-table">
+    <table className="w-full table-fixed border-separate border-spacing-x-1.5 border-spacing-y-1.5 text-base" data-testid="slot-table">
       <colgroup>
-        <col className="w-[72px]" />
+        <col className="w-[92px]" />
         <col className="w-[92px]" />
         {NUMBER_FIELDS.map((field) => (
           <col key={field} />
         ))}
       </colgroup>
       <thead>
-        <tr className="text-left text-xs font-medium text-ink-soft">
+        <tr className="text-left text-sm font-medium text-ink-soft">
           <th scope="col" className="sr-only">
             {columns.slot}
           </th>
@@ -153,7 +153,7 @@ export function SlotTable({
               <th
                 scope="row"
                 className={cn(
-                  'rounded-[var(--radius-field)] px-2 text-left text-xs font-medium whitespace-nowrap',
+                  'rounded-[var(--radius-field)] px-2 text-left text-sm font-medium whitespace-nowrap',
                   selected ? 'bg-selection text-white' : 'text-ink',
                 )}
               >
@@ -170,7 +170,7 @@ export function SlotTable({
                     onCommit({ ...slot, photo: value === 'none' ? null : (Number(value) as PhotoIndex) })
                   }}
                   className={cn(
-                    'h-11 w-full cursor-pointer rounded-[var(--radius-field)] border border-line bg-bg-raised px-2 text-sm text-ink',
+                    'h-12 w-full cursor-pointer rounded-[var(--radius-field)] border border-line bg-bg-raised px-2 text-base text-ink',
                     'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ink',
                   )}
                 >

@@ -86,6 +86,39 @@ describe('guest window controller', () => {
     expect(states.at(-1)?.tv).toEqual({ kind: 'open', display: tv })
   })
 
+  it('the two-finger hold hides the window without closing it, and the laptop reopens it', () => {
+    const { controller, displays, windows, states } = setup('portrait-tv')
+    controller.open({ allowLandscape: false })
+    const window = windows[0]!
+
+    expect(controller.dismiss().tv).toEqual({ kind: 'hidden' })
+    expect(window.hide).toHaveBeenCalledTimes(1)
+    expect(window.destroy).not.toHaveBeenCalled()
+    expect(states.at(-1)?.tv).toEqual({ kind: 'hidden' })
+
+    // A monitor change does not bring it back on its own.
+    displays.set('laptop-only')
+    displays.set('portrait-tv')
+    expect(window.place).toHaveBeenCalledTimes(1)
+    expect(controller.state().tv).toEqual({ kind: 'hidden' })
+
+    expect(controller.reopen().tv).toEqual({ kind: 'open', display: tv })
+    expect(window.place).toHaveBeenCalledTimes(2)
+    expect(windows).toHaveLength(1)
+  })
+
+  it('reopening without a TV reports it detached, and dismiss or reopen without a window do nothing', () => {
+    const { controller, displays } = setup('portrait-tv')
+    expect(controller.dismiss().tv).toEqual({ kind: 'closed' })
+    expect(controller.reopen().tv).toEqual({ kind: 'closed' })
+    controller.open({ allowLandscape: false })
+    controller.dismiss()
+    displays.set('laptop-only')
+    expect(controller.reopen().tv).toEqual({ kind: 'detached', reason: 'missing' })
+    displays.set('portrait-tv')
+    expect(controller.state().tv).toEqual({ kind: 'open', display: tv })
+  })
+
   it('keeps a confirmed landscape TV across a replug, but not after closing', () => {
     const { controller, displays, windows } = setup('landscape-tv')
     controller.open({ allowLandscape: true })

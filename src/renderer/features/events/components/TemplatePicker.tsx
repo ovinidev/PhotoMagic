@@ -1,5 +1,7 @@
-import { useId } from 'react'
+import { useId, type ReactNode } from 'react'
 import type { TemplateInfo } from '@shared/ipc'
+import type { PrintMode } from '@shared/layout'
+import { SheetGuides } from '@renderer/features/layout'
 import { useObjectUrl } from '@renderer/shared/hooks/useObjectUrl'
 import { cn } from '@renderer/shared/utils/cn'
 import { EVENTS_COPY } from '../copy'
@@ -14,17 +16,22 @@ function rejection(state: ImportState): string | null {
 
 /** The selected mode's template: preview, file name, import, and the loading, empty and error states. */
 export function TemplatePicker({
+  mode,
   modeLabel,
   templates,
   template,
   importState,
   onFile,
+  actions,
 }: {
+  mode: PrintMode
   modeLabel: string
   templates: TemplatesView
   template: TemplateInfo | null
   importState: ImportState
   onFile: (file: File) => void
+  /** Extra buttons on the import row, e.g. `Editar posições das fotos`. */
+  actions?: ReactNode
 }) {
   const inputId = useId()
   const url = useObjectUrl(template?.preview ?? null)
@@ -33,7 +40,7 @@ export function TemplatePicker({
 
   return (
     <fieldset className="flex flex-col gap-3">
-      <legend className="mb-2 text-sm font-medium text-ink">{EVENTS_COPY.template(modeLabel)}</legend>
+      <legend className="mb-2 text-base font-medium text-ink">{EVENTS_COPY.template(modeLabel)}</legend>
       <div className="flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[var(--radius-field)] border border-line bg-bg">
         {templates.status === 'loading' ? (
           <p className="text-sm text-ink-soft">{EVENTS_COPY.templatesLoading}</p>
@@ -42,13 +49,17 @@ export function TemplatePicker({
         ) : url ? (
           <img src={url} alt={EVENTS_COPY.templatePreviewAlt(modeLabel)} data-testid="template-preview" className="h-full w-full object-contain" draggable={false} />
         ) : (
-          <p className="max-w-[360px] px-6 text-center text-sm text-ink-soft">{EVENTS_COPY.templateEmpty(modeLabel)}</p>
+          // No template: the plain white default sheet with the standard boxes (PRD §6.1).
+          <div role="img" aria-label={EVENTS_COPY.templateDefaultAlt(modeLabel)} data-testid="template-default" className="relative h-full w-full bg-white">
+            <SheetGuides mode={mode} />
+          </div>
         )}
       </div>
-      <div className="flex items-center justify-between gap-4">
-        <p className="truncate text-sm text-ink-soft" data-testid="template-file-name">
-          {template ? `${template.fileName} · ${template.width} × ${template.height} px` : ''}
-        </p>
+      <p className="truncate text-sm text-ink-soft" data-testid="template-file-name">
+          {template ? `${template.fileName} · ${template.width} × ${template.height} px` : templates.status === 'ready' ? EVENTS_COPY.templateDefault : ''}
+      </p>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {actions}
         <label
           htmlFor={inputId}
           aria-disabled={loading}
@@ -75,6 +86,7 @@ export function TemplatePicker({
           />
         </label>
       </div>
+      {!template && templates.status === 'ready' ? <p className="text-sm text-ink-soft">{EVENTS_COPY.templateDefaultHint}</p> : null}
       {error ? (
         <p role="alert" className="text-sm text-danger tabular-nums">
           {error}

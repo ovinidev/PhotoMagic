@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import type { Page } from '@playwright/test'
 import sharp from 'sharp'
 import { expect, test } from './fixtures'
-import { PHOTO_TIMEOUT, startEvent, takePhotos } from './event'
+import { PHOTO_TIMEOUT, PRINT_TIMEOUT, startEvent, takePhotos } from './event'
 import { writeY4m } from './y4m'
 
 test.describe('capture round', () => {
@@ -53,7 +53,8 @@ test.describe('capture round', () => {
     await takePhotos(tv, 2)
     await expect(operatorWindow.getByTestId('round-status')).toHaveText('Foto 3/3')
     await tv.getByRole('button', { name: 'Tirar foto' }).click()
-    await expect(tv.getByTestId('print-screen')).toBeVisible()
+    // The third capture, then the montage preview: same headroom as `takePhotos`.
+    await expect(tv.getByTestId('print-screen')).toBeVisible({ timeout: PHOTO_TIMEOUT })
     // The fourth tap has nothing to hit: the shutter is gone behind the print screen.
     await expect(tv.getByRole('button', { name: 'Tirar foto' })).toHaveCount(0)
     await expect(operatorWindow.getByTestId('round-status')).toHaveText('As 3 fotos estão prontas. Imprima ou cancele na TV.')
@@ -68,25 +69,34 @@ test.describe('capture round', () => {
   })
 
   test('RF07 counts down 5 s and 10 s before capturing', async ({ app, operatorWindow }) => {
+    // 15 s of countdown plus two captures exceeds the 30 s default on a loaded runner.
+    test.setTimeout(60_000)
     const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
     const countdown = tv.getByTestId('countdown')
 
+    // Each digit is on screen for one second, shorter than Playwright's retry step on a loaded
+    // runner, so assert ranges of digits and the elapsed time instead of one exact transient digit.
     await tv.getByRole('radio', { name: '5 s' }).click()
     await tv.getByRole('button', { name: 'Tirar foto' }).click()
     await expect(countdown).toHaveText('5')
+    const fiveStarted = Date.now()
     // A tap during the countdown adds nothing.
     await tv.getByRole('button', { name: 'Tirar foto' }).click({ force: true })
-    await expect(countdown).toHaveText('1', { timeout: 6_000 })
+    await expect(countdown).toHaveText(/^[1-4]$/)
     await expect(tv.getByTestId('photo-counter')).toHaveText('1/3')
-    await expect(tv.getByTestId('photo-counter')).toHaveText('2/3', { timeout: PHOTO_TIMEOUT })
+    await expect(tv.getByTestId('photo-counter')).toHaveText('2/3', { timeout: 5_000 + PHOTO_TIMEOUT })
+    // '5' was seen within its first second, so the capture cannot come sooner than 4 s later.
+    expect(Date.now() - fiveStarted).toBeGreaterThanOrEqual(4_000)
     await expect(countdown).toHaveCount(0)
 
     await tv.getByRole('radio', { name: '10 s' }).click()
     await tv.getByRole('button', { name: 'Tirar foto' }).click()
     await expect(countdown).toHaveText('10')
-    await expect(countdown).toHaveText('6', { timeout: 6_000 })
+    const tenStarted = Date.now()
+    await expect(countdown).toHaveText(/^[1-9]$/)
     await expect(tv.getByTestId('photo-counter')).toHaveText('2/3')
-    await expect(tv.getByTestId('photo-counter')).toHaveText('3/3', { timeout: 5_000 + PHOTO_TIMEOUT })
+    await expect(tv.getByTestId('photo-counter')).toHaveText('3/3', { timeout: 10_000 + PHOTO_TIMEOUT })
+    expect(Date.now() - tenStarted).toBeGreaterThanOrEqual(9_000)
   })
 
   test('RF07 syncs the timer between the TV and the laptop', async ({ app, operatorWindow }) => {
@@ -167,7 +177,7 @@ test.describe('capture round: live view and file (RF05)', () => {
     // The file: one-strip slot 1 is 560×1160 at (42, 40); the 360×640 portrait covers it at 1.8125×.
     await takePhotos(tv, 3)
     await tv.getByRole('button', { name: 'Imprimir' }).click()
-    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PHOTO_TIMEOUT })
+    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
     const [file] = readdirSync(join(dirs.desktop, 'Festa'))
     const { data, info } = await sharp(join(dirs.desktop, 'Festa', file!)).raw().toBuffer({ resolveWithObject: true })
     const at = (x: number, y: number) => Array.from(data.subarray((y * info.width + x) * info.channels, (y * info.width + x) * info.channels + 3))

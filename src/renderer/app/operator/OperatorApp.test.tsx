@@ -26,6 +26,43 @@ describe('OperatorApp', () => {
     expect(await screen.findByText('Não foi possível ler a versão do app')).toBeInTheDocument()
   })
 
+  it('shows a discreet update line only while an update downloads or waits for quit', async () => {
+    const { pushUpdate } = stubBridge()
+    render(<OperatorApp />)
+    expect(await screen.findByText('Versão 0.1.0')).toBeInTheDocument()
+    expect(screen.queryByTestId('update-status')).toBeNull()
+
+    act(() => pushUpdate({ kind: 'downloading', version: '0.2.0', percent: 42 }))
+    expect(screen.getByTestId('update-status')).toHaveTextContent('Baixando atualização 0.2.0 (42%)')
+
+    act(() => pushUpdate({ kind: 'ready', version: '0.2.0' }))
+    expect(screen.getByTestId('update-status')).toHaveTextContent('Atualização 0.2.0 pronta: será instalada ao fechar o app')
+
+    act(() => pushUpdate({ kind: 'idle' }))
+    expect(screen.queryByTestId('update-status')).toBeNull()
+  })
+
+  it('zooms the laptop with the footer buttons, Ctrl + and Ctrl + wheel (DESIGN §3)', async () => {
+    const { api, pushZoom } = stubBridge()
+    render(<OperatorApp />)
+    expect(await screen.findByTestId('zoom-percent')).toHaveTextContent('100%')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Aumentar zoom (Ctrl +)' }))
+    expect(api.zoom.step).toHaveBeenLastCalledWith('in')
+    await userEvent.click(screen.getByRole('button', { name: 'Diminuir zoom (Ctrl −)' }))
+    expect(api.zoom.step).toHaveBeenLastCalledWith('out')
+    await userEvent.click(screen.getByTestId('zoom-percent'))
+    expect(api.zoom.step).toHaveBeenLastCalledWith('reset')
+
+    await userEvent.keyboard('{Control>}={/Control}')
+    expect(api.zoom.step).toHaveBeenLastCalledWith('in')
+    act(() => void window.dispatchEvent(new WheelEvent('wheel', { deltaY: 100, ctrlKey: true, cancelable: true })))
+    expect(api.zoom.step).toHaveBeenLastCalledWith('out')
+
+    act(() => pushZoom({ user: 1.25, auto: 1.3, effective: 1.63 }))
+    expect(screen.getByTestId('zoom-percent')).toHaveTextContent('125%')
+  })
+
   it('switches to the event screen when main opens an event, and back on Encerrar evento', async () => {
     const { pushSession, api } = stubBridge()
     render(<OperatorApp />)

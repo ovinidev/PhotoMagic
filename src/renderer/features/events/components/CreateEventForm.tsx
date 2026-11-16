@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { checkEventName } from '@shared/files'
 import type { EventStartError } from '@shared/ipc'
 import { DEFAULT_PRINT_MODE, PRINT_MODES, type PrintMode } from '@shared/layout'
@@ -17,7 +17,7 @@ import { TemplatePicker } from './TemplatePicker'
  * `onEditLayout` opens the slot editor (PRD §5, "Slot editor, optional"): right after a template is
  * accepted, and from the button below the template. The home page owns the editor.
  */
-export function CreateEventForm({ onEditLayout }: { onEditLayout?: (mode: PrintMode) => void } = {}) {
+export function CreateEventForm({ onEditLayout, logo }: { onEditLayout?: (mode: PrintMode) => void; logo?: ReactNode } = {}) {
   const nameId = useId()
   const nameHintId = useId()
   const [name, setName] = useState('')
@@ -34,7 +34,9 @@ export function CreateEventForm({ onEditLayout }: { onEditLayout?: (mode: PrintM
   const guest = display.status === 'ready' ? display.value.guest.kind : null
   const landscape = guest === 'landscape-external'
   const tvReady = guest === 'portrait' || (landscape && allowLandscape)
-  const canStart = nameCheck.ok && template !== null && imports[mode].status === 'idle' && tvReady && !pending
+  // No template is fine: the sheet is plain white with the standard boxes (PRD §6.1). A rejected file
+  // still blocks the start until a valid one is imported (RF01).
+  const canStart = nameCheck.ok && templates.status === 'ready' && imports[mode].status === 'idle' && tvReady && !pending
   const modeLabel = EVENTS_COPY.modes[mode].label
 
   const start = async () => {
@@ -53,19 +55,24 @@ export function CreateEventForm({ onEditLayout }: { onEditLayout?: (mode: PrintM
   }
 
   return (
-    <section aria-labelledby="create-event-title" className="w-full rounded-[var(--radius-card)] border border-line bg-bg-raised p-8">
-      <h1 id="create-event-title" className="text-2xl font-semibold text-ink">
-        {EVENTS_COPY.title}
-      </h1>
+    <section aria-labelledby="create-event-title" className="w-full rounded-[var(--radius-card)] border border-line bg-bg-raised px-8 py-6 text-base">
+      <div className="flex items-center gap-5">
+        {logo}
+        <h1 id="create-event-title" className="text-2xl font-semibold text-ink">
+          {EVENTS_COPY.title}
+        </h1>
+      </div>
       <form
-        className="mt-8 flex flex-col gap-8"
+        className="mt-5 grid gap-8 lg:grid-cols-2 lg:gap-10"
         onSubmit={(event) => {
           event.preventDefault()
           void start()
         }}
       >
+        {/* Wide windows: the details on the left, the sheet preview large on the right (DESIGN §14). */}
+        <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
-          <label htmlFor={nameId} className="text-sm font-medium text-ink">
+          <label htmlFor={nameId} className="text-base font-medium text-ink">
             {EVENTS_COPY.name}
           </label>
           <input
@@ -78,7 +85,7 @@ export function CreateEventForm({ onEditLayout }: { onEditLayout?: (mode: PrintM
             aria-describedby={nameHintId}
             onChange={(event) => setName(event.target.value)}
             className={cn(
-              'min-h-11 rounded-[var(--radius-field)] border bg-bg-raised px-3 text-ink placeholder:text-ink-soft/60',
+              'min-h-12 rounded-[var(--radius-field)] border bg-bg-raised px-4 text-lg text-ink placeholder:text-ink-soft/60',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink',
               showNameError ? 'border-danger' : 'border-line',
             )}
@@ -89,7 +96,7 @@ export function CreateEventForm({ onEditLayout }: { onEditLayout?: (mode: PrintM
         </div>
 
         <fieldset>
-          <legend className="mb-2 text-sm font-medium text-ink">{EVENTS_COPY.mode}</legend>
+          <legend className="mb-2 text-base font-medium text-ink">{EVENTS_COPY.mode}</legend>
           <div className="grid grid-cols-2 gap-3">
             {PRINT_MODES.map((option) => (
               <label
@@ -117,29 +124,8 @@ export function CreateEventForm({ onEditLayout }: { onEditLayout?: (mode: PrintM
           </div>
         </fieldset>
 
-        <TemplatePicker
-          key={mode}
-          modeLabel={modeLabel}
-          templates={templates}
-          template={template}
-          importState={imports[mode]}
-          onFile={(file) =>
-            void importFile(mode, file).then((ok) => {
-              if (ok) onEditLayout?.(mode)
-            })
-          }
-        />
-
-        {onEditLayout ? (
-          <div className="-mt-4 flex justify-end">
-            <Button variant="ghost" onClick={() => onEditLayout(mode)}>
-              {EVENTS_COPY.editLayout(modeLabel)}
-            </Button>
-          </div>
-        ) : null}
-
-        <div className="flex flex-col gap-3 border-t border-line pt-6">
-          <h2 className="text-sm font-medium text-ink">{EVENTS_COPY.tv}</h2>
+        <div className="flex flex-col gap-2 border-t border-line pt-4">
+          <h2 className="text-base font-medium text-ink">{EVENTS_COPY.tv}</h2>
           <TvStatus view={display} />
           {landscape ? (
             <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-ink">
@@ -161,9 +147,35 @@ export function CreateEventForm({ onEditLayout }: { onEditLayout?: (mode: PrintM
         ) : null}
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={!canStart}>
+          <Button type="submit" disabled={!canStart} className="min-h-12 px-8 text-base">
             {pending ? EVENTS_COPY.starting : EVENTS_COPY.start}
           </Button>
+        </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+        <TemplatePicker
+          key={mode}
+          mode={mode}
+          modeLabel={modeLabel}
+          templates={templates}
+          template={template}
+          importState={imports[mode]}
+          actions={
+            onEditLayout ? (
+              <Button variant="ghost" onClick={() => onEditLayout(mode)}>
+                {EVENTS_COPY.editLayout(modeLabel)}
+              </Button>
+            ) : null
+          }
+          onFile={(file) =>
+            void importFile(mode, file).then((ok) => {
+              if (ok) onEditLayout?.(mode)
+            })
+          }
+        />
+
+
         </div>
       </form>
     </section>

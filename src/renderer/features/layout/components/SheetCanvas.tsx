@@ -18,6 +18,7 @@ import { cn } from '@renderer/shared/utils/cn'
 import { LAYOUT_COPY } from '../copy'
 import { paintSlot, slotStyle, type LiveRegistry } from '../utils/livePaint'
 import { photoColor } from '../utils/slotColors'
+import { SheetGuides } from './SheetGuides'
 
 type Gesture =
   | { kind: 'move'; pointerId: number; origin: Slot; start: { x: number; y: number }; draft: Slot }
@@ -122,10 +123,13 @@ export function SheetCanvas({
         {templateUrl ? (
           <img src={templateUrl} alt={LAYOUT_COPY.templateAlt(LAYOUT_COPY.modes[mode])} className="h-full w-full select-none" draggable={false} />
         ) : (
-          <div className="flex h-full w-full items-end justify-center bg-bg p-4">
+          // No template: the montage uses a plain white sheet (PRD §6.1), so the editor shows it too.
+          <div className="flex h-full w-full items-end justify-center bg-white p-4" data-testid="layout-white-sheet">
             <p className="text-sm text-ink-soft">{LAYOUT_COPY.noTemplate(LAYOUT_COPY.modes[mode])}</p>
           </div>
         )}
+        {/* The standard boxes, under the cards: visible even when the art has no boxes (PRD §6.2). */}
+        <SheetGuides mode={mode} />
         {/* Print margins: 22 and 20 px inside the extent (DESIGN §6). */}
         <div
           aria-hidden
@@ -171,7 +175,7 @@ export function SheetCanvas({
               'absolute cursor-move outline-none select-none',
               selected ? 'z-20 outline-2 outline-offset-0 outline-dashed outline-selection' : 'z-10 outline-1 outline-ink/30 outline-solid',
             )}
-            style={{ ...slotStyle(slot), backgroundColor: color.fill }}
+            style={{ ...slotStyle(slot), backgroundColor: `color-mix(in srgb, ${color.fill} 82%, transparent)` }}
             onPointerDown={(event) => begin(event, slot, 'move')}
             onFocus={() => onSelect(slot.id)}
           >

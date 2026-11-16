@@ -49,6 +49,8 @@ const api: FotomagicaApi = {
   },
   display: {
     getState: () => invoke(IPC_CHANNELS.displayGetState, undefined),
+    hideTv: () => invoke(IPC_CHANNELS.displayHideTv, undefined),
+    showTv: () => invoke(IPC_CHANNELS.displayShowTv, undefined),
     onState: (listener) => subscribe(IPC_CHANNELS.displayState, listener),
   },
   camera: {
@@ -99,6 +101,15 @@ const api: FotomagicaApi = {
   printer: {
     getStatus: () => invoke(IPC_CHANNELS.printerStatus, undefined),
     onStatus: (listener) => subscribe(IPC_CHANNELS.printerStatusChanged, listener),
+  },
+  update: {
+    getStatus: () => invoke(IPC_CHANNELS.updateGetStatus, undefined),
+    onStatus: (listener) => subscribe(IPC_CHANNELS.updateStatus, listener),
+  },
+  zoom: {
+    get: () => invoke(IPC_CHANNELS.zoomGet, undefined),
+    step: (step) => invoke(IPC_CHANNELS.zoomStep, { step }),
+    onState: (listener) => subscribe(IPC_CHANNELS.zoomState, listener),
   },
 }
 

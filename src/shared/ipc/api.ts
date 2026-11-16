@@ -21,6 +21,8 @@ import type {
   TemplateImportResult,
   Templates,
   Timer,
+  UpdateStatus,
+  ZoomState,
   WebcamReport,
   WebcamState,
 } from './schemas'
@@ -36,6 +38,10 @@ export type FotomagicaApi = {
   display: {
     /** Monitor choice for the TV and the TV window state. */
     getState: () => Promise<DisplayState>
+    /** TV only: the two-finger hold hides the TV window; the event and the round go on. */
+    hideTv: () => Promise<DisplayState>
+    /** Laptop only: puts a hidden TV window back on the TV. */
+    showTv: () => Promise<DisplayState>
     /** Pushed on every monitor added, removed or changed, and on every TV window change. */
     onState: (listener: (state: DisplayState) => void) => Unsubscribe
   }
@@ -118,5 +124,19 @@ export type FotomagicaApi = {
     getStatus: () => Promise<PrinterStatus>
     /** Pushed to both windows whenever the reported state changes. */
     onStatus: (listener: (status: PrinterStatus) => void) => Unsubscribe
+  }
+  update: {
+    /** Background auto-update (DESIGN §11): a download in progress or one that installs on quit. */
+    getStatus: () => Promise<UpdateStatus>
+    /** Pushed whenever the update status changes. */
+    onStatus: (listener: (status: UpdateStatus) => void) => Unsubscribe
+  }
+  zoom: {
+    /** The laptop window zoom: automatic factor, the operator's zoom and their product (DESIGN §3). */
+    get: () => Promise<ZoomState>
+    /** One operator step (Ctrl + / Ctrl − / Ctrl 0); saved on this computer. */
+    step: (step: 'in' | 'out' | 'reset') => Promise<ZoomState>
+    /** Pushed when the window is resized or the operator zooms. */
+    onState: (listener: (state: ZoomState) => void) => Unsubscribe
   }
 }

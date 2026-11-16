@@ -100,7 +100,11 @@ Monitors change at runtime (`display-added`, `display-removed`, `display-metrics
 
 `event:start` opens the TV window through this controller and `event:end` closes it; there is no separate IPC to open the TV, so the TV never shows without an event. The create-event form shows the TV state and, for a landscape TV, a checkbox the operator ticks to open anyway (RF04). The TV window closing for any reason ends the event.
 
-The operator window opens on the primary monitor, with a frame and a comfortable size (minimum 1280×800). The TV window has no frame, ignores accidental close and covers the `bounds` of the chosen monitor. Main closes it, on `Encerrar evento` or when quitting the app.
+The operator window opens on the primary monitor, with a frame, at 1280×800 or the work area if smaller (minimum 1024×640, so it fits a 1366×768 laptop), and maximized when the screen is at least 1366 px wide. E2E keeps a fixed 1280×800.
+
+Laptop zoom is pure, in `src/shared/zoom.ts`, and applied by `src/main/windows/operatorZoom.ts` with `webContents.setZoomFactor` on the laptop window only: `autoZoom(content size)` (1 up to 1280×760, growing with the smaller of the width and height ratios up to 2, so a maximized 1920×1080 window is about 1.34) times the operator's zoom. The operator's zoom steps like a browser (67% to 200%) with Ctrl + / Ctrl − / Ctrl 0, Ctrl + wheel and the `−` / percentage / `+` buttons in the laptop footer, and is saved as `zoom` in `config.json` on that computer. The footer percentage shows only the operator's zoom. The TV window is never zoomed by this: its factor is the logical-frame scale below, and its visual (pinch) zoom is locked to 1. The TV window has no frame, ignores accidental close and covers the `bounds` of the chosen monitor. Main closes it, on `Encerrar evento` or when quitting the app.
+
+On the TV, two fingers held still for 2 s hide the TV window (`display:hide-tv`, accepted only from the TV). The rule is pure, in `src/shared/closeHold.ts`: exactly two fingers, each within 40 px of where it landed; one finger, a third finger, a quick tap, a swipe or a pinch never fire, and every finger must lift before another hold. After 300 ms a pt-BR hint, `Continue segurando com dois dedos para fechar a tela`, shows a filling bar. Hiding is not closing: the TV window state becomes `hidden`, the event, the camera and the round stay, and a monitor change does not bring it back. The laptop TV line says `Tela da TV fechada` with an `Abrir TV` button (`display:show-tv`, accepted only from the laptop), which puts it back on the TV, or reports it detached if no TV is eligible.
 
 The reference TV is 1080×1920. If Windows reports another portrait height (for example 2160×3840 at different DIPs), the TV UI scales from a logical frame of 1080×1920 to keep the same 64 px targets proportional to the screen. The computation of that scale is a pure function, with a test.
 
@@ -116,7 +120,7 @@ The preload exposes `window.fotomagica`. Each method validates input and output 
 | --- | --- | --- |
 | invoke | `template:get-all` | Each mode's stored template (name, size and a small JPEG preview), or `null` |
 | invoke | `template:import` | Mode, file name and bytes. Stores a 1844×1240 PNG or JPEG for that mode only, or returns `format`, `size` (with the size read) or `unreadable` |
-| invoke | `event:start` | Name, mode (`two-strips` or `one-strip`) and the landscape confirmation. Checks the name and that mode's stored template, opens the TV, then creates or reuses the Desktop folder. Returns the session or the reason (`invalid-name`, `no-template`, `missing`, `landscape`, `folder-failed`, `already-open`) |
+| invoke | `event:start` | Name, mode (`two-strips` or `one-strip`) and the landscape confirmation. Checks the name, reads that mode's stored template (none means the plain white 1844×1240 sheet), opens the TV, then creates or reuses the Desktop folder. Returns the session or the reason (`invalid-name`, `missing`, `landscape`, `folder-failed`, `already-open`) |
 | invoke | `event:end` | Closes the TV and forgets the unprinted round |
 | invoke | `session:get-state` | The event and its round (`idle`, or name, mode, timer, copies, photos taken, preview revision, slots and phase) |
 | invoke | `session:get-preview` | The current montage preview JPEG and its revision |
@@ -139,7 +143,14 @@ The preload exposes `window.fotomagica`. Each method validates input and output 
 | invoke | `printer:status` | A fresh read of the printer state (`PrinterStatus`, §10) |
 | event | `session:state` | Main → both windows, on every round change |
 | event | `printer:status-changed` | Main → laptop and TV, when the polled state changes |
-| invoke | `display:get-state` | TV monitor choice (`GuestChoice`) and TV window state (`closed`, `open` on a monitor, or `detached` because the TV went away) |
+| invoke | `update:get-status` | Background auto-update state (`UpdateStatus`, §11): `idle`, `downloading` with version and percent, or `ready` (installs on quit) |
+| event | `update:status` | Main → both windows, on every update status change; only the laptop shows it |
+| invoke | `zoom:get` | Laptop zoom state `{ user, auto, effective }` (§3) |
+| invoke | `zoom:step` | `in`, `out` or `reset` of the operator's zoom; saved in `config.json` |
+| event | `zoom:state` | Main → laptop, when the zoom changes (step or window resize) |
+| invoke | `display:get-state` | TV monitor choice (`GuestChoice`) and TV window state (`closed`, `open` on a monitor, `detached` because the TV went away, or `hidden` by the two-finger hold) |
+| invoke | `display:hide-tv` | TV → main: the two-finger hold hides the TV window; the event goes on (§3) |
+| invoke | `display:show-tv` | Laptop → main: `Abrir TV` puts a hidden TV window back on the TV |
 | event | `display:state` | Main → both windows, on every monitor change and every TV window change |
 | send | `camera:report` | TV → main, the state of its `MediaStream`. Main ignores it from any other window |
 | invoke | `camera:get-status` | Last camera state reported by the TV (`idle` while the TV window is closed) |
@@ -218,7 +229,7 @@ For each slot, in this order:
 2. Pre-rotation of the photo by minus the quarter turn nearest to the slot's `angle` (Angle 270 turns the photo 90° clockwise first). Step 4 turns it back, so the person stays upright while the slot's frame turns: a 500×281 slot at Angle 270 shows a tall, upright portrait
 3. `cover` fit into the unrotated rectangle (`width` × `height`), with that slot's pan (-1 to 1 on each axis) and zoom (1 to 3). Zoom 1 and pan 0 crop the center: in a horizontal slot, the portrait loses top and bottom in equal parts. With a framing rotation, the photo covers the bounds of the box turned by that rotation (plus 2 px), is turned clockwise by it, and the centered `width` × `height` is kept, so no corner of the slot ever shows the template (RF09)
 4. If the slot has a `radius`, the tile is clipped to a rounded rectangle of that radius (a `dest-in` SVG mask), in the box's own axes; a rounded rectangle turns into itself, so this works at any angle. Then rotation of the result by the slot's `angle`, clockwise around the center
-5. Composition over that mode's template, centered on the slot's center and clipped to the sheet. A slot dragged partly off the sheet is cut there (the client seed sits fully inside)
+5. Composition over that mode's template (or, with none imported, a plain white 1844×1240 sheet), centered on the slot's center and clipped to the sheet. A slot dragged partly off the sheet is cut there (the client seed sits fully inside)
 
 The plan is pure (`planSlot`, `clipToSheet` in `src/shared/layout/geometry.ts`) and `src/main/compose/renderSheet.ts` runs it with sharp, one materialized step at a time (sharp otherwise reorders rotate, resize and extract). The preview the laptop and the TV show is the same composition scaled to 922 px wide, recomposed after each photo; the round state carries a `previewRevision` and both windows fetch the JPEG with `session:get-preview`.
 
@@ -232,13 +243,15 @@ The cut line used by the editor, only in the 2-strip layout, is y = 620. It fall
 
 ### Editor model
 
+**Standard boxes (guides).** `guideBoxes(mode)` (`src/shared/layout/guides.ts`, unit-tested) is the seed of the mode as axis-aligned rounded rectangles. `SheetGuides` (`features/layout`) draws them as gray dashed SVG rectangles over the template and under the cards, in the editor and on the create-event preview. They never take the pointer and do not follow the cards. With no template, both surfaces show a white sheet.
+
 Left and Top are the top-left corner of the rectangle before rotation. Width and Height do not swap when the angle changes. Rotation is around the center. The panel shows these numbers as integers.
 
 In the current app, Angle 270 with 500×281 draws a tall slot, and Angle 0 draws a lying-down slot. The new renderer reproduces this. The photo number is drawn in the slot's local space, so it rotates with it, as in the demonstration: vertically the "3" is sideways. This is the current app's behavior, and the editor keeps it.
 
 A slot's `photo` is 1, 2, 3 or `null` (`Nenhuma` in the panel). The montage skips a `null` slot, so the template shows there.
 
-A slot may carry `radius` (sheet pixels, default 0): the corner radius of the artwork's photo box. The client's 2 tiras boxes are black rounded rectangles of about 33 px (31.1 to 35.3 px, measured from the anti-aliased coverage of all 20 corners), and the seed uses 30 px (`CLIENT_BOX_RADIUS`). Clipping 1 px under the tightest corner keeps the photo's anti-aliased edge past the black curve everywhere. The boxes' right edge is also anti-aliased (a 35% black column past the measured width), so the seed bleeds 1 px past each side edge (`CLIENT_BOX_BLEED`), keeping integer numbers and the same centers. A render test over the client artwork counts zero dark pixels in every box, no gray pixel just inside or outside any edge, and white paper at each box's corner pixel. `print.spec.ts` runs a full round over the same artwork (`e2e/fixtures/client-2tiras-1844x1240.png`); with `FOTOMAGICA_SAMPLE_OUT=<file.png>` it also writes the montage, for showing the owner. The alternative, a square photo covering the box, would put square photo corners on the white paper outside the rounded box. The panel does not show the radius; editing a slot keeps it, and `Restaurar padrão` brings it back. A layout saved before the client seed has no radius and stays square.
+A slot may carry `radius` (sheet pixels, default 0): the corner radius of the artwork's photo box. The client's 2 tiras boxes are black rounded rectangles of about 33 px (31.1 to 35.3 px, measured from the anti-aliased coverage of all 20 corners), and the seed uses 30 px (`CLIENT_BOX_RADIUS`). Clipping 1 px under the tightest corner keeps the photo's anti-aliased edge past the black curve everywhere. The boxes' right edge is also anti-aliased (a 35% black column past the measured width), so the seed bleeds 1 px past each side edge (`CLIENT_BOX_BLEED`), keeping integer numbers and the same centers. A render test over the client artwork counts zero dark pixels in every box, no gray pixel just inside or outside any edge, and white paper at each box's corner pixel. `print.spec.ts` runs a full round over the same artwork (`e2e/fixtures/client-2tiras-1844x1240.png`); with `FOTOMAGICA_SAMPLE_OUT=<file.png>` it also writes the montage, for showing the owner. The alternative, a square photo covering the box, would put square photo corners on the white paper outside the rounded box. The panel does not show the radius; editing a slot keeps it, and `Restaurar padrão` brings it back. A layout saved before the client seed has no radius and stays square. The 1-strip seed carries the same 30 px radius: the artwork usually has no boxes, so these rounded boxes are the standard ones.
 
 ![Figure 4 — Selected slot with dashed red border](assets/briefing/image4.png)
 
@@ -268,6 +281,8 @@ The tolerance is 8 px in sheet space, not screen pixels. Rotation also snaps to 
 
 Minimum slot size: 40×40 px, so the handle does not invert the rectangle.
 
+The sheet sits in a scrollable viewport with its own zoom (`ZoomableSheet`, pure math in `features/layout/utils/canvasZoom.ts`): 100% fits the whole sheet, `−` / `+` step by 1.25× up to 400%, the percentage fits again, and Ctrl + wheel zooms toward the cursor (that wheel is not the app zoom). The sheet is laid out at `fit × zoom` CSS pixels, never a CSS transform, so the pointer-to-sheet conversion and the 8 px snap tolerance stay exact at any zoom. When zoomed, dragging the background or the middle button pans; the cards keep their own gestures. The standard boxes of the mode are drawn grey under the cards, since artwork often has no boxes.
+
 Every commit (a released gesture, a confirmed number, a photo choice, `Restaurar padrão`, Undo, Redo) is one history step of the layout on screen and one `layout:save`. The history lives in the editor only (up to 100 steps) and is not saved. The operator window has no menu (`removeMenu`): with Electron's default menu, releasing Alt would reveal the menu bar and shift the editor in the middle of a gesture.
 
 The editor is a full-window dialog over the home page (the form underneath keeps its state). It opens after a template is accepted and from `Editar posições das fotos`. With an event open the home page is not rendered, so the editor is unreachable; main also refuses `layout:save` while the session is open.
@@ -286,9 +301,10 @@ Unlike the slot editor, framing does go to main during the gesture, because the 
 
 | Data | Location |
 | --- | --- |
-| Both layouts, both templates, webcam values and the controls the camera last advertised | `app.getPath('userData')/config.json` |
+| Both layouts, both templates, webcam values, the controls the camera last advertised and the laptop zoom | `app.getPath('userData')/config.json` |
 | Each mode's template file (`two-strips.png` or `.jpg`, `one-strip.…`) | `app.getPath('userData')/templates/` |
 | JPG montage | `app.getPath('desktop')/<event name>/HH-mm-ss.jpg` |
+| Auto-update log (§11) | `app.getPath('userData')/logs/updater.log` |
 
 The folder name goes through a pure function: trim, reject empty, reject the characters `\ / : * ? " < > |`, reject reserved Windows names, reject a trailing dot or space. The test lists these cases.
 
@@ -386,7 +402,13 @@ Copies: the ticket carries 1 to 10, a ceiling approved by the owner. Each copy i
 
 ## 11. Update and signing
 
-electron-updater with the GitHub provider, on the repository `ovinidev/PhotoMagic`. The check runs at startup, only with no event in progress. A network failure is ignored: the app opens. The download does not occupy the TV. Installation happens on quit, when a new version has already been downloaded.
+electron-updater with the GitHub provider, on the repository `ovinidev/PhotoMagic` (`publish` in `electron-builder.yml`, written into the installed app as `resources/app-update.yml`). `src/main/updater/` owns it:
+
+- **When.** Once, at startup, after the laptop window opens. The pure `shouldCheckForUpdates` (`updater/policy.ts`, unit-tested) allows it only in an installed build (`app.isPackaged`), never under E2E, never with an event in progress, and only when `net.isOnline()` says there is a network. The check is never awaited, so startup never waits on it.
+- **Download.** In the background (`autoDownload`). It does not occupy the TV and does not stop an event that starts meanwhile.
+- **Install.** Only on quit (`autoInstallOnAppQuit`), silently, when a version has already been downloaded; the next launch is the new version. The app never calls `quitAndInstall` and never asks to restart, so an update never interrupts an event.
+- **Failures.** A network error, a missing release or a dropped download is ignored by the operator UI: the status goes back to `idle` and the app keeps working. Every updater message and error is appended to `userData/logs/updater.log` (`updater/log.ts`), never to the event folder; writing the log never throws.
+- **Laptop status.** `update:status` carries `UpdateStatus` (pure reducer `nextUpdateStatus`). The laptop footer, next to the version, shows nothing when idle, `Baixando atualização <versão> (<n>%)` while downloading, and `Atualização <versão> pronta: será instalada ao fechar o app` once downloaded. The TV shows nothing.
 
 The published installer is named `FotoMagica-Setup.exe`, for the stable address:
 
@@ -399,7 +421,7 @@ Signing, in the Windows job, only applies if the secrets are filled in:
 
 `CSC_IDENTITY_AUTO_DISCOVERY` stays `false`. The step exports `CSC_LINK` and `CSC_KEY_PASSWORD` only when the secret is non-empty. Without them electron-builder produces the installer unsigned and the job ends green. The workflow does not store the certificate in the repository.
 
-NSIS: per machine, desktop shortcut, selectable install directory. `appId`: `com.fotomagica.desktop`. `productName`: `Foto Mágica`.
+NSIS: per user and one click (`oneClick: true`, `perMachine: false`), so neither the install nor the silent update on quit asks for administrator rights; it installs into `%LOCALAPPDATA%\Programs\fotomagica`, with desktop and Start menu shortcuts, and keeps `userData` on uninstall. There is no install-directory page: an assisted installer would offer "all users", which elevates. `appId`: `com.fotomagica.desktop`. `productName`: `Foto Mágica`.
 
 Builder icon: `assets/brand/icon.ico`, generated from `assets/brand/icon.png` (symbol on a light background) by `pnpm icon` (`scripts/build-icon.mjs`, sharp) with PNG entries at 16, 32, 48 and 256; a unit test checks the four sizes. The operator window uses `icon.png` as its window icon (title bar and taskbar in dev); the installed exe carries the `.ico`. The TV window has no taskbar entry. The full logo does not go into the small icon, because the text does not survive at 16 px.
 
@@ -425,6 +447,8 @@ The pull-request E2E can run on `ubuntu-latest`: the printer is simulated, the c
 - Signs only with the secrets present, as in section 11
 
 A push that does not bump the version produces the installer as a workflow artifact and does not create another release. electron-updater only sees a published release.
+
+To release, bump `package.json` `version` on a branch (`pnpm version <patch|minor|major> --no-git-tag-version`, no tag) and merge it to `main`; the steps are in `CLAUDE.md` ("Releasing a version").
 
 ### What the tests cover
 
@@ -480,7 +504,7 @@ src/
     print/               types.ts, SimulatedPrinter.ts, WindowsDnpPrinter.ts, monitor.ts
       dnp/               spooler flags, PrintCapabilities choice, helper protocol and bridge, dnp-helper.ps1
     persist/             config.json and the per-mode templates
-    updater/
+    updater/             startup check gating (policy.ts), status reducer, updater.log
     gallery/             the event folder's montages by name, thumbnails
   preload/
     index.ts             contextBridge
@@ -559,9 +583,9 @@ Inter, weights 400, 500 and 600, local files. The words FOTO MÁGICA in the inte
 
 Background `--bg`, cards `--bg-raised`, 1 px `--line` border, 12 px radius on cards and 8 px on fields. The primary button is black with light text. The secondary button is ghost, with a `--line` border. Visible focus: 2 px `--ink` ring, 2 px offset.
 
-At startup, until main says whether an event is open, the window shows the full logo centered. Header with the symbol and the event name when there is one. The home screen centers the full logo, the name, the mode (2 tiras or 1 tira) and the file for that mode. A single column, maximum width 720 px, because it is a short form and not a dashboard.
+At startup, until main says whether an event is open, the window shows the full logo centered. Header with the symbol and the event name when there is one. The home screen centers the full logo, the name, the mode (2 tiras or 1 tira) and the file for that mode. Maximum width 1280 px: on wide windows (Tailwind `lg`) the form is two columns, the details (name, mode, TV, `Iniciar evento`) on the left and the large sheet preview with the template file on the right; narrower, one column. Text, inputs and buttons are a step larger than the shadcn defaults (16 px labels, 48 px fields), and the app zoom (§3) grows everything with the window.
 
-The editor is the exception to width: the 1844×1240 sheet scales to fit the window, with the numbers panel in a fixed 520 px column on the left: a table with one row per slot, in the same order as the current app (Image, Left, Top, Width, Height, Angle), so all the slots of the layout are visible at once, as in the current app's dialog.
+The editor is the exception to width: the 1844×1240 sheet scales to fit the window, with the numbers panel in a fixed 640 px column on the left (16 px text, 48 px fields): a table with one row per slot, in the same order as the current app (Image, Left, Top, Width, Height, Angle), so all the slots of the layout are visible at once, as in the current app's dialog.
 
 Empty, error and loading states exist on every laptop screen. Empty gallery: "Nenhuma montagem ainda". Template error: the dimensions read and the expected ones. Loading the file: the button shows waiting and does not fire twice.
 

@@ -1,6 +1,6 @@
 import { vi, type Mock } from 'vitest'
 import { SEED_LAYOUTS } from '@shared/layout'
-import type { CameraStatus, DisplayState, FotomagicaApi, PrinterStatus, SessionState, Templates, WebcamState } from '@shared/ipc'
+import type { CameraStatus, DisplayState, FotomagicaApi, PrinterStatus, SessionState, Templates, UpdateStatus, WebcamState, ZoomState } from '@shared/ipc'
 
 type Listener<T> = (value: T) => void
 
@@ -24,11 +24,14 @@ export type BridgeStub = {
   pushPrinter: (status: PrinterStatus) => void
   pushGallery: () => void
   pushWebcam: (state: WebcamState) => void
+  pushUpdate: (status: UpdateStatus) => void
+  pushZoom: (state: ZoomState) => void
 }
 
 const CLOSED: DisplayState = { guest: { kind: 'missing' }, tv: { kind: 'closed' } }
 const NO_TEMPLATES: Templates = { 'two-strips': null, 'one-strip': null }
 const IDLE: SessionState = { kind: 'idle' }
+const DEFAULT_ZOOM: ZoomState = { user: 1, auto: 1, effective: 1 }
 const NO_WEBCAM: WebcamState = { values: { controls: {} }, capabilities: null, live: false }
 
 function listeners<T>() {
@@ -44,7 +47,7 @@ function listeners<T>() {
 
 /**
  * Installs a `window.fotomagica` stand-in for renderer tests. Defaults: version 0.1.0, no TV, camera
- * idle, no templates, no event, printer ready. `push…` emit the main → renderer events.
+ * idle, no templates, no event, printer ready, no update. `push…` emit the main → renderer events.
  */
 export function stubBridge(overrides: Overrides = {}): BridgeStub {
   const display = listeners<DisplayState>()
@@ -54,6 +57,8 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
   const printer = listeners<PrinterStatus>()
   const gallery = listeners<void>()
   const webcam = listeners<WebcamState>()
+  const update = listeners<UpdateStatus>()
+  const zoom = listeners<ZoomState>()
   const o = overrides
 
   const api: MockedBridge = {
@@ -62,6 +67,8 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
     },
     display: {
       getState: vi.fn(o.display?.getState ?? (() => Promise.resolve(CLOSED))),
+      hideTv: vi.fn(o.display?.hideTv ?? (() => Promise.resolve(CLOSED))),
+      showTv: vi.fn(o.display?.showTv ?? (() => Promise.resolve(CLOSED))),
       onState: vi.fn(o.display?.onState ?? display.add),
     },
     camera: {
@@ -115,10 +122,19 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
       getStatus: vi.fn(o.printer?.getStatus ?? (() => Promise.resolve<PrinterStatus>({ kind: 'ready' }))),
       onStatus: vi.fn(o.printer?.onStatus ?? printer.add),
     },
+    update: {
+      getStatus: vi.fn(o.update?.getStatus ?? (() => Promise.resolve<UpdateStatus>({ kind: 'idle' }))),
+      onStatus: vi.fn(o.update?.onStatus ?? update.add),
+    },
+    zoom: {
+      get: vi.fn(o.zoom?.get ?? (() => Promise.resolve<ZoomState>(DEFAULT_ZOOM))),
+      step: vi.fn(o.zoom?.step ?? (() => Promise.resolve<ZoomState>(DEFAULT_ZOOM))),
+      onState: vi.fn(o.zoom?.onState ?? zoom.add),
+    },
   }
 
   window.fotomagica = api
-  return { api, pushDisplay: display.push, pushCamera: camera.push, pushSession: session.push, pushShutter: () => shutter.push(), pushPrinter: printer.push, pushGallery: () => gallery.push(), pushWebcam: webcam.push }
+  return { api, pushDisplay: display.push, pushCamera: camera.push, pushSession: session.push, pushShutter: () => shutter.push(), pushPrinter: printer.push, pushGallery: () => gallery.push(), pushWebcam: webcam.push, pushUpdate: update.push, pushZoom: zoom.push }
 }
 
 /** An open event in 2 tiras, capturing, for renderer tests. */

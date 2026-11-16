@@ -31,7 +31,12 @@ export const LAYOUT_COPY = {
   cutLine: 'Linha de corte',
   cutWarning: (slots: string[]) =>
     `${slots.join(', ')} ${slots.length === 1 ? 'cruza' : 'cruzam'} a linha de corte (y = 620). A tira pode sair cortada no meio da foto.`,
-  noTemplate: (mode: string) => `Nenhum template para ${mode}. As posições ficam salvas mesmo assim.`,
+  canvasZoom: 'Zoom da folha',
+  canvasZoomHint: 'Ctrl + roda do mouse para aproximar; arraste o fundo para mover.',
+  canvasZoomIn: 'Mais zoom na folha',
+  canvasZoomOut: 'Menos zoom na folha',
+  canvasZoomFit: (percent: number) => `Zoom da folha ${percent}%. Ajustar à tela`,
+  noTemplate: (mode: string) => `Sem template para ${mode}: fundo branco. As caixas cinza são as posições padrão.`,
   templateAlt: (mode: string) => `Template do modo ${mode}`,
   loading: 'Carregando posições…',
   loadError: 'Não foi possível ler as posições salvas.',

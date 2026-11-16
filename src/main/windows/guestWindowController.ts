@@ -18,6 +18,10 @@ export type GuestWindowController = {
   state: () => DisplayState
   open: (input: TvOpenInput) => TvOpenResult
   close: () => DisplayState
+  /** The two-finger hold on the TV: hides an open TV window without closing it or ending the event. */
+  dismiss: () => DisplayState
+  /** The laptop's `Abrir TV`: puts a hidden window back on the TV, if one is eligible. */
+  reopen: () => DisplayState
   /** Called on every monitor change and every TV window change. */
   onChange: (listener: (state: DisplayState) => void) => void
 }
@@ -61,7 +65,8 @@ export function createGuestWindowController(deps: {
   }
 
   deps.displays.onChange(() => {
-    if (handle) reconcile(handle)
+    // A window the guests hid stays hidden until the operator reopens it.
+    if (handle && tv.kind !== 'hidden') reconcile(handle)
     notify()
   })
 
@@ -96,6 +101,21 @@ export function createGuestWindowController(deps: {
       tv = { kind: 'closed' }
       allowLandscape = false
       window?.destroy()
+      notify()
+      return state()
+    },
+
+    dismiss: () => {
+      if (!handle || tv.kind !== 'open') return state()
+      handle.hide()
+      tv = { kind: 'hidden' }
+      notify()
+      return state()
+    },
+
+    reopen: () => {
+      if (!handle || tv.kind !== 'hidden') return state()
+      reconcile(handle)
       notify()
       return state()
     },

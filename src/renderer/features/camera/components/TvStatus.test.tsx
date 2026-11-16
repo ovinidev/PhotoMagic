@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { stubBridge } from '@renderer/test/bridge'
 import { describe, expect, it } from 'vitest'
 import type { DisplayState } from '@shared/ipc'
 import { TvStatus } from './TvStatus'
@@ -29,5 +30,15 @@ describe('TvStatus (RF04)', () => {
     expect(screen.getByText('Câmera aberta na TV')).toBeInTheDocument()
     rerender(<TvStatus view={ready({ guest: { kind: 'missing' }, tv: { kind: 'detached', reason: 'missing' } })} />)
     expect(screen.getByText('A TV foi desconectada')).toBeInTheDocument()
+  })
+
+  it('offers Abrir TV only after the guests hid the TV window, and asks main to show it', () => {
+    const bridge = stubBridge()
+    const { rerender } = render(<TvStatus view={ready({ guest: { kind: 'portrait', display: tv }, tv: { kind: 'open', display: tv } })} />)
+    expect(screen.queryByRole('button', { name: 'Abrir TV' })).not.toBeInTheDocument()
+    rerender(<TvStatus view={ready({ guest: { kind: 'portrait', display: tv }, tv: { kind: 'hidden' } })} />)
+    expect(screen.getByText('Tela da TV fechada')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir TV' }))
+    expect(bridge.api.display.showTv).toHaveBeenCalledTimes(1)
   })
 })

@@ -34,7 +34,11 @@ export function createGuestWindow({ fullscreen }: { fullscreen: boolean }): Gues
 
   let zoom = 1
   // Chromium resets the zoom when the page (re)loads.
-  window.webContents.on('did-finish-load', () => window.webContents.setZoomFactor(zoom))
+  window.webContents.on('did-finish-load', () => {
+    window.webContents.setZoomFactor(zoom)
+    // Touch-safe TV: no pinch zoom. Ctrl + wheel never zooms in Electron without a handler.
+    void window.webContents.setVisualZoomLevelLimits(1, 1).catch(() => {})
+  })
   void loadRendererPage(window, 'guest')
 
   return {
