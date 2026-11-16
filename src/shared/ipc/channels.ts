@@ -15,6 +15,7 @@ export const IPC_CHANNELS = {
   eventEnd: 'event:end',
   sessionGetState: 'session:get-state',
   sessionGetPreview: 'session:get-preview',
+  sessionGetPhoto: 'session:get-photo',
   sessionSetTimer: 'session:set-timer',
   sessionSetCopies: 'session:set-copies',
   sessionSetFraming: 'session:set-framing',

@@ -326,6 +326,10 @@ export const sessionPhotoSchema = z.strictObject({
   jpeg: bytesSchema(MAX_CAPTURE_BYTES),
 })
 
+/** One capture of the round for the laptop's local framing preview (DESIGN §8); `null` when not taken. */
+export const getPhotoInputSchema = z.strictObject({ index: photoIndexSchema })
+export const sessionPhotoBytesSchema = bytesSchema(MAX_CAPTURE_BYTES).nullable()
+
 export const sessionPreviewSchema = z.strictObject({
   revision: z.number().int().nonnegative(),
   jpeg: bytesSchema(MAX_PREVIEW_BYTES).nullable(),

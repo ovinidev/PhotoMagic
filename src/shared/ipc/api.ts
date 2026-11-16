@@ -1,4 +1,4 @@
-import type { Layouts } from '../layout'
+import type { Layouts, PhotoIndex } from '../layout'
 import type { WebcamValues } from '../webcam'
 import type {
   AppVersion,
@@ -80,6 +80,8 @@ export type FotomagicaApi = {
     onState: (listener: (state: SessionState) => void) => Unsubscribe
     /** The current montage preview JPEG and its revision. */
     getPreview: () => Promise<SessionPreview>
+    /** One capture of the current round (upright, mirrored), or `null`; the laptop draws the framing drag with it. */
+    getPhoto: (index: PhotoIndex) => Promise<Uint8Array | null>
     setTimer: (timer: Timer) => Promise<SessionState>
     setCopies: (copies: number) => Promise<SessionState>
     /** Pan, zoom and rotation of one filled slot of the round, before the montage is saved (RF09). */

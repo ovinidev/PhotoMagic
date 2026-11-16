@@ -78,6 +78,7 @@ export function registerEventHandlers(deps: EventDeps): void {
 
   handleInvoke(IPC_CHANNELS.sessionGetState, () => session.state())
   handleInvoke(IPC_CHANNELS.sessionGetPreview, () => session.preview())
+  handleInvoke(IPC_CHANNELS.sessionGetPhoto, ({ index }) => session.photo(index))
   handleInvoke(IPC_CHANNELS.sessionSetTimer, ({ timer }) => session.setTimer(timer))
   handleInvoke(IPC_CHANNELS.sessionSetCopies, ({ copies }) => session.setCopies(copies))
   handleInvoke(IPC_CHANNELS.sessionSetFraming, ({ slotId, framing }) => session.setFraming(slotId, framing))

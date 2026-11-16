@@ -46,6 +46,15 @@ describe('session', () => {
     expect(taken(session.addPhoto(3, jpeg(4)))).toBe(3)
   })
 
+  it('hands the laptop the round captures taken so far, for the local framing preview', () => {
+    const { session } = setup()
+    expect(session.photo(1)).toBeNull()
+    session.start(EVENT)
+    session.addPhoto(1, jpeg(1))
+    expect(session.photo(1)).toEqual(jpeg(1))
+    expect(session.photo(2)).toBeNull()
+  })
+
   it('ignores photos with no event', () => {
     const { session } = setup()
     expect(session.addPhoto(1, jpeg(1))).toEqual({ kind: 'idle' })
