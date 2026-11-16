@@ -69,5 +69,4 @@ export const CAPTURE_COPY = {
   timerShort: { 0: 'Off', 5: '5s', 10: '10s' },
   counter: (current: number, total: number) => `${current}/${total}`,
   captureError: 'Não foi possível tirar a foto. Toque de novo.',
-  grid: 'Grade de terços',
 } as const

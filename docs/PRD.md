@@ -206,7 +206,6 @@ Opens fullscreen on the TV monitor as soon as the event starts. The look follows
 - Timer: off, 5 s or 10 s, with a large countdown
 - Thumbnail of the last montage in the bottom-left corner. Tapping it opens the gallery
 - In place of the flash, the webcam adjustments icon
-- Rule-of-thirds grid, on or off
 - Touch targets of at least 64 px
 
 ![Figure 6 — The current app's camera on the TV, which this look replaces](assets/briefing/image9.png)
