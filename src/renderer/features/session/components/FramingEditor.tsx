@@ -1,12 +1,25 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { SHEET } from '@shared/constants'
 import type { EventSession } from '@shared/ipc'
-import { DEFAULT_FRAMING, panFraming, rotateFraming, turnFraming, wheelZoomFactor, zoomFraming, type Framing, type Slot } from '@shared/layout'
+import {
+  DEFAULT_FRAMING,
+  panFraming,
+  photoPlacement,
+  photoPlacementCss,
+  planSlot,
+  rotateFraming,
+  turnFraming,
+  wheelZoomFactor,
+  zoomFraming,
+  type Framing,
+  type Slot,
+} from '@shared/layout'
 import { LAYOUT_COPY } from '@renderer/features/layout'
 import { Button } from '@renderer/shared/components/ui/button'
 import { cn } from '@renderer/shared/utils/cn'
 import { SESSION_COPY } from '../copy'
 import { useFramingSender } from '../hooks/useFramingSender'
+import { useRoundPhotos, type RoundPhoto } from '../hooks/useRoundPhotos'
 
 type Point = { x: number; y: number }
 type Gesture = { kind: 'pan' | 'rotate'; slot: Slot; origin: Framing; start: Point; pointerId: number }
@@ -24,6 +37,33 @@ function filledSlots(session: EventSession): Slot[] {
 
 const pct = (value: number, total: number) => `${(value / total) * 100}%`
 
+/** The slot's rounded corners as a CSS radius, in percent of the box so it scales with the preview. */
+function cornerRadius(slot: Slot): string | undefined {
+  const radius = Math.min(slot.radius ?? 0, slot.width / 2, slot.height / 2)
+  return radius > 0 ? `${pct(radius, slot.width)} / ${pct(radius, slot.height)}` : undefined
+}
+
+/**
+ * The capture inside one slot, placed by the same plan the composer runs (`planSlot` then
+ * `photoPlacement`), inside a box that clips to the slot and its rounded corners: the photo is never
+ * drawn outside the slot. Drawn here so a drag follows the pointer without waiting for main.
+ */
+function SlotPhoto({ slot, photo, framing }: { slot: Slot; photo: RoundPhoto; framing: Framing }) {
+  const css = photoPlacementCss(photoPlacement(planSlot(slot, photo, framing)), slot)
+  return (
+    <span data-testid="framing-photo-mask" className="pointer-events-none absolute inset-0 overflow-hidden" style={{ borderRadius: cornerRadius(slot) }}>
+      <img
+        src={photo.url}
+        alt=""
+        draggable={false}
+        data-testid="framing-photo"
+        className="absolute top-1/2 left-1/2 max-w-none select-none"
+        style={{ width: css.width, height: css.height, transform: css.transform }}
+      />
+    </span>
+  )
+}
+
 /**
  * Round framing on the laptop (RF09, DESIGN §8), drawn over the montage preview. The slots stay
  * still: clicking a filled slot selects it, dragging moves the photo inside, the wheel zooms, and the
@@ -36,6 +76,7 @@ export function useFramingEditor(session: EventSession): { overlay: ReactNode; c
   const overlayRef = useRef<HTMLDivElement>(null)
   const gesture = useRef<Gesture | null>(null)
   const send = useFramingSender()
+  const photos = useRoundPhotos(session.taken)
   const [selected, setSelected] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, Framing>>({})
   const enabled = canFrame(session)
@@ -54,9 +95,9 @@ export function useFramingEditor(session: EventSession): { overlay: ReactNode; c
   }
 
   const framingOf = (slotId: string): Framing => drafts[slotId] ?? session.framings[slotId] ?? DEFAULT_FRAMING
-  const apply = (slotId: string, framing: Framing) => {
+  const apply = (slotId: string, framing: Framing, final = false) => {
     setDrafts((current) => ({ ...current, [slotId]: framing }))
-    send(slotId, framing)
+    send(slotId, framing, { final })
   }
 
   // Wheel zoom needs a non-passive listener to keep the page from scrolling.
@@ -106,12 +147,16 @@ export function useFramingEditor(session: EventSession): { overlay: ReactNode; c
   }
 
   const end = (event: ReactPointerEvent<HTMLElement>) => {
-    if (gesture.current?.pointerId === event.pointerId) gesture.current = null
+    const active = gesture.current
+    if (active?.pointerId !== event.pointerId) return
+    gesture.current = null
+    // The last framing of the gesture goes to main now, not after the throttle.
+    apply(active.slot.id, framingOf(active.slot.id), true)
   }
 
   const current = selectedSlot ? framingOf(selectedSlot.id) : null
   const step = (change: (framing: Framing) => Framing) => {
-    if (selectedSlot && current) apply(selectedSlot.id, change(current))
+    if (selectedSlot && current) apply(selectedSlot.id, change(current), true)
   }
 
   const overlay = (
@@ -119,6 +164,7 @@ export function useFramingEditor(session: EventSession): { overlay: ReactNode; c
         {filled.map((slot) => {
           const isSelected = slot.id === selected
           const label = LAYOUT_COPY.slotLabel(slot.id)
+          const photo = slot.photo === null ? undefined : photos[slot.photo]
           return (
             <button
               key={slot.id}
@@ -130,10 +176,7 @@ export function useFramingEditor(session: EventSession): { overlay: ReactNode; c
               onPointerMove={move}
               onPointerUp={end}
               onPointerCancel={end}
-              className={cn(
-                'absolute cursor-move touch-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink',
-                isSelected ? 'border-2 border-ink' : 'border border-white/70 hover:border-ink/70',
-              )}
+              className="group absolute cursor-move touch-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               style={{
                 left: pct(slot.left, SHEET.width),
                 top: pct(slot.top, SHEET.height),
@@ -142,6 +185,15 @@ export function useFramingEditor(session: EventSession): { overlay: ReactNode; c
                 transform: `rotate(${slot.angle}deg)`,
               }}
             >
+              {photo ? <SlotPhoto slot={slot} photo={photo} framing={framingOf(slot.id)} /> : null}
+              <span
+                aria-hidden
+                className={cn(
+                  'pointer-events-none absolute inset-0',
+                  isSelected ? 'border-2 border-ink' : 'border border-white/70 group-hover:border-ink/70',
+                )}
+                style={{ borderRadius: cornerRadius(slot) }}
+              />
               {isSelected ? (
                 <span
                   role="presentation"

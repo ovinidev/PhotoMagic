@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { EventSession } from '@shared/ipc'
 import { eventState, stubBridge } from '@renderer/test/bridge'
 import { useFramingEditor } from './FramingEditor'
@@ -45,5 +45,21 @@ describe('useFramingEditor (RF09)', () => {
     render(<Harness session={eventState({ taken: 3, phase: { kind: 'printed', fileName: '21-45-08.jpg' } })} />)
     expect(screen.queryByRole('button', { name: /Enquadrar/ })).toBeNull()
     expect(screen.queryByTestId('framing-controls')).toBeNull()
+  })
+
+  it('draws the photo inside the slot, clipped to its rounded box, where the composer puts it', async () => {
+    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 1080, height: 1920, close: () => {} })))
+    const { api } = stubBridge({ session: { getPhoto: () => Promise.resolve(new Uint8Array([1, 2, 3])) } })
+    render(<Harness session={eventState({ taken: 1, framings: { 'bottom-1': { zoom: 2, panX: 0.5, panY: 0, rotation: 0 } } })} />)
+    const photos = await screen.findAllByTestId('framing-photo')
+    // Photo 1 fills Cima 1 and Baixo 1, each in its own mask.
+    expect(photos).toHaveLength(2)
+    expect(api.session.getPhoto).toHaveBeenCalledWith(1)
+    for (const mask of screen.getAllByTestId('framing-photo-mask')) {
+      expect(mask).toHaveClass('overflow-hidden')
+    }
+    const baixo = screen.getByRole('button', { name: 'Enquadrar Baixo 1' }).querySelector('img')!
+    expect(baixo.style.transform).toMatch(/^translate\(-50%, -50%\) translate\(-?[\d.]+%, -?[\d.]+%\) rotate\(0deg\)$/)
+    vi.unstubAllGlobals()
   })
 })
