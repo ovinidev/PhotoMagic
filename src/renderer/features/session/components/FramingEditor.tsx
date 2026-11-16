@@ -3,9 +3,8 @@ import { SHEET } from '@shared/constants'
 import type { EventSession } from '@shared/ipc'
 import {
   DEFAULT_FRAMING,
-  fixedBox,
-  onSeed,
   panFraming,
+  photoInBox,
   photoPlacement,
   photoPlacementCss,
   planSlot,
@@ -84,15 +83,14 @@ function PlacedPhoto({ slot, box, photo, framing, testId }: { slot: Slot; box: G
 }
 
 /**
- * One slot's photo as the montage draws it (DESIGN §6): clipped to the slot's fixed gray box and
- * its rounded corners, whatever the slot's own position and size; where the slot does not cover
- * the box, the photo cover-fitted to the box (the seed slot's plan) fills it. Drawn here so a drag
- * follows the pointer without waiting for main.
+ * One slot's photo as the montage draws it (DESIGN §6): exactly one photo per fixed gray box
+ * (`photoInBox`), covering the whole box and clipped to its rounded corners, whatever the card's own
+ * position and size. Drawn here so a drag follows the pointer without waiting for main.
  */
-function BoxPhoto({ mode, slot, index, photo, framing }: { mode: PrintMode; slot: Slot; index: number; photo: RoundPhoto; framing: Framing }) {
-  const fixed = fixedBox(mode, slot.id, index)
-  if (!fixed) return null
-  const { box, seedSlot } = fixed
+function BoxPhoto({ mode, boxes, slot, index, photo, framing }: { mode: PrintMode; boxes: readonly GuideBox[] | null; slot: Slot; index: number; photo: RoundPhoto; framing: Framing }) {
+  const placed = photoInBox(mode, slot, index, framing, boxes)
+  if (!placed) return null
+  const { box } = placed
   return (
     <span
       data-testid="framing-photo-mask"
@@ -106,8 +104,7 @@ function BoxPhoto({ mode, slot, index, photo, framing }: { mode: PrintMode; slot
         borderRadius: cssRadius(box.radius, box.rect.width, box.rect.height),
       }}
     >
-      {onSeed(slot, seedSlot) ? null : <PlacedPhoto slot={seedSlot} box={box} photo={photo} framing={framing} testId="framing-photo-fill" />}
-      <PlacedPhoto slot={slot} box={box} photo={photo} framing={framing} testId="framing-photo" />
+      <PlacedPhoto slot={placed.slot} box={box} photo={photo} framing={placed.framing} testId="framing-photo" />
     </span>
   )
 }
@@ -180,7 +177,10 @@ export function useFramingEditor(session: EventSession): { overlay: ReactNode; c
     event.stopPropagation()
     setSelected(slot.id)
     event.currentTarget.setPointerCapture?.(event.pointerId)
-    gesture.current = { kind, slot, origin: framingOf(slot.id), start: toSheet(event), pointerId: event.pointerId }
+    // Pan and turn on the slot the photo is planned on (its box), so a drag moves the photo 1:1.
+    const index = session.slots.findIndex((each) => each.id === slot.id)
+    const onBox = photoInBox(session.mode, slot, index, DEFAULT_FRAMING, session.boxes)?.slot ?? slot
+    gesture.current = { kind, slot: onBox, origin: framingOf(slot.id), start: toSheet(event), pointerId: event.pointerId }
   }
 
   const move = (event: ReactPointerEvent<HTMLElement>) => {
@@ -212,7 +212,7 @@ export function useFramingEditor(session: EventSession): { overlay: ReactNode; c
         {filled.map((slot) => {
           const photo = slot.photo === null ? undefined : photos[slot.photo]
           const index = session.slots.findIndex((each) => each.id === slot.id)
-          return photo ? <BoxPhoto key={`photo-${slot.id}`} mode={session.mode} slot={slot} index={index} photo={photo} framing={framingOf(slot.id)} /> : null
+          return photo ? <BoxPhoto key={`photo-${slot.id}`} mode={session.mode} boxes={session.boxes} slot={slot} index={index} photo={photo} framing={framingOf(slot.id)} /> : null
         })}
         {filled.map((slot) => {
           const isSelected = slot.id === selected

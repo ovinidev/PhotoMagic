@@ -10,7 +10,7 @@ export {
   type PrintMode,
   type Slot,
 } from './types'
-export { fixedBox, guideBoxes, onSeed, type GuideBox } from './guides'
+export { fixedBox, guideBoxes, photoInBox, slotOnBox, type GuideBox } from './guides'
 export { CLIENT_BOX_BLEED, CLIENT_BOX_RADIUS, ONE_STRIP_SEED, SEED_LAYOUTS, TWO_STRIPS_CLIENT_BOXES, TWO_STRIPS_SEED } from './seed'
 export {
   DEFAULT_FRAMING,

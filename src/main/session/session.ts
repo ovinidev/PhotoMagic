@@ -1,5 +1,5 @@
 import type { EventSession, PrintFailureReason, RoundPhase, SessionPreview, SessionState, Timer } from '@shared/ipc'
-import { clampFraming, isDefaultFraming, type Framing, type PhotoIndex, type PrintMode, type Slot } from '@shared/layout'
+import { clampFraming, isDefaultFraming, type Framing, type GuideBox, type PhotoIndex, type PrintMode, type Slot } from '@shared/layout'
 import { clampCopies } from '@shared/round'
 import type { SheetInput, SheetOutput } from '../compose/renderSheet'
 import { ticketFor, type Printer } from '../print'
@@ -17,6 +17,8 @@ export type OpenEvent = {
   folder: string
   slots: readonly Slot[]
   template: Uint8Array | null
+  /** The template's dark boxes in seed order, or `null` to use the seed boxes (DESIGN §6). */
+  boxes: readonly GuideBox[] | null
 }
 
 export type SessionDeps = {
@@ -86,6 +88,7 @@ export function createSession(deps: SessionDeps): Session {
       taken: round.photos.size,
       previewRevision: preview.revision,
       slots: [...event.slots],
+      boxes: event.boxes ? [...event.boxes] : null,
       framings: Object.fromEntries(round.framings),
       phase: round.phase,
     }
@@ -104,6 +107,7 @@ export function createSession(deps: SessionDeps): Session {
     slots: open.slots,
     photos: Object.fromEntries(current.photos),
     framings: Object.fromEntries(current.framings),
+    boxes: open.boxes,
   })
 
   /**

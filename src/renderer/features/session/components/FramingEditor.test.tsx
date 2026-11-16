@@ -64,7 +64,7 @@ describe('useFramingEditor (RF09)', () => {
     vi.unstubAllGlobals()
   })
 
-  it('clips a moved, enlarged slot to its fixed gray box and fills the box with the photo', async () => {
+  it('clips a moved, enlarged slot to its fixed gray box with exactly one photo', async () => {
     vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 1080, height: 1920, close: () => {} })))
     stubBridge({ session: { getPhoto: () => Promise.resolve(new Uint8Array([1, 2, 3])) } })
     const base = eventState({ taken: 1 })
@@ -77,9 +77,11 @@ describe('useFramingEditor (RF09)', () => {
     expect(parseFloat(mask.style.width)).toBeCloseTo((602 / 1844) * 100, 3)
     expect(mask).toHaveClass('overflow-hidden')
     expect(mask.style.borderRadius).not.toBe('')
-    expect(mask.querySelector('[data-testid="framing-photo-fill"]')).not.toBeNull()
-    // A slot on its seed needs no fill.
-    expect(document.querySelector('[data-mask-for="top-1"] [data-testid="framing-photo-fill"]')).toBeNull()
+    // One photo per box, no underlay copy; planned on the box, so it fills it whatever the card.
+    expect(mask.querySelectorAll('img')).toHaveLength(1)
+    const span = mask.querySelector<HTMLElement>('[data-testid="framing-photo"]')!.parentElement!
+    expect(parseFloat(span.style.left)).toBeCloseTo(0, 3)
+    expect(parseFloat(span.style.width)).toBeCloseTo(100, 3)
     vi.unstubAllGlobals()
   })
 })

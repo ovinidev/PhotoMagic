@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SHEET } from '../constants'
+import { slotBounds } from './geometry'
 import { fixedBox, guideBoxes } from './guides'
 import { CLIENT_BOX_BLEED, CLIENT_BOX_RADIUS, TWO_STRIPS_CLIENT_BOXES } from './seed'
 
@@ -46,5 +47,31 @@ describe('fixedBox', () => {
   it('falls back to the box at the slot index for an unknown id, and to none past the boxes', () => {
     expect(fixedBox('one-strip', 'other', 1)?.box.id).toBe('photo-2')
     expect(fixedBox('one-strip', 'other', 3)).toBeNull()
+  })
+})
+
+describe('fixedBox with the template boxes', () => {
+  const detected = [
+    { id: 'top-1', rect: { left: 90, top: 80, width: 380, height: 500 }, radius: 58 },
+    { id: 'top-2', rect: { left: 520, top: 80, width: 380, height: 500 }, radius: 58 },
+    { id: 'top-3', rect: { left: 950, top: 80, width: 380, height: 500 }, radius: 58 },
+    { id: 'bottom-1', rect: { left: 90, top: 690, width: 620, height: 470 }, radius: 58 },
+    { id: 'bottom-2', rect: { left: 760, top: 690, width: 570, height: 470 }, radius: 58 },
+  ]
+
+  it('uses the detected box of the slot and a seed slot sitting exactly on it', () => {
+    const fixed = fixedBox('two-strips', 'top-2', 1, detected)!
+    expect(fixed.box).toEqual(detected[1])
+    // A quarter-turned slot: its unrotated size is the box's, swapped, around the box center.
+    expect(fixed.seedSlot).toMatchObject({ id: 'top-2', angle: 270, width: 500, height: 380, left: 460, top: 140, radius: 58 })
+    expect(slotBounds(fixed.seedSlot)).toEqual(detected[1]!.rect)
+    const bottom = fixedBox('two-strips', 'bottom-2', 4, detected)!
+    expect(bottom.seedSlot).toMatchObject({ angle: 0, left: 760, top: 690, width: 570, height: 470 })
+  })
+
+  it('falls back to the seed boxes when the count does not match the mode', () => {
+    expect(fixedBox('two-strips', 'top-1', 0, detected.slice(0, 4))!.box).toEqual(fixedBox('two-strips', 'top-1', 0)!.box)
+    expect(fixedBox('one-strip', 'photo-1', 0, detected)!.box).toEqual(fixedBox('one-strip', 'photo-1', 0)!.box)
+    expect(fixedBox('two-strips', 'top-1', 0, null)!.box.rect.left).toBe(120)
   })
 })

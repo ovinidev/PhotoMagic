@@ -4,7 +4,7 @@ import { TWO_STRIPS_SEED } from '@shared/layout'
 import type { Printer, PrintResult } from '../print'
 import { createSession, type OpenEvent } from './session'
 
-const EVENT: OpenEvent = { name: 'Aniversário AJ', mode: 'two-strips', folder: '/Desktop/Aniversário AJ', slots: TWO_STRIPS_SEED, template: null }
+const EVENT: OpenEvent = { name: 'Aniversário AJ', mode: 'two-strips', folder: '/Desktop/Aniversário AJ', slots: TWO_STRIPS_SEED, template: null, boxes: null }
 const jpeg = (value: number) => new Uint8Array([value])
 
 function setup(results: PrintResult[] = [{ ok: true }]) {
