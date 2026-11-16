@@ -2,7 +2,7 @@
 
 Foto Mágica 2.0 is a party photobooth: vertical touch TV, webcam on top, operator laptop and a DNP DS-RX1 printer. What the product does is in [docs/PRD.md](docs/PRD.md). How to build it is in [docs/DESIGN.md](docs/DESIGN.md). If the code disagrees with the docs, stop and ask. If you change a rule, update the doc in the same PR.
 
-This file is the agent guide. In [PilatePay](https://github.com/ovinidev/PilatePay) the equivalent is `AGENTS.md`. This repo's folder structure follows that one, read on 2026-11-14, with the addition of `src/main` and `src/preload` because here the app is Electron. PilatePay uses ESLint; here the linter is oxlint, by decision of this project.
+This file is the agent guide. In [PilatePay](https://github.com/ovinidev/PilatePay) the equivalent is `AGENTS.md`; here `AGENTS.md` only points to this file. This repo's folder structure follows that one, read on 2026-11-14, with the addition of `src/main` and `src/preload` because here the app is Electron. PilatePay uses ESLint; here the linter is oxlint, by decision of this project.
 
 The foundation scaffold (shell windows, typed IPC, tooling, CI) is in place, plus the dual windows (TV monitor choice and hot-plug), the live camera on the TV, create event (name, mode, per-mode template), the capture round, the montage, the print screen with the simulated printer, printer status and DS-RX1 printing through the Windows PowerShell PrintTicket helper (DESIGN §10; still to be confirmed on the device), the slot editor for both layouts, round framing (RF09), the gallery (RF14), webcam adjustments (RF15) with the TV top bar and thirds grid, and the app icon (`assets/brand/icon.ico`, rebuilt with `pnpm icon`). Not built yet: build, release and auto-update hardening and the installer (RNF09, next milestone), and the camera choice in create-event when there are several cameras and no MX Brio. The commands below are the contract. Do not invent another package manager, another linter or another E2E runner.
 
@@ -10,6 +10,12 @@ The foundation scaffold (shell windows, typed IPC, tooling, CI) is in place, plu
 
 - **Language.** Code, identifiers, comments, commit messages, branch names, PR titles and descriptions, and documentation are all in **English**. The only exception is end-user UI strings (everything the operator or guests see on screen), which are **pt-BR**.
 - **Tooling.** All coding for this project is done with the **Claude Code CLI**. **Never use Grok models.**
+
+## Session rule
+
+- Each new task = a new PR = a new, clean Claude Code session.
+- When a session reaches 45% of its context, run `/compact`.
+- Never keep a long session that rereads the whole history on every step (it drains the shared usage limit).
 
 ## Stack
 
