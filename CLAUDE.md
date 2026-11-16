@@ -4,7 +4,7 @@ Foto Mágica 2.0 is a party photobooth: vertical touch TV, webcam on top, operat
 
 This file is the agent guide. In [PilatePay](https://github.com/ovinidev/PilatePay) the equivalent is `AGENTS.md`. This repo's folder structure follows that one, read on 2026-11-14, with the addition of `src/main` and `src/preload` because here the app is Electron. PilatePay uses ESLint; here the linter is oxlint, by decision of this project.
 
-The foundation scaffold (shell windows, typed IPC, tooling, CI) is in place, plus the dual windows (TV monitor choice and hot-plug), the live camera on the TV, create event (name, mode, per-mode template), the capture round, the montage, the print screen with the simulated printer, printer status and DS-RX1 printing through the Windows PowerShell PrintTicket helper (DESIGN §10; still to be confirmed on the device), the slot editor for both layouts, round framing (RF09), the gallery (RF14), webcam adjustments (RF15) with the TV top bar and thirds grid, and the app icon (`assets/brand/icon.ico`, rebuilt with `pnpm icon`). Not built yet: build, release and auto-update hardening and the installer (RNF09, next milestone), and the camera choice in create-event when there are several cameras and no MX Brio. The commands below are the contract. Do not invent another package manager, another linter or another E2E runner.
+The foundation scaffold (shell windows, typed IPC, tooling, CI) is in place, plus the dual windows (TV monitor choice and hot-plug), the live camera on the TV, create event (name, mode, per-mode template), the capture round, the montage, the print screen with the simulated printer, printer status and DS-RX1 printing through the Windows PowerShell PrintTicket helper (DESIGN §10; still to be confirmed on the device), the slot editor for both layouts, round framing (RF09), the gallery (RF14), webcam adjustments (RF15) with the TV top bar and thirds grid, the app icon (`assets/brand/icon.ico`, rebuilt with `pnpm icon`), and build, release and auto-update (RNF09: NSIS installer `FotoMagica-Setup.exe`, GitHub Release on a new version, background electron-updater gated on no event and a network, see DESIGN §11 and §12). Not built yet: the camera choice in create-event when there are several cameras and no MX Brio. The commands below are the contract. Do not invent another package manager, another linter or another E2E runner.
 
 ## Language and tooling rules (read first)
 
@@ -55,6 +55,18 @@ pnpm playwright test <specs> --reporter=dot
 Do not run the full lint, build, unit or Playwright suite yourself. The Husky `pre-push` hook runs oxlint, typecheck, unit tests and Playwright; GitHub Actions runs the same contract (DESIGN §12). On Linux without a display the hook wraps Playwright in `xvfb-run`. Tail only failures; never paste long test or build logs.
 
 E2E does not use the webcam or the DS-RX1. It starts with `FOTOMAGICA_E2E=1` and `FOTOMAGICA_PRINTER=simulated`. The camera is Chromium's fake device (`FOTOMAGICA_FAKE_CAMERA`: unset for its pattern, a `.y4m` path, or `none`) the monitors are a fixture (`FOTOMAGICA_DISPLAYS`: `portrait-tv`, `landscape-tv`, `laptop-only`), and each test gets its own `FOTOMAGICA_USER_DATA` and `FOTOMAGICA_DESKTOP` folders. `FOTOMAGICA_PRINTER_STATUS` (`offline`, `no-paper`, `no-ribbon`) and `FOTOMAGICA_PRINTER_CUT=unsupported` drive simulated print failures. See DESIGN §3, §5, §10 and §12.
+
+## Releasing a version
+
+The release is driven by the `package.json` version (DESIGN §12). Nothing is published by hand.
+
+1. On a branch, bump the version: `pnpm version minor --no-git-tag-version` (or `patch` / `major`). It changes `package.json` only; do not create a tag, the release job creates `v<version>`.
+2. Commit (`Release 0.2.0`), push, open a PR. CI runs the checks.
+3. Merge to `main`. `release.yml` runs the checks again, builds `FotoMagica-Setup.exe` on `windows-latest`, uploads it as an artifact and, because `v<version>` does not exist yet, publishes a GitHub Release with `FotoMagica-Setup.exe`, its `.blockmap` and `latest.yml`.
+4. Installed apps pick it up at their next startup with a network and no event, download in the background and install when the operator quits.
+5. The stable download address is `https://github.com/ovinidev/PhotoMagic/releases/latest/download/FotoMagica-Setup.exe`.
+
+A merge without a bump only produces the workflow artifact. Never delete or re-upload assets of a published release: installed apps compare against its `latest.yml`. To sign, set the repository secrets `CSC_LINK` (base64 `.pfx`) and `CSC_KEY_PASSWORD`; without them the installer is unsigned and the job stays green. Update errors on a machine are in `%APPDATA%\Foto Mágica\logs\updater.log`.
 
 ## Folders
 

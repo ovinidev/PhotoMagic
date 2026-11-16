@@ -139,6 +139,8 @@ The preload exposes `window.fotomagica`. Each method validates input and output 
 | invoke | `printer:status` | A fresh read of the printer state (`PrinterStatus`, §10) |
 | event | `session:state` | Main → both windows, on every round change |
 | event | `printer:status-changed` | Main → laptop and TV, when the polled state changes |
+| invoke | `update:get-status` | Background auto-update state (`UpdateStatus`, §11): `idle`, `downloading` with version and percent, or `ready` (installs on quit) |
+| event | `update:status` | Main → both windows, on every update status change; only the laptop shows it |
 | invoke | `display:get-state` | TV monitor choice (`GuestChoice`) and TV window state (`closed`, `open` on a monitor, or `detached` because the TV went away) |
 | event | `display:state` | Main → both windows, on every monitor change and every TV window change |
 | send | `camera:report` | TV → main, the state of its `MediaStream`. Main ignores it from any other window |
@@ -289,6 +291,7 @@ Unlike the slot editor, framing does go to main during the gesture, because the 
 | Both layouts, both templates, webcam values and the controls the camera last advertised | `app.getPath('userData')/config.json` |
 | Each mode's template file (`two-strips.png` or `.jpg`, `one-strip.…`) | `app.getPath('userData')/templates/` |
 | JPG montage | `app.getPath('desktop')/<event name>/HH-mm-ss.jpg` |
+| Auto-update log (§11) | `app.getPath('userData')/logs/updater.log` |
 
 The folder name goes through a pure function: trim, reject empty, reject the characters `\ / : * ? " < > |`, reject reserved Windows names, reject a trailing dot or space. The test lists these cases.
 
@@ -386,7 +389,13 @@ Copies: the ticket carries 1 to 10, a ceiling approved by the owner. Each copy i
 
 ## 11. Update and signing
 
-electron-updater with the GitHub provider, on the repository `ovinidev/PhotoMagic`. The check runs at startup, only with no event in progress. A network failure is ignored: the app opens. The download does not occupy the TV. Installation happens on quit, when a new version has already been downloaded.
+electron-updater with the GitHub provider, on the repository `ovinidev/PhotoMagic` (`publish` in `electron-builder.yml`, written into the installed app as `resources/app-update.yml`). `src/main/updater/` owns it:
+
+- **When.** Once, at startup, after the laptop window opens. The pure `shouldCheckForUpdates` (`updater/policy.ts`, unit-tested) allows it only in an installed build (`app.isPackaged`), never under E2E, never with an event in progress, and only when `net.isOnline()` says there is a network. The check is never awaited, so startup never waits on it.
+- **Download.** In the background (`autoDownload`). It does not occupy the TV and does not stop an event that starts meanwhile.
+- **Install.** Only on quit (`autoInstallOnAppQuit`), silently, when a version has already been downloaded; the next launch is the new version. The app never calls `quitAndInstall` and never asks to restart, so an update never interrupts an event.
+- **Failures.** A network error, a missing release or a dropped download is ignored by the operator UI: the status goes back to `idle` and the app keeps working. Every updater message and error is appended to `userData/logs/updater.log` (`updater/log.ts`), never to the event folder; writing the log never throws.
+- **Laptop status.** `update:status` carries `UpdateStatus` (pure reducer `nextUpdateStatus`). The laptop footer, next to the version, shows nothing when idle, `Baixando atualização <versão> (<n>%)` while downloading, and `Atualização <versão> pronta: será instalada ao fechar o app` once downloaded. The TV shows nothing.
 
 The published installer is named `FotoMagica-Setup.exe`, for the stable address:
 
@@ -425,6 +434,8 @@ The pull-request E2E can run on `ubuntu-latest`: the printer is simulated, the c
 - Signs only with the secrets present, as in section 11
 
 A push that does not bump the version produces the installer as a workflow artifact and does not create another release. electron-updater only sees a published release.
+
+To release, bump `package.json` `version` on a branch (`pnpm version <patch|minor|major> --no-git-tag-version`, no tag) and merge it to `main`; the steps are in `CLAUDE.md` ("Releasing a version").
 
 ### What the tests cover
 
@@ -480,7 +491,7 @@ src/
     print/               types.ts, SimulatedPrinter.ts, WindowsDnpPrinter.ts, monitor.ts
       dnp/               spooler flags, PrintCapabilities choice, helper protocol and bridge, dnp-helper.ps1
     persist/             config.json and the per-mode templates
-    updater/
+    updater/             startup check gating (policy.ts), status reducer, updater.log
     gallery/             the event folder's montages by name, thumbnails
   preload/
     index.ts             contextBridge
