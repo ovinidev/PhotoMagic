@@ -89,8 +89,16 @@ describe('event and round payloads', () => {
     previewRevision: 0,
     slots: [{ id: 'top-1', photo: 1 as const, left: 72, top: 70, width: 500, height: 281, angle: 270 }],
     framings: {},
+    boxes: null,
     phase: { kind: 'capturing' as const },
   }
+
+  it('carries the template boxes, or null for the seed boxes (DESIGN §6)', () => {
+    const box = { id: 'top-1', rect: { left: 120, top: 43, width: 358, height: 534 }, radius: 31 }
+    expect(sessionStateSchema.safeParse({ ...session, boxes: [box] }).success).toBe(true)
+    expect(sessionStateSchema.safeParse({ ...session, boxes: [{ ...box, radius: -1 }] }).success).toBe(false)
+    expect(sessionStateSchema.safeParse({ ...session, boxes: undefined }).success).toBe(false)
+  })
 
   it('accepts a framing within zoom 1..3, pan -1..1 and rotation -180..180 (RF09)', () => {
     const framing = { zoom: 2, panX: -1, panY: 1, rotation: 45 }
