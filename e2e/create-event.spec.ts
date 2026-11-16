@@ -10,10 +10,11 @@ test.describe('create event (RF01, RF02)', () => {
     await expect(operatorWindow.getByAltText('Template do modo 2 tiras')).toBeVisible()
     await expect(operatorWindow.getByRole('button', { name: 'Iniciar evento' })).toBeEnabled()
 
-    // The other mode keeps its own (empty) template.
+    // The other mode keeps its own (empty) template: the plain white default, which can start (PRD §6.1).
     await operatorWindow.getByRole('radio', { name: /1 tira/ }).check()
-    await expect(operatorWindow.getByText(/Nenhum template para 1 tira/)).toBeVisible()
-    await expect(operatorWindow.getByRole('button', { name: 'Iniciar evento' })).toBeDisabled()
+    await expect(operatorWindow.getByTestId('template-default')).toBeVisible()
+    await expect(operatorWindow.getByText('Fundo branco (padrão) · 1844 × 1240 px')).toBeVisible()
+    await expect(operatorWindow.getByRole('button', { name: 'Iniciar evento' })).toBeEnabled()
   })
 
   test('RF01 shows the dimensions read for a template of another size and keeps Iniciar evento disabled', async ({ operatorWindow, dirs }) => {

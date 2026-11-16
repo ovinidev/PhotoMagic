@@ -295,7 +295,7 @@ export const eventStartInputSchema = z.strictObject({
   allowLandscape: z.boolean(),
 })
 
-export const eventStartErrorSchema = z.enum(['invalid-name', 'no-template', 'missing', 'landscape', 'folder-failed', 'already-open'])
+export const eventStartErrorSchema = z.enum(['invalid-name', 'missing', 'landscape', 'folder-failed', 'already-open'])
 
 export const eventStartResultSchema = z.discriminatedUnion('ok', [
   z.strictObject({ ok: z.literal(true), session: sessionStateSchema }),

@@ -93,6 +93,8 @@ flowchart TD
 
 Fields: event name, the party mode (2 tiras, default, or 1 tira) and import the PNG or JPG template for that mode.
 
+The client's background art usually comes **without** the photo boxes, often plain white. The template is therefore optional: with none imported for the selected mode, the preview shows a plain white 1844×1240 sheet with the standard boxes in gray, the line under it reads `Fundo branco (padrão) · 1844 × 1240 px`, and `Iniciar evento` is available. The event then composes on that white sheet, with each photo in its box and the boxes' rounded corners.
+
 The app reads the file size. At 1844×1240, the template is accepted for the selected mode. At any other size, the screen shows the width and height found and the `Iniciar evento` button is disabled. The importer takes PNG and JPEG only. A PDF (the client's artwork comes from Canva as PDF) is recognized and answered with `Este arquivo é um PDF. Exporte o template como PNG ou JPG de 1844 × 1240 px e importe de novo.`; rendering PDFs inside the app is an open question (section 11).
 
 Assumption, until the client says otherwise: each mode has its own background. The two-strip art and the three-photo full-sheet art are different drawings, so the imported file is stored under the mode that is selected. Starting uses the template of that mode. The other mode keeps its own file. The same file can be imported into both, and they are still stored separately.
@@ -119,7 +121,7 @@ The editor holds two layouts. A selector switches which one is on screen. Editin
 
 **1 tira** has three slots, photos 1, 2 and 3, with no cut guide. The seed below covers the sheet and is pending validation.
 
-The template of that mode is the background, at the real sheet proportion (1844×1240), and each slot is a colored card with its photo number, as in the current app: green 1, blue 2, yellow 3. This is how the operator sees and assigns which webcam photo goes into which gray square.
+The template of that mode is the background, at the real sheet proportion (1844×1240), or the plain white sheet when there is none. Over it, under the cards, the editor always draws the mode's **standard boxes** as gray rounded rectangles: in 2 tiras the client's measured boxes (three portrait on top, two landscape below), in 1 tira its three portrait boxes. They come from the seed, not from the artwork, and do not move with the cards, so the operator sees where the photos go even when the art has no boxes. Each slot is a colored card with its photo number, as in the current app: green 1, blue 2, yellow 3. This is how the operator sees and assigns which webcam photo goes into which gray square.
 
 The numbers panel on the left is a table with one row per slot, in the current app's order: Image, Left, Top, Width, Height, Angle. Image is the photo (1, 2 or 3) or `Nenhuma`, which leaves the slot empty on the montage (the template shows there). Typing a number moves the card while typing; Enter or leaving the field saves it. Clicking a card or a row selects that slot. In the preview, the selected slot has a dashed red border, 8 resize handles and a rotation handle below the bottom center. Left, Top and Angle change live during drag and rotation. Width and Height change live during resizing.
 
@@ -171,7 +173,7 @@ The black boxes have rounded corners of about 33 px (31 to 35 measured). The pho
 
 #### One-strip mode seed
 
-Three portraits side by side, Angle 0, so the whole sheet is filled. The 42 px side margins and 40 px top and bottom margins sit inside the print area (22 and 20). The gap between slots is 40 px. Left and Top are the visible corner, because the angle is 0.
+Three portraits side by side, Angle 0, so the whole sheet is filled, with the same 30 px rounded corners as the 2-strip boxes. The 42 px side margins and 40 px top and bottom margins sit inside the print area (22 and 20). The gap between slots is 40 px. Left and Top are the visible corner, because the angle is 0.
 
 | Slot | Photo | Left | Top | Width | Height | Angle |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -240,6 +242,8 @@ Each criterion is verifiable by a unit test, component test or E2E in Electron w
 ### RF01 — Create event with name and template
 
 Given a valid name, mode 2 tiras or 1 tira, and a 1844×1240 PNG or JPG imported for that mode, the preview shows that background and `Iniciar evento` becomes available. The other mode's template does not change.
+
+Given a valid name and no template imported for the mode, the preview shows the plain white sheet with the standard boxes and `Iniciar evento` is available. A round printed that way has white everywhere outside the boxes, the photos inside them and white at the boxes' rounded corners.
 
 Given a file of another size, the screen shows the dimensions read and 1844×1240, and `Iniciar evento` stays disabled. No folder exists on the Desktop.
 

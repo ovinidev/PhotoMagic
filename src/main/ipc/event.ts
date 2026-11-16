@@ -43,8 +43,9 @@ export function registerEventHandlers(deps: EventDeps): void {
     if (session.isOpen()) return { ok: false, reason: 'already-open' }
     const checked = checkEventName(name)
     if (!checked.ok) return { ok: false, reason: 'invalid-name' }
+    // No template imported for this mode: the sheet is plain white 1844×1240 (PRD §6.1), so an event
+    // can start right away; the photos still go into the standard boxes.
     const template = await readTemplate(deps.userData, mode)
-    if (!template) return { ok: false, reason: 'no-template' }
 
     // The TV first: with no TV the event does not start and no folder appears (RF04).
     const opened = tv.open({ allowLandscape })
@@ -62,7 +63,7 @@ export function registerEventHandlers(deps: EventDeps): void {
       return { ok: false, reason: 'folder-failed' }
     }
     const { layouts } = await readConfig(deps.userData)
-    return { ok: true, session: session.start({ name: checked.name, mode, folder, slots: layouts[mode], template: template.bytes }) }
+    return { ok: true, session: session.start({ name: checked.name, mode, folder, slots: layouts[mode], template: template?.bytes ?? null }) }
   })
 
   handleInvoke(IPC_CHANNELS.eventEnd, () => {

@@ -19,11 +19,18 @@ export const validTemplate = () => writePng('template-1844x1240.png', { width: 1
 
 const MODE_LABEL = { 'two-strips': '2 tiras', 'one-strip': '1 tira' } as const
 
-/** Fills the create-event form: name, mode and that mode's template. */
-export async function fillEvent(operatorWindow: Page, options: { name: string; mode?: keyof typeof MODE_LABEL; template?: string }) {
+/**
+ * Fills the create-event form: name, mode and that mode's template. `template: null` imports nothing,
+ * so the event uses the plain white default sheet (PRD §6.1).
+ */
+export async function fillEvent(operatorWindow: Page, options: { name: string; mode?: keyof typeof MODE_LABEL; template?: string | null }) {
   const mode = options.mode ?? 'two-strips'
   await operatorWindow.getByLabel('Nome do evento').fill(options.name)
   await operatorWindow.getByRole('radio', { name: new RegExp(MODE_LABEL[mode]) }).check()
+  if (options.template === null) {
+    await expect(operatorWindow.getByTestId('template-default')).toBeVisible()
+    return
+  }
   await operatorWindow.getByTestId('template-input').setInputFiles(options.template ?? (await validTemplate()))
   // An accepted template opens the slot editor over the form; a rejected one shows why.
   const editor = layoutEditor(operatorWindow)
@@ -44,7 +51,7 @@ export async function closeLayoutEditor(operatorWindow: Page): Promise<void> {
 /** Fills the form, clicks `Iniciar evento` and returns the TV page, live and at 1/3. */
 export async function startEvent(app: ElectronApplication, operatorWindow: Page, options: Parameters<typeof fillEvent>[1]): Promise<Page> {
   await fillEvent(operatorWindow, options)
-  await expect(operatorWindow.getByTestId('template-preview')).toBeVisible()
+  await expect(operatorWindow.getByTestId(options.template === null ? 'template-default' : 'template-preview')).toBeVisible()
   const opened = app.waitForEvent('window')
   await operatorWindow.getByRole('button', { name: 'Iniciar evento' }).click()
   const tv = await opened

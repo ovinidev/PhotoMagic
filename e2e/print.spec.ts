@@ -234,4 +234,35 @@ test.describe('print: client 2 tiras artwork', () => {
       else copyFileSync(montage, sample)
     }
   })
+
+  test('PRD §6.1 with no template a round prints the photos in the standard rounded boxes on plain white', async ({ app, operatorWindow, dirs }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa Branca', mode: 'two-strips', template: null })
+    await takePhotos(tv, 3)
+    await tv.getByRole('button', { name: 'Imprimir' }).click()
+    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
+    const files = readdirSync(join(dirs.desktop, 'Festa Branca'))
+    expect(files).toHaveLength(1)
+    expect(files[0]).toMatch(MONTAGE)
+
+    const { data, info } = await sharp(join(dirs.desktop, 'Festa Branca', files[0]!)).raw().toBuffer({ resolveWithObject: true })
+    expect(info).toMatchObject({ width: 1844, height: 1240 })
+    const at = (x: number, y: number) => {
+      const i = (y * info.width + x) * info.channels
+      return [data[i]!, data[i + 1]!, data[i + 2]!]
+    }
+    const white = (x: number, y: number) => at(x, y).every((value) => value > 245)
+    // Outside the boxes: the white default sheet (margins, the gap at the cut line, the right side).
+    for (const [x, y] of [[8, 8], [1835, 1230], [900, 650], [1600, 300], [1500, 1000]] as const) {
+      expect(white(x, y), `white at ${x},${y} = ${at(x, y).join(',')}`).toBe(true)
+    }
+    for (const box of TWO_STRIPS_CLIENT_BOXES) {
+      // The photo fills each standard box...
+      const cx = box.left + Math.floor(box.width / 2)
+      const cy = box.top + Math.floor(box.height / 2)
+      expect(white(cx, cy), `photo at ${cx},${cy}`).toBe(false)
+      expect(white(box.left + 40, box.top + box.height - 40), `photo inside ${box.left},${box.top}`).toBe(false)
+      // ...clipped to its rounded corner: the very corner pixel stays white.
+      expect(white(box.left + 2, box.top + 2), `rounded corner of ${box.left},${box.top}`).toBe(true)
+    }
+  })
 })

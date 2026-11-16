@@ -34,7 +34,9 @@ export function CreateEventForm({ onEditLayout }: { onEditLayout?: (mode: PrintM
   const guest = display.status === 'ready' ? display.value.guest.kind : null
   const landscape = guest === 'landscape-external'
   const tvReady = guest === 'portrait' || (landscape && allowLandscape)
-  const canStart = nameCheck.ok && template !== null && imports[mode].status === 'idle' && tvReady && !pending
+  // No template is fine: the sheet is plain white with the standard boxes (PRD §6.1). A rejected file
+  // still blocks the start until a valid one is imported (RF01).
+  const canStart = nameCheck.ok && templates.status === 'ready' && imports[mode].status === 'idle' && tvReady && !pending
   const modeLabel = EVENTS_COPY.modes[mode].label
 
   const start = async () => {
@@ -119,6 +121,7 @@ export function CreateEventForm({ onEditLayout }: { onEditLayout?: (mode: PrintM
 
         <TemplatePicker
           key={mode}
+          mode={mode}
           modeLabel={modeLabel}
           templates={templates}
           template={template}
