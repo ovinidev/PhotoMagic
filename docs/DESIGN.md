@@ -408,7 +408,7 @@ Signing, in the Windows job, only applies if the secrets are filled in:
 
 `CSC_IDENTITY_AUTO_DISCOVERY` stays `false`. The step exports `CSC_LINK` and `CSC_KEY_PASSWORD` only when the secret is non-empty. Without them electron-builder produces the installer unsigned and the job ends green. The workflow does not store the certificate in the repository.
 
-NSIS: per machine, desktop shortcut, selectable install directory. `appId`: `com.fotomagica.desktop`. `productName`: `Foto Mágica`.
+NSIS: per user and one click (`oneClick: true`, `perMachine: false`), so neither the install nor the silent update on quit asks for administrator rights; it installs into `%LOCALAPPDATA%\Programs\fotomagica`, with desktop and Start menu shortcuts, and keeps `userData` on uninstall. There is no install-directory page: an assisted installer would offer "all users", which elevates. `appId`: `com.fotomagica.desktop`. `productName`: `Foto Mágica`.
 
 Builder icon: `assets/brand/icon.ico`, generated from `assets/brand/icon.png` (symbol on a light background) by `pnpm icon` (`scripts/build-icon.mjs`, sharp) with PNG entries at 16, 32, 48 and 256; a unit test checks the four sizes. The operator window uses `icon.png` as its window icon (title bar and taskbar in dev); the installed exe carries the `.ico`. The TV window has no taskbar entry. The full logo does not go into the small icon, because the text does not survive at 16 px.
 

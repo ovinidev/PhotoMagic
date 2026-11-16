@@ -27,9 +27,11 @@ win:
   # Signing happens only when CSC_LINK and CSC_KEY_PASSWORD are set; otherwise the installer is unsigned.
 
 nsis:
-  oneClick: false
-  perMachine: true
-  allowToChangeInstallationDirectory: true
+  # Per-user, one click: the client installs it himself with no admin prompt, and the silent update on
+  # quit never asks for elevation either. Installs to %LOCALAPPDATA%\Programs\fotomagica. An assisted
+  # (oneClick: false) installer would show the "all users" choice, which elevates.
+  oneClick: true
+  perMachine: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Foto Mágica
