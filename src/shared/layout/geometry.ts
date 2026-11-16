@@ -120,6 +120,47 @@ export function planSlot(slot: Slot, photo: Size, framing: Framing = DEFAULT_FRA
 }
 
 /**
+ * Where the whole upright photo sits inside the slot's box once a plan runs, as one rigid move: the
+ * photo, `width × height` sheet pixels, turned clockwise by `rotation` around its own center, with that
+ * center at (`x`, `y`) from the box center, in the box's axes (before the slot's angle). The composer
+ * runs the plan with sharp; the laptop draws the same placement with a CSS transform inside a box that
+ * clips to the slot, so the drag is local and the two agree (DESIGN §8).
+ */
+export type PhotoPlacement = { width: number; height: number; x: number; y: number; rotation: number }
+
+export function photoPlacement(plan: SlotPlan): PhotoPlacement {
+  const sideways = plan.preRotate === 90 || plan.preRotate === 270
+  // Center of the resized photo from the center of the extracted window (steps 2 and 3)…
+  const cx = plan.resize.width / 2 - plan.extract.left - plan.extract.width / 2
+  const cy = plan.resize.height / 2 - plan.extract.top - plan.extract.height / 2
+  // …turned with the window around the box center (step 4).
+  const radians = (plan.rotate * Math.PI) / 180
+  const cos = Math.cos(radians)
+  const sin = Math.sin(radians)
+  return {
+    width: sideways ? plan.resize.height : plan.resize.width,
+    height: sideways ? plan.resize.width : plan.resize.height,
+    x: cx * cos - cy * sin,
+    y: cx * sin + cy * cos,
+    rotation: plan.preRotate + plan.rotate,
+  }
+}
+
+/**
+ * The placement as CSS for an image absolutely positioned at the center of a box of `box` size:
+ * size in percent of the box and the transform (percent translations are of the image's own size,
+ * so the result does not depend on how large the preview is drawn).
+ */
+export function photoPlacementCss(placement: PhotoPlacement, box: Size): { width: string; height: string; transform: string } {
+  const pct = (value: number) => `${round6(value * 100)}%`
+  return {
+    width: pct(placement.width / box.width),
+    height: pct(placement.height / box.height),
+    transform: `translate(-50%, -50%) translate(${pct(placement.x / placement.width)}, ${pct(placement.y / placement.height)}) rotate(${round6(placement.rotation)}deg)`,
+  }
+}
+
+/**
  * The tile that, turned by `rotation`, still covers `box` everywhere: the bounds of the box turned
  * the other way, plus 2 px so rounding never shows a transparent corner.
  */
