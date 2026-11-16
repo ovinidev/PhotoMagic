@@ -62,7 +62,7 @@ async function defects(framings?: Record<string, Framing>) {
   const photo = await smoothPhoto()
   const boxes = await detectTemplateBoxes(template, 'two-strips')
   expect(boxes).toHaveLength(5)
-  const sheet = await composeSheet({ mode: 'two-strips', template, slots: CARDS, photos: { 1: photo, 2: photo, 3: photo }, framings, boxes })
+  const sheet = await composeSheet({ mode: 'two-strips', template, slots: CARDS, photos: { 1: photo, 2: photo, 3: photo }, framings: framings ?? {}, boxes })
   const tpl = await sharp(template).removeAlpha().raw().toBuffer()
   const { data, info } = sheet
   const ch = info.channels
