@@ -47,6 +47,71 @@ test.describe('capture round', () => {
     }).toBeGreaterThan(before.previewRevision)
   })
 
+  test('RF09 draws the framed photo locally, clipped to its slot: nothing outside the slot changes', async ({ app, operatorWindow }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
+    await takePhotos(tv, 3)
+    await expect(tv.getByTestId('print-preview')).toBeVisible()
+    const overlay = operatorWindow.getByTestId('framing-overlay')
+    const bottom1 = operatorWindow.getByRole('button', { name: 'Enquadrar Baixo 1' })
+    const photo = bottom1.getByTestId('framing-photo')
+    await expect(photo).toBeVisible()
+    const mask = bottom1.getByTestId('framing-photo-mask')
+    expect(await mask.evaluate((node) => getComputedStyle(node).overflow)).toBe('hidden')
+    expect(parseFloat(await mask.evaluate((node) => getComputedStyle(node).borderTopLeftRadius))).toBeGreaterThan(0)
+
+    const revision = async () => {
+      const current = await operatorWindow.evaluate(() => window.fotomagica.session.getState())
+      return current.kind === 'event' ? current.previewRevision : 0
+    }
+    /** Waits until main has composed the latest framing and the laptop shows it. */
+    const settle = async () => {
+      await app.evaluate(() => new Promise((done) => setTimeout(done, 300)))
+      const target = await revision()
+      await expect.poll(revision).toBeGreaterThanOrEqual(target)
+      await expect(operatorWindow.getByTestId('montage-preview')).toBeVisible()
+      await operatorWindow.waitForTimeout(300)
+    }
+    const shot = async () => {
+      const { data, info } = await sharp(await overlay.screenshot()).raw().toBuffer({ resolveWithObject: true })
+      return { data, info }
+    }
+
+    await bottom1.click()
+    await settle()
+    const before = await shot()
+    const area = (await overlay.boundingBox())!
+    const slot = (await bottom1.boundingBox())!
+
+    // Zoom far in, then drag hard: the photo element grows past the slot, the mask clips it.
+    for (let step = 0; step < 5; step += 1) await operatorWindow.getByRole('button', { name: 'Aproximar' }).click()
+    const center = { x: slot.x + slot.width / 2, y: slot.y + slot.height / 2 }
+    await operatorWindow.mouse.move(center.x, center.y)
+    await operatorWindow.mouse.down()
+    await operatorWindow.mouse.move(center.x + 120, center.y + 90, { steps: 12 })
+    await operatorWindow.mouse.up()
+    const drawn = (await photo.boundingBox())!
+    expect(drawn.width).toBeGreaterThan(slot.width * 1.5)
+    await settle()
+    const after = await shot()
+
+    // Every pixel outside Baixo 1 (plus a few px of anti-aliasing and the selection border) is unchanged.
+    const scale = before.info.width / area.width
+    const margin = 4 * scale
+    const x0 = (slot.x - area.x) * scale - margin
+    const y0 = (slot.y - area.y) * scale - margin
+    const x1 = (slot.x + slot.width - area.x) * scale + margin
+    const y1 = (slot.y + slot.height - area.y) * scale + margin
+    let changed = 0
+    for (let y = 0; y < before.info.height; y += 1) {
+      for (let x = 0; x < before.info.width; x += 1) {
+        if (x >= x0 && x <= x1 && y >= y0 && y <= y1) continue
+        const at = (y * before.info.width + x) * before.info.channels
+        if ([0, 1, 2].some((c) => Math.abs(before.data[at + c]! - after.data[at + c]!) > 24)) changed += 1
+      }
+    }
+    expect(changed).toBe(0)
+  })
+
   test('RF06 advances the counter 1/3, 2/3, 3/3 and moves to printing', async ({ app, operatorWindow }) => {
     const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
     await expect(operatorWindow.getByTestId('round-status')).toHaveText('Foto 1/3')
