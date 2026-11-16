@@ -1,4 +1,4 @@
-import { slotBounds, type Rect } from './geometry'
+import { clampFraming, nearestQuarterTurn, normalizeAngle, slotBounds, type Framing, type Rect } from './geometry'
 import { SEED_LAYOUTS } from './seed'
 import type { PrintMode, Slot } from './types'
 
@@ -50,14 +50,26 @@ export function slotOnBox(seedSlot: Slot, box: GuideBox): Slot {
   return { ...seedSlot, left: cx - width / 2, top: cy - height / 2, width, height, radius: box.radius }
 }
 
-/** True when the slot sits exactly on its seed slot (same place, size and angle): the default card. */
-export function onSeed(slot: Slot, seedSlot: Slot): boolean {
-  return (
-    slot.left === seedSlot.left &&
-    slot.top === seedSlot.top &&
-    slot.width === seedSlot.width &&
-    slot.height === seedSlot.height &&
-    slot.angle === seedSlot.angle &&
-    (slot.radius ?? 0) === (seedSlot.radius ?? 0)
-  )
+/**
+ * Where one slot's photo is drawn (DESIGN §6): exactly one photo per fixed box. The photo is planned
+ * on the box itself (`slot`: the seed slot moved onto the box, `slotOnBox`), never on the card, so it
+ * always covers the whole box and its zoom does not depend on how large the card was drawn. The card
+ * only decides how the photo is turned: its nearest quarter turn orients the photo, and whatever is
+ * left of its angle is added to the framing rotation (`planSlot` grows the photo to keep the box
+ * covered). `null` when the slot has no box. The montage and the laptop framing preview both use it.
+ */
+export function photoInBox(
+  mode: PrintMode,
+  card: Slot,
+  index: number,
+  framing: Framing,
+  boxes?: readonly GuideBox[] | null,
+): { box: GuideBox; slot: Slot; framing: Framing } | null {
+  const fixed = fixedBox(mode, card.id, index, boxes)
+  if (!fixed) return null
+  const quarter = nearestQuarterTurn(card.angle)
+  const slot = slotOnBox({ ...fixed.seedSlot, id: card.id, photo: card.photo, angle: quarter }, fixed.box)
+  const rest = normalizeAngle(card.angle - quarter)
+  const residual = rest > 180 ? rest - 360 : rest
+  return { box: fixed.box, slot, framing: residual === 0 ? framing : clampFraming({ ...framing, rotation: framing.rotation + residual }) }
 }
