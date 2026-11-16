@@ -107,7 +107,7 @@ Tests of pure rules sit next to the file (`snap.test.ts`).
 - Pure business rules (snap, crop, file name, monitor choice, space geometry) do not import Electron or React. This way Vitest covers them without opening a window
 - Laptop UI uses a shadcn component from `shared/components/ui/` before creating another. The TV is not a shadcn dialog with another theme: it is the camera surface, drawn in `features/camera`
 - Visible text in pt-BR, with the PRD labels (`Iniciar evento`, `Encerrar evento`, `Imprimir`, `Cancelar`, `Mais`, `Menos`, `Nova rodada`, `Imprimir novamente`)
-- Laptop button, checkbox and select carry `cursor-pointer` and a touch target of at least 44 px. On the TV the minimum is 64 px
+- Laptop button, checkbox and select carry `cursor-pointer` and a touch target of at least 44 px. On the TV the minimum is 64 px. Exceptions, dense desktop tools: the slot editor's controls and the header zoom buttons are 32 px (`Button size="sm"`)
 
 ## Easy-to-break rules
 

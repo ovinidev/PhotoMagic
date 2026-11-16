@@ -69,12 +69,12 @@ function EditorBody({ layouts, initialMode, titleId }: { layouts: Layouts; initi
 
   return (
     <>
-      <header className="flex flex-wrap items-center gap-4 border-b border-line px-6 py-3">
+      <header className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-2">
         <div className="mr-auto">
-          <h1 id={titleId} className="text-lg font-semibold text-ink">
+          <h1 id={titleId} className="text-base font-semibold text-ink">
             {LAYOUT_COPY.title}
           </h1>
-          <p className="text-sm text-ink-soft">{LAYOUT_COPY.subtitle}</p>
+          <p className="text-xs text-ink-soft">{LAYOUT_COPY.subtitle}</p>
         </div>
         <div role="radiogroup" aria-label={LAYOUT_COPY.modeSelector} className="flex rounded-[var(--radius-field)] border border-line p-0.5">
           {PRINT_MODES.map((option) => (
@@ -85,7 +85,7 @@ function EditorBody({ layouts, initialMode, titleId }: { layouts: Layouts; initi
               aria-checked={mode === option}
               onClick={() => setMode(option)}
               className={cn(
-                'min-h-10 min-w-20 cursor-pointer rounded-[6px] px-4 text-sm font-medium',
+                'h-7 min-w-16 cursor-pointer rounded-[6px] px-3 text-[13px] font-medium',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink',
                 mode === option ? 'bg-primary text-primary-ink' : 'text-ink hover:bg-bg',
               )}
@@ -95,26 +95,26 @@ function EditorBody({ layouts, initialMode, titleId }: { layouts: Layouts; initi
           ))}
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" disabled={!canUndo(history)} onClick={() => apply(undo)}>
+          <Button variant="ghost" size="sm" disabled={!canUndo(history)} onClick={() => apply(undo)}>
             {LAYOUT_COPY.undo}
           </Button>
-          <Button variant="ghost" disabled={!canRedo(history)} onClick={() => apply(redo)}>
+          <Button variant="ghost" size="sm" disabled={!canRedo(history)} onClick={() => apply(redo)}>
             {LAYOUT_COPY.redo}
           </Button>
-          <Button variant="ghost" onClick={() => apply((h) => commit(h, SEED_LAYOUTS[mode]))}>
+          <Button variant="ghost" size="sm" onClick={() => apply((h) => commit(h, SEED_LAYOUTS[mode]))}>
             {LAYOUT_COPY.reset}
           </Button>
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[640px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-6 p-6">
-        <aside className="flex min-h-0 flex-col gap-4 overflow-auto">
+      <div className="grid min-h-0 flex-1 grid-cols-[400px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-3 p-3">
+        <aside className="flex min-h-0 flex-col gap-2 overflow-auto">
           {/* key: the rows remount per mode, so the fields register the slots on screen. */}
           <SlotTable key={mode} slots={slots} selectedId={selected[mode]} registry={registry} onSelect={select} onCommit={commitSlot} />
           <p
             role="status"
             data-testid="layout-save-state"
-            className={cn('min-h-5 text-sm', saveState === 'error' || saveState === 'event-open' ? 'text-danger' : 'text-ink-soft')}
+            className={cn('min-h-5 text-xs', saveState === 'error' || saveState === 'event-open' ? 'text-danger' : 'text-ink-soft')}
           >
             {saveState === 'saving'
               ? LAYOUT_COPY.saving
@@ -127,7 +127,7 @@ function EditorBody({ layouts, initialMode, titleId }: { layouts: Layouts; initi
                     : ''}
           </p>
         </aside>
-        <section className="flex min-h-0 min-w-0 flex-col gap-3">
+        <section className="flex min-h-0 min-w-0 flex-col gap-2">
           <ZoomableSheet key={mode}>
             <SheetCanvas
               key={mode}
@@ -141,7 +141,7 @@ function EditorBody({ layouts, initialMode, titleId }: { layouts: Layouts; initi
             />
           </ZoomableSheet>
           {crossing.length > 0 ? (
-            <p role="alert" data-testid="cut-warning" className="mx-auto text-base text-danger">
+            <p role="alert" data-testid="cut-warning" className="mx-auto text-sm text-danger">
               {LAYOUT_COPY.cutWarning(crossing)}
             </p>
           ) : null}
@@ -182,8 +182,10 @@ export function LayoutEditor({ initialMode, onClose }: { initialMode: PrintMode;
           </p>
         </div>
       )}
-      <footer className="flex justify-end border-t border-line px-6 py-3">
-        <Button onClick={onClose}>{LAYOUT_COPY.done}</Button>
+      <footer className="flex justify-end border-t border-line px-4 py-2">
+        <Button size="sm" onClick={onClose}>
+          {LAYOUT_COPY.done}
+        </Button>
       </footer>
     </div>
   )
