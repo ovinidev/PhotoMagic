@@ -38,6 +38,10 @@ export type FotomagicaApi = {
   display: {
     /** Monitor choice for the TV and the TV window state. */
     getState: () => Promise<DisplayState>
+    /** TV only: the two-finger hold hides the TV window; the event and the round go on. */
+    hideTv: () => Promise<DisplayState>
+    /** Laptop only: puts a hidden TV window back on the TV. */
+    showTv: () => Promise<DisplayState>
     /** Pushed on every monitor added, removed or changed, and on every TV window change. */
     onState: (listener: (state: DisplayState) => void) => Unsubscribe
   }

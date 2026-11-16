@@ -67,6 +67,8 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
     },
     display: {
       getState: vi.fn(o.display?.getState ?? (() => Promise.resolve(CLOSED))),
+      hideTv: vi.fn(o.display?.hideTv ?? (() => Promise.resolve(CLOSED))),
+      showTv: vi.fn(o.display?.showTv ?? (() => Promise.resolve(CLOSED))),
       onState: vi.fn(o.display?.onState ?? display.add),
     },
     camera: {

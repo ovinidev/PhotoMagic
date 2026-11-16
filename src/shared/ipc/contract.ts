@@ -44,6 +44,8 @@ import {
 export const INVOKE_CONTRACT = {
   [IPC_CHANNELS.appGetVersion]: { input: appGetVersionInputSchema, output: appVersionSchema },
   [IPC_CHANNELS.displayGetState]: { input: noInputSchema, output: displayStateSchema },
+  [IPC_CHANNELS.displayHideTv]: { input: noInputSchema, output: displayStateSchema },
+  [IPC_CHANNELS.displayShowTv]: { input: noInputSchema, output: displayStateSchema },
   [IPC_CHANNELS.cameraGetStatus]: { input: noInputSchema, output: cameraStatusSchema },
   [IPC_CHANNELS.templateGetAll]: { input: noInputSchema, output: templatesSchema },
   [IPC_CHANNELS.templateImport]: { input: templateImportInputSchema, output: templateImportResultSchema },

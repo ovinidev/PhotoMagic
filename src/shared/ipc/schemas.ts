@@ -65,12 +65,14 @@ export const tvUnavailableReasonSchema = z.enum(['missing', 'landscape'])
 
 /**
  * The TV window: not created, on screen on a monitor, or created but hidden because its monitor
- * went away (it comes back when an eligible TV is connected again).
+ * went away (it comes back when an eligible TV is connected again), or `hidden` by the two-finger
+ * hold on the TV: the event goes on and the laptop reopens it (DESIGN §3).
  */
 export const tvWindowStateSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('closed') }),
   z.strictObject({ kind: z.literal('open'), display: displayInfoSchema }),
   z.strictObject({ kind: z.literal('detached'), reason: tvUnavailableReasonSchema }),
+  z.strictObject({ kind: z.literal('hidden') }),
 ])
 
 /** `display:get-state` output and `display:state` payload. */
