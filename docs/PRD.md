@@ -199,14 +199,13 @@ The slot editor does not open while an event is in progress. To change Left/Top/
 
 ### 6.4 Camera (TV)
 
-Opens fullscreen on the TV monitor as soon as the event starts. The look follows the current iPhone camera: frosted-glass bars, white button, gallery thumbnail. The VIDEO/PHOTO/PORTRAIT selector and the front-camera button go away.
+Opens fullscreen on the TV monitor as soon as the event starts. The look follows the current iPhone camera: dark translucent bars, a large white button, gallery thumbnail. The VIDEO/PHOTO/PORTRAIT selector and the front-camera button go away.
 
 - Live image mirrored. The person sees themselves as in a mirror, and the saved JPG shows exactly that
 - White button, bottom center. Each tap takes a photo. Three taps per round. A counter shows 1/3, 2/3 and 3/3
 - Timer: off, 5 s or 10 s, with a large countdown
 - Thumbnail of the last montage in the bottom-left corner. Tapping it opens the gallery
 - In place of the flash, the webcam adjustments icon
-- Rule-of-thirds grid, on or off
 - Touch targets of at least 64 px
 
 ![Figure 6 — The current app's camera on the TV, which this look replaces](assets/briefing/image9.png)

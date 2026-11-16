@@ -594,14 +594,15 @@ Empty, error and loading states exist on every laptop screen. Empty gallery: "Ne
 
 Logical frame 1080×1920.
 
-- The image fills the core, edge to edge, already mirrored
-- Top glass bar: adjustments icon (in place of the flash) and the rule-of-thirds grid toggle. No flip-camera icon
-- Bottom glass bar: 96 px circular thumbnail of the last montage on the left; the white button in the center, 96 px in diameter inside a ring; the timer (off, 5 s, 10 s) as three targets to the right of the button, each at least 64 px
-- `1/3` counter above the button, in white, weight 600
-- Countdown in the center of the image, about 18% of the logical height
-- `backdrop-filter: blur(24px)`. If the compositor has no blur, the bar falls back to `rgba(28, 28, 30, 0.72)`, opaque enough for the label to stay legible
+The look follows the iPhone camera app (reference: dark translucent bars, a large white shutter, minimal chrome), scaled up to be read from a distance on a vertical TV.
 
-The rule-of-thirds grid is white hairlines at 20% opacity. When off, it disappears completely.
+- The image fills the core, edge to edge, already mirrored
+- Top bar: dark translucent strip, 160 px tall, with the adjustments icon (a white line sun, 96 px target) centered where the iPhone has the flash. No grid toggle and no flip-camera icon
+- Bottom bar: dark translucent; the white shutter in the center, a 240 px ring (10 px white border) around a 192 px filled white circle. Pressed, the circle shrinks to 86% and dims; during a countdown or a capture it is disabled at half opacity. The 128 px circular thumbnail of the last montage on the left; the timer (off, 5 s, 10 s) as a dark pill of three targets on the right, each at least 64 px, the selected one in iPhone yellow (`#ffd60a`) on a light chip
+- `1/3` counter in a dark pill above the shutter, in white, weight 600, 48 px
+- Countdown in the center of the image, about 18% of the logical height
+- The capture error and the webcam panel open under the top bar
+- The bars are `rgba(0, 0, 0, 0.45)` with `backdrop-filter: blur(24px)`; without blur they fall back to `rgba(0, 0, 0, 0.7)`. Messages and the webcam panel keep the frosted glass (`rgba(28, 28, 30, 0.62)`, fallback `0.72`), opaque enough for the label to stay legible
 
 The webcam panel opens from the adjustments icon as a strong-glass sheet under the top bar, with the same controls as the laptop card. The gallery grid and the fullscreen view are rendered into `document.body`, because the bottom bar's `backdrop-filter` would make `position: fixed` relative to the bar.
 
