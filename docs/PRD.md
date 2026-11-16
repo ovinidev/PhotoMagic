@@ -58,7 +58,7 @@ These decisions came from the product owner. The implementation follows them, wi
 9. **Copies.** `Mais` stops at 10. `Menos` stops at 1. Approved by the owner.
 10. **Crash mid-round.** Until `Imprimir`, the round lives in memory. If the process crashes before that, the three photos are lost. There is no draft on disk, because the event folder only receives the montage. Approved by the owner.
 11. **Editor snap.** The slot snaps to edges and centers. Rotation snaps to 0°, 90°, 180° and 270° within 4°. Alt turns snap off. Approved by the owner.
-12. **Release.** Every push to `main` produces the installer. The GitHub Release, which electron-updater sees, is published when the `package.json` version has not been published yet. Approved by the owner.
+12. **Release.** Every push to `main` produces the installer. Every push to `main` also publishes a GitHub Release, which electron-updater sees: the next patch after the latest release, or the `package.json` version when it was bumped higher (minor or major). Approved by the owner.
 
 ## 5. Flow
 

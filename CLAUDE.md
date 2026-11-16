@@ -4,7 +4,7 @@ Foto Mágica 2.0 is a party photobooth: vertical touch TV, webcam on top, operat
 
 This file is the agent guide. In [PilatePay](https://github.com/ovinidev/PilatePay) the equivalent is `AGENTS.md`; here `AGENTS.md` only points to this file. This repo's folder structure follows that one, read on 2026-11-14, with the addition of `src/main` and `src/preload` because here the app is Electron. PilatePay uses ESLint; here the linter is oxlint, by decision of this project.
 
-The foundation scaffold (shell windows, typed IPC, tooling, CI) is in place, plus the dual windows (TV monitor choice and hot-plug), the live camera on the TV, create event (name, mode, per-mode template), the capture round, the montage, the print screen with the simulated printer, printer status and DS-RX1 printing through the Windows PowerShell PrintTicket helper (DESIGN §10; still to be confirmed on the device), the slot editor for both layouts, round framing (RF09), the gallery (RF14), webcam adjustments (RF15) with the TV top bar and thirds grid, the app icon (`assets/brand/icon.ico`, rebuilt with `pnpm icon`), the laptop app zoom and window-sized UI, the editor sheet zoom and pan, the TV two-finger close hold with `Abrir TV` on the laptop (DESIGN §3, §7), and build, release and auto-update (RNF09: NSIS installer `FotoMagica-Setup.exe`, GitHub Release on a new version, background electron-updater gated on no event and a network, see DESIGN §11 and §12). Not built yet: the camera choice in create-event when there are several cameras and no MX Brio. The commands below are the contract. Do not invent another package manager, another linter or another E2E runner.
+The foundation scaffold (shell windows, typed IPC, tooling, CI) is in place, plus the dual windows (TV monitor choice and hot-plug), the live camera on the TV, create event (name, mode, per-mode template), the capture round, the montage, the print screen with the simulated printer, printer status and DS-RX1 printing through the Windows PowerShell PrintTicket helper (DESIGN §10; still to be confirmed on the device), the slot editor for both layouts, round framing (RF09), the gallery (RF14), webcam adjustments (RF15) with the TV top bar and thirds grid, the app icon (`assets/brand/icon.ico`, rebuilt with `pnpm icon`), the laptop app zoom and window-sized UI, the editor sheet zoom and pan, the TV two-finger close hold with `Abrir TV` on the laptop (DESIGN §3, §7), and build, release and auto-update (RNF09: NSIS installer `FotoMagica-Setup.exe`, a GitHub Release on every merge to `main`, background electron-updater gated on no event and a network, see DESIGN §11 and §12). Not built yet: the camera choice in create-event when there are several cameras and no MX Brio. The commands below are the contract. Do not invent another package manager, another linter or another E2E runner.
 
 ## Language and tooling rules (read first)
 
@@ -64,15 +64,20 @@ E2E does not use the webcam or the DS-RX1. It starts with `FOTOMAGICA_E2E=1` and
 
 ## Releasing a version
 
-The release is driven by the `package.json` version (DESIGN §12). Nothing is published by hand.
+Every merge to `main` is a release (DESIGN §12). Nothing is published by hand and nothing is committed back to `main`.
 
-1. On a branch, bump the version: `pnpm version minor --no-git-tag-version` (or `patch` / `major`). It changes `package.json` only; do not create a tag, the release job creates `v<version>`.
-2. Commit (`Release 0.2.0`), push, open a PR. CI runs the checks.
-3. Merge to `main`. `release.yml` runs the checks again, builds `FotoMagica-Setup.exe` on `windows-latest`, uploads it as an artifact and, because `v<version>` does not exist yet, publishes a GitHub Release with `FotoMagica-Setup.exe`, its `.blockmap` and `latest.yml`.
-4. Installed apps pick it up at their next startup with a network and no event, download in the background and install when the operator quits.
-5. The stable download address is `https://github.com/ovinidev/PhotoMagic/releases/latest/download/FotoMagica-Setup.exe`.
+1. Merge a PR to `main`. `release.yml` runs the checks again, then on `windows-latest` computes the version with `scripts/release/next-version.mjs`:
+   - the latest published `v<x.y.z>` tag plus one patch (`v0.2.0` → `0.2.1`), by default;
+   - the `package.json` version as is, when a PR bumped it above the latest tag (a manual minor or major).
+2. The job writes that version into its own copy of `package.json` (not committed), builds `FotoMagica-Setup.exe`, uploads it as an artifact and publishes the GitHub Release `v<version>` with `FotoMagica-Setup.exe`, its `.blockmap` and `latest.yml`.
+3. Installed apps pick it up at their next startup with a network and no event, download in the background and install when the operator quits.
+4. The stable download address is `https://github.com/ovinidev/PhotoMagic/releases/latest/download/FotoMagica-Setup.exe`.
 
-A merge without a bump only produces the workflow artifact. Never delete or re-upload assets of a published release: installed apps compare against its `latest.yml`. To sign, set the repository secrets `CSC_LINK` (base64 `.pfx`) and `CSC_KEY_PASSWORD`; without them the installer is unsigned and the job stays green. Update errors on a machine are in `%APPDATA%\Foto Mágica\logs\updater.log`.
+For a minor or major, bump on the branch: `pnpm version minor --no-git-tag-version` (or `major`), commit (`Release 0.3.0`) and merge. Do not create a tag; the release job creates `v<version>`. Patch bumps need no PR change. The `package.json` version on `main` therefore lags behind the released one; the tags are the source of truth.
+
+Why tags and not a bump commit: the job never pushes to `main`, so it cannot retrigger itself (no `[skip ci]` needed), it does not depend on `GITHUB_TOKEN` being allowed past branch protection, and two merges cannot race on a `package.json` commit. The workflow has a single `release` concurrency group that is never cancelled midway; if merges queue up, GitHub keeps the newest pending run, which contains every queued commit, so one release covers them. If `v<version>` already exists as a tag or a release, the job builds the artifact only and never touches it; a `workflow_dispatch` from a branch other than `main` never publishes.
+
+Never delete or re-upload assets of a published release, and never push a `v*` tag by hand: installed apps compare against its `latest.yml`, and the next release is computed from the highest tag. To sign, set the repository secrets `CSC_LINK` (base64 `.pfx`) and `CSC_KEY_PASSWORD`; without them the installer is unsigned and the job stays green. Update errors on a machine are in `%APPDATA%\Foto Mágica\logs\updater.log`.
 
 ## Folders
 
@@ -117,7 +122,7 @@ Tests of pure rules sit next to the file (`snap.test.ts`).
 - The accepted template is exactly 1844×1240 px. The montage too. DPI 300
 - The file name uses Windows local time, 24 h, hyphens: `21-45-08.jpg`. Two files in the same second get `-2`, `-3`
 - Dragging or rotating a slot in the editor does not write to disk and does not call IPC. The Left/Top/Angle panel updates in the same frame. The write happens on release. Snap to edges and centers applies during the gesture; rotation snaps to 0°, 90°, 180° and 270°. Alt turns snap off
-- More copies stops at 10. The GitHub Release only goes out when the `package.json` version has not been published yet
+- More copies stops at 10. Every push to `main` publishes a new GitHub Release: the latest `v*` tag plus one patch, or the `package.json` version when it is higher. An existing tag or release is never overwritten, and CI never commits back to `main`
 
 ## What not to do
 

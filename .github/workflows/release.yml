@@ -1,5 +1,7 @@
-# Every push to main: the CI checks, then the Windows installer (DESIGN §11, §12).
-# A GitHub Release is published only when the package.json version has no release yet.
+# Every push to main: the CI checks, then the Windows installer and a new GitHub Release (DESIGN §11, §12).
+# The version comes from the latest v<x.y.z> tag plus one patch, or from package.json when a PR bumped it
+# higher (scripts/release/next-version.mjs). It is stamped into package.json inside the job only; nothing is
+# committed back to main, so this workflow never triggers itself. An existing tag or release is never touched.
 # Code signing is optional: without CSC_LINK / CSC_KEY_PASSWORD the installer is unsigned and the job stays green.
 name: Release
 
@@ -8,8 +10,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# One release at a time across the repository, never cancelled midway. If several merges queue up,
+# GitHub keeps only the newest pending run; it contains every queued commit, so one release covers them.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 jobs:
@@ -39,21 +43,36 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Decide whether this version is new
+      - name: Compute the release version
         id: version
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version="$(node -p "require('./package.json').version")"
+          set -euo pipefail
+          tags="$(git ls-remote --tags origin 'v*')"
+          version="$(printf '%s\n' "$tags" | node scripts/release/next-version-cli.mjs)"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if gh release view "v$version" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+          # Guard: never reuse an existing tag or release (e.g. a tag created by a race with another push).
+          if printf '%s\n' "$tags" | grep -q "refs/tags/v$version\(\^{}\)\?$" \
+            || gh release view "v$version" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             echo "publish=false" >> "$GITHUB_OUTPUT"
-            echo "Release v$version already exists: building the installer as an artifact only."
+            echo "::warning::v$version already exists: building the installer as an artifact only."
+          elif [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "Not on main ($GITHUB_REF): building the installer as an artifact only."
           else
             echo "publish=true" >> "$GITHUB_OUTPUT"
-            echo "Release v$version does not exist yet: it will be published."
+            echo "Release v$version will be published."
           fi
+
+      - name: Stamp the version into package.json (this job only, not committed)
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));p.version=process.env.VERSION;fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+          node -p "'package.json version: ' + require('./package.json').version"
 
       - name: Enable code signing when the secrets exist
         shell: bash
@@ -92,6 +111,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          # gh would attach a new release to an existing tag, so check again right before creating it.
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" > /dev/null; then
+            echo "::error::Tag v$VERSION appeared during the build; not publishing over it."
+            exit 1
+          fi
           gh release create "v$VERSION" \
             release/FotoMagica-Setup.exe \
             release/FotoMagica-Setup.exe.blockmap \
