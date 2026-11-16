@@ -16,6 +16,19 @@ export const appVersionSchema = z.strictObject({
 
 export type AppVersion = z.infer<typeof appVersionSchema>
 
+/**
+ * `update:status` (DESIGN §11): what electron-updater is doing in the background. `idle` covers
+ * "not checked", "up to date" and every failure (offline is the normal case at a party), so the
+ * laptop only ever shows a download in progress or one waiting for the next quit.
+ */
+export const updateStatusSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('idle') }),
+  z.strictObject({ kind: z.literal('downloading'), version: z.string().min(1), percent: z.number().min(0).max(100) }),
+  z.strictObject({ kind: z.literal('ready'), version: z.string().min(1) }),
+])
+
+export type UpdateStatus = z.infer<typeof updateStatusSchema>
+
 /** Channels that take no input. */
 export const noInputSchema = z.undefined()
 

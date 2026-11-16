@@ -28,6 +28,7 @@ export const IPC_CHANNELS = {
   galleryReprint: 'gallery:reprint',
   webcamGet: 'webcam:get',
   webcamSet: 'webcam:set',
+  updateGetStatus: 'update:get-status',
   // send: renderer → main, no answer
   cameraReport: 'camera:report',
   cameraRequestPreviewPort: 'camera:request-preview-port',
@@ -42,6 +43,7 @@ export const IPC_CHANNELS = {
   printerStatusChanged: 'printer:status-changed',
   galleryChanged: 'gallery:changed',
   webcamState: 'webcam:state',
+  updateStatus: 'update:status',
 } as const
 
 /**

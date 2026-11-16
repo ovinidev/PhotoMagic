@@ -21,6 +21,7 @@ import type {
   TemplateImportResult,
   Templates,
   Timer,
+  UpdateStatus,
   WebcamReport,
   WebcamState,
 } from './schemas'
@@ -118,5 +119,11 @@ export type FotomagicaApi = {
     getStatus: () => Promise<PrinterStatus>
     /** Pushed to both windows whenever the reported state changes. */
     onStatus: (listener: (status: PrinterStatus) => void) => Unsubscribe
+  }
+  update: {
+    /** Background auto-update (DESIGN §11): a download in progress or one that installs on quit. */
+    getStatus: () => Promise<UpdateStatus>
+    /** Pushed whenever the update status changes. */
+    onStatus: (listener: (status: UpdateStatus) => void) => Unsubscribe
   }
 }

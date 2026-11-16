@@ -28,6 +28,7 @@ import {
   templateImportInputSchema,
   templateImportResultSchema,
   templatesSchema,
+  updateStatusSchema,
   webcamReportSchema,
   webcamSetInputSchema,
   webcamStateSchema,
@@ -63,6 +64,7 @@ export const INVOKE_CONTRACT = {
   [IPC_CHANNELS.webcamGet]: { input: noInputSchema, output: webcamStateSchema },
   [IPC_CHANNELS.webcamSet]: { input: webcamSetInputSchema, output: webcamStateSchema },
   [IPC_CHANNELS.galleryReprint]: { input: galleryReprintInputSchema, output: galleryReprintResultSchema },
+  [IPC_CHANNELS.updateGetStatus]: { input: noInputSchema, output: updateStatusSchema },
 } as const satisfies Record<string, { input: z.ZodType; output: z.ZodType }>
 
 /** Renderer → main, fire and forget. The preload validates before sending, main again on arrival. */
@@ -83,6 +85,7 @@ export const EVENT_CONTRACT = {
   [IPC_CHANNELS.printerStatusChanged]: printerStatusSchema,
   [IPC_CHANNELS.galleryChanged]: galleryChangedSchema,
   [IPC_CHANNELS.webcamState]: webcamStateSchema,
+  [IPC_CHANNELS.updateStatus]: updateStatusSchema,
 } as const satisfies Record<string, z.ZodType>
 
 export type InvokeChannel = keyof typeof INVOKE_CONTRACT

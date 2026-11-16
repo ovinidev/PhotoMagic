@@ -63,6 +63,7 @@ export {
   tvOpenInputSchema,
   tvOpenResultSchema,
   tvWindowStateSchema,
+  updateStatusSchema,
   type AppVersion,
   type CameraErrorReason,
   type CameraStatus,
@@ -94,6 +95,7 @@ export {
   type TvOpenResult,
   type TvUnavailableReason,
   type TvWindowState,
+  type UpdateStatus,
   type WebcamReport,
   type WebcamState,
 } from './schemas'

@@ -100,6 +100,10 @@ const api: FotomagicaApi = {
     getStatus: () => invoke(IPC_CHANNELS.printerStatus, undefined),
     onStatus: (listener) => subscribe(IPC_CHANNELS.printerStatusChanged, listener),
   },
+  update: {
+    getStatus: () => invoke(IPC_CHANNELS.updateGetStatus, undefined),
+    onStatus: (listener) => subscribe(IPC_CHANNELS.updateStatus, listener),
+  },
 }
 
 contextBridge.exposeInMainWorld('fotomagica', api)
