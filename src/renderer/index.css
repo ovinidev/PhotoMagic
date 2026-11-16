@@ -15,6 +15,7 @@
   --glass: rgba(28, 28, 30, 0.42);
   --glass-strong: rgba(28, 28, 30, 0.62);
   --shutter: #ffffff;
+  --timer: #ffd60a;
 }
 
 @theme inline {
@@ -31,6 +32,7 @@
   --color-glass: var(--glass);
   --color-glass-strong: var(--glass-strong);
   --color-shutter: var(--shutter);
+  --color-timer: var(--timer);
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 
