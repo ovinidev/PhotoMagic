@@ -53,7 +53,7 @@ jobs:
           tags="$(git ls-remote --tags origin 'v*')"
           version="$(printf '%s\n' "$tags" | node scripts/release/next-version-cli.mjs)"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          # Guard: never reuse an existing tag or release (e.g. a tag pushed by hand above the computed one).
+          # Guard: never reuse an existing tag or release (e.g. a tag created by a race with another push).
           if printf '%s\n' "$tags" | grep -q "refs/tags/v$version\(\^{}\)\?$" \
             || gh release view "v$version" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             echo "publish=false" >> "$GITHUB_OUTPUT"

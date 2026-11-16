@@ -443,12 +443,12 @@ The pull-request E2E can run on `ubuntu-latest`: the printer is simulated, the c
 **On push to `main`, an extra job on `windows-latest`**
 
 - `pnpm dist` (electron-builder `--win`)
-- Publishes a GitHub Release `v<version>` (installer, blockmap and `latest.yml`, not a draft) when `package.json` `version` does not yet exist as a release
+- Computes the version (`scripts/release/next-version.mjs`): the latest `v<x.y.z>` tag plus one patch, or `package.json` `version` when a PR bumped it above that tag. It is written into the job's copy of `package.json` before `pnpm dist` and never committed back
+- Publishes a GitHub Release `v<version>` (installer, blockmap and `latest.yml`, not a draft). If that tag or release already exists, or the run is not on `main`, it builds the artifact only
+- One global `release` concurrency group, never cancelled midway
 - Signs only with the secrets present, as in section 11
 
-A push that does not bump the version produces the installer as a workflow artifact and does not create another release. electron-updater only sees a published release.
-
-To release, bump `package.json` `version` on a branch (`pnpm version <patch|minor|major> --no-git-tag-version`, no tag) and merge it to `main`; the steps are in `CLAUDE.md` ("Releasing a version").
+Every push to `main` therefore creates a new release, which electron-updater sees. Because the job never pushes to `main`, it cannot retrigger itself. For a minor or major, bump `package.json` `version` on a branch (`pnpm version <minor|major> --no-git-tag-version`, no tag) and merge it; the steps are in `CLAUDE.md` ("Releasing a version").
 
 ### What the tests cover
 
