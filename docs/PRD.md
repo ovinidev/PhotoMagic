@@ -199,7 +199,7 @@ The slot editor does not open while an event is in progress. To change Left/Top/
 
 ### 6.4 Camera (TV)
 
-Opens fullscreen on the TV monitor as soon as the event starts. The look follows the current iPhone camera: frosted-glass bars, white button, gallery thumbnail. The VIDEO/PHOTO/PORTRAIT selector and the front-camera button go away.
+Opens fullscreen on the TV monitor as soon as the event starts. The look follows the current iPhone camera: dark translucent bars, a large white button, gallery thumbnail. The VIDEO/PHOTO/PORTRAIT selector and the front-camera button go away.
 
 - Live image mirrored. The person sees themselves as in a mirror, and the saved JPG shows exactly that
 - White button, bottom center. Each tap takes a photo. Three taps per round. A counter shows 1/3, 2/3 and 3/3
