@@ -1,7 +1,7 @@
 {
   "name": "fotomagica",
   "productName": "Foto Mágica",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Foto Mágica 2.0 — party photobooth for a vertical touch TV and the DNP DS-RX1",
   "author": "Vinicius (@ovinidev)",
