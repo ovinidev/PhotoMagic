@@ -73,6 +73,7 @@ Every merge to `main` is a release (DESIGN §12). Nothing is published by hand a
    - the latest published `v<x.y.z>` tag plus one patch (`v0.2.0` → `0.2.1`), by default;
    - the `package.json` version as is, when a PR bumped it above the latest tag (a manual minor or major).
 2. The job writes that version into its own copy of `package.json` (not committed), builds `FotoMagica-Setup.exe`, uploads it as an artifact and publishes the GitHub Release `v<version>` with `FotoMagica-Setup.exe`, its `.blockmap` and `latest.yml`.
+   After publishing, a `label` job creates the label `v<version>` if missing and adds it to every PR merged since the previous tag (`scripts/release/label-prs-cli.mjs`).
 3. Installed apps pick it up at their next startup with a network and no event, download in the background and install when the operator quits.
 4. The stable download address is `https://github.com/ovinidev/PhotoMagic/releases/latest/download/FotoMagica-Setup.exe`.
 
