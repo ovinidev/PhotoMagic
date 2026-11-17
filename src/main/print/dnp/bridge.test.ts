@@ -32,20 +32,21 @@ afterEach(() => {
 })
 
 describe('createHelperBridge', () => {
-  it('starts the helper once and matches answers to requests by id', async () => {
+  it('starts the helper once and sends one request at a time, matching answers by id', async () => {
     const helper = fakeHelper()
     const spawn = vi.fn(() => helper.process)
     const bridge = createHelperBridge({ spawn, timeoutMs: () => 1_000 })
     const first = bridge.request({ action: 'list' })
     const second = bridge.request({ action: 'capabilities', printer: 'DNP DS-RX1' })
+    expect(helper.lines).toEqual([{ id: 1, action: 'list' }])
+    helper.noise('WARNING: something PowerShell printed')
+    helper.answer({ id: 1, ok: true, printers: [] })
+    await expect(first).resolves.toEqual({ id: 1, ok: true, printers: [] })
     expect(helper.lines).toEqual([
       { id: 1, action: 'list' },
       { id: 2, action: 'capabilities', printer: 'DNP DS-RX1' },
     ])
-    helper.noise('WARNING: something PowerShell printed')
     helper.answer({ id: 2, ok: true, features: [] })
-    helper.answer({ id: 1, ok: true, printers: [] })
-    await expect(first).resolves.toEqual({ id: 1, ok: true, printers: [] })
     await expect(second).resolves.toEqual({ id: 2, ok: true, features: [] })
     expect(spawn).toHaveBeenCalledTimes(1)
   })

@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import type { RuntimeFlags, SimulatedPrinterFlags } from '@shared/runtime'
+import { createFileLog } from '../persist/log'
 import { createSimulatedPrinter } from './SimulatedPrinter'
 import { createWindowsDnpPrinter } from './WindowsDnpPrinter'
 import type { Printer } from './types'
@@ -17,12 +18,16 @@ export type PrinterHandle = {
   dispose: () => void
 }
 
+/** The DS-RX1 log under `userData/logs/`: each print sent and every helper stderr line. */
+export const PRINT_LOG = 'print.log'
+
 /** Picks the implementation from `FOTOMAGICA_PRINTER`. The simulated one writes under `userData/simulated-prints/`. */
 export function createPrinter(flags: RuntimeFlags, userData: string): PrinterHandle {
   if (flags.printer === 'simulated') {
     const printer = createSimulatedPrinter({ dir: join(userData, 'simulated-prints'), flags: flags.simulatedPrinter })
     return { printer, pollMs: 250, setSimulated: printer.setFlags, dispose: () => {} }
   }
-  const printer = createWindowsDnpPrinter({ helperDir: join(userData, 'helpers') })
+  const log = createFileLog(userData, PRINT_LOG)
+  const printer = createWindowsDnpPrinter({ helperDir: join(userData, 'helpers'), file: (line) => log('info', line) })
   return { printer, pollMs: 5_000, setSimulated: null, dispose: printer.dispose }
 }

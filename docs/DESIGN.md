@@ -308,6 +308,8 @@ Unlike the slot editor, framing does go to main during the gesture, because the 
 | Each mode's template file (`two-strips.png` or `.jpg`, `one-strip.…`) | `app.getPath('userData')/templates/` |
 | JPG montage | `app.getPath('desktop')/<event name>/HH-mm-ss.jpg` |
 | Auto-update log (§11) | `app.getPath('userData')/logs/updater.log` |
+| DS-RX1 print log (§10): each print sent and the helper's stderr | `app.getPath('userData')/logs/print.log` |
+| PowerShell print helper, rewritten on each launch | `app.getPath('userData')/helpers/dnp-helper.ps1` |
 
 The folder name goes through a pure function: trim, reject empty, reject the characters `\ / : * ? " < > |`, reject reserved Windows names, reject a trailing dot or space. The test lists these cases.
 
