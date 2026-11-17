@@ -29,6 +29,9 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      published: ${{ steps.release.outputs.published }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
@@ -105,6 +108,7 @@ jobs:
           retention-days: 30
 
       - name: Publish GitHub Release
+        id: release
         if: steps.version.outputs.publish == 'true'
         shell: bash
         env:
@@ -124,3 +128,33 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "Foto Mágica $VERSION" \
             --generate-notes
+          echo "published=true" >> "$GITHUB_OUTPUT"
+
+  # Labels every PR merged since the previous tag with the vX.Y.Z it shipped in. Idempotent; no PRs is not an error.
+  label:
+    name: Label released PRs
+    needs: windows
+    if: needs.windows.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Label the PRs merged in this release
+        env:
+          TAG: v${{ needs.windows.outputs.version }}
+        run: |
+          git fetch --tags --force origin
+          node scripts/release/label-prs-cli.mjs "$TAG"
