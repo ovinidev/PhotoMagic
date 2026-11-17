@@ -16,24 +16,40 @@ export type HelperBridge = {
   dispose: () => void
 }
 
-type Pending = { resolve: (payload: unknown) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }
+type Queued = { id: number; request: HelperRequest; resolve: (payload: unknown) => void; reject: (error: Error) => void }
+type InFlight = Queued & { timer: ReturnType<typeof setTimeout> }
 
 /**
  * Keeps one helper process alive and talks to it line by line. The process starts on the first
- * request (loading System.Printing takes a moment, once), and again after it exits. A request that
- * times out kills the process: a driver call that hangs must not hang every print after it.
+ * request (loading System.Printing takes a moment, once), and again after it exits.
+ *
+ * The helper reads one request at a time, so the bridge sends one at a time too: a request's
+ * timeout starts when it is sent, never while it waits behind a slow print (a status poll queued
+ * behind ten copies must not time out and kill the print). A request that times out kills the
+ * process, since a driver call that hangs must not hang every print after it, and whatever was
+ * queued behind it fails at once instead of waiting for its own timeout.
  */
 export function createHelperBridge({ spawn, timeoutMs }: { spawn: () => HelperProcess; timeoutMs: (request: HelperRequest) => number }): HelperBridge {
   let child: HelperProcess | null = null
   let nextId = 1
-  const pending = new Map<number, Pending>()
+  let inFlight: InFlight | null = null
+  const queue: Queued[] = []
 
   const failAll = (error: Error) => {
-    for (const [id, entry] of pending) {
-      clearTimeout(entry.timer)
-      pending.delete(id)
-      entry.reject(error)
+    const current = inFlight
+    inFlight = null
+    if (current) {
+      clearTimeout(current.timer)
+      current.reject(error)
     }
+    for (const entry of queue.splice(0)) entry.reject(error)
+  }
+
+  const stop = (error: Error) => {
+    const current = child
+    child = null
+    failAll(error)
+    current?.kill()
   }
 
   const start = (): HelperProcess => {
@@ -48,44 +64,42 @@ export function createHelperBridge({ spawn, timeoutMs }: { spawn: () => HelperPr
     if (started.stdout) {
       createInterface({ input: started.stdout }).on('line', (line) => {
         const response = parseResponseLine(line)
-        if (!response) return
-        const entry = pending.get(response.id)
-        if (!entry) return
-        clearTimeout(entry.timer)
-        pending.delete(response.id)
-        entry.resolve(response.payload)
+        if (!response || child !== started || !inFlight || response.id !== inFlight.id) return
+        const done = inFlight
+        inFlight = null
+        clearTimeout(done.timer)
+        done.resolve(response.payload)
+        pump()
       })
     }
     return started
   }
 
+  const pump = () => {
+    while (!inFlight && queue.length > 0) {
+      const entry = queue.shift()!
+      try {
+        child ??= start()
+        if (!child.stdin) throw new Error('print helper has no stdin')
+        const timer = setTimeout(() => {
+          stop(new Error(`print helper did not answer ${entry.request.action} in time`))
+        }, timeoutMs(entry.request))
+        inFlight = { ...entry, timer }
+        child.stdin.write(encodeRequest(entry.id, entry.request))
+      } catch (error) {
+        if (inFlight?.id === entry.id) clearTimeout(inFlight.timer)
+        inFlight = null
+        entry.reject(error instanceof Error ? error : new Error(String(error)))
+      }
+    }
+  }
+
   return {
     request: (request) =>
       new Promise((resolve, reject) => {
-        const id = nextId++
-        const timer = setTimeout(() => {
-          pending.delete(id)
-          reject(new Error(`print helper did not answer ${request.action} in time`))
-          const hung = child
-          child = null
-          hung?.kill()
-        }, timeoutMs(request))
-        pending.set(id, { resolve, reject, timer })
-        try {
-          child ??= start()
-          if (!child.stdin) throw new Error('print helper has no stdin')
-          child.stdin.write(encodeRequest(id, request))
-        } catch (error) {
-          clearTimeout(timer)
-          pending.delete(id)
-          reject(error instanceof Error ? error : new Error(String(error)))
-        }
+        queue.push({ id: nextId++, request, resolve, reject })
+        pump()
       }),
-    dispose: () => {
-      const current = child
-      child = null
-      failAll(new Error('print helper stopped'))
-      current?.kill()
-    },
+    dispose: () => stop(new Error('print helper stopped')),
   }
 }
