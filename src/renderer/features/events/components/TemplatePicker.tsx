@@ -39,9 +39,9 @@ export function TemplatePicker({
   const loading = importState.status === 'loading'
 
   return (
-    <fieldset className="flex flex-col gap-3">
+    <fieldset className="flex min-w-0 max-w-full flex-col gap-3">
       <legend className="mb-2 text-base font-medium text-ink">{EVENTS_COPY.template(modeLabel)}</legend>
-      <div className="flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[var(--radius-field)] border border-line bg-bg">
+      <div className="flex aspect-[1844/1240] w-full max-w-full items-center justify-center overflow-hidden rounded-[var(--radius-field)] border border-line bg-bg">
         {templates.status === 'loading' ? (
           <p className="text-sm text-ink-soft">{EVENTS_COPY.templatesLoading}</p>
         ) : templates.status === 'error' ? (
@@ -55,16 +55,16 @@ export function TemplatePicker({
           </div>
         )}
       </div>
-      <p className="truncate text-sm text-ink-soft" data-testid="template-file-name">
+      <p className="min-w-0 truncate text-sm text-ink-soft" data-testid="template-file-name" title={template?.fileName}>
           {template ? `${template.fileName} · ${template.width} × ${template.height} px` : templates.status === 'ready' ? EVENTS_COPY.templateDefault : ''}
       </p>
-      <div className="flex flex-wrap items-center justify-end gap-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-3" data-testid="template-actions">
         {actions}
         <label
           htmlFor={inputId}
           aria-disabled={loading}
           className={cn(
-            'inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-[var(--radius-field)] border border-line px-5 text-sm font-medium text-ink hover:bg-bg',
+            'inline-flex min-h-11 max-w-full cursor-pointer items-center rounded-[var(--radius-field)] border border-line px-5 text-sm font-medium text-ink hover:bg-bg',
             'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink',
             loading && 'pointer-events-none opacity-50',
           )}

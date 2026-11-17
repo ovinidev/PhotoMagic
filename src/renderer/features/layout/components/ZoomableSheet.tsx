@@ -9,8 +9,8 @@ const PAD = { x: 16, top: 16, bottom: 48 } as const
 type Pan = { pointerId: number; x: number; y: number }
 
 /**
- * The editor's sheet in a scrollable viewport with its own zoom (DESIGN §7): `−` / `+`, the
- * percentage to fit again, and Ctrl + wheel toward the cursor. The sheet is laid out at
+ * The editor's sheet in a scrollable viewport with its own zoom (DESIGN §7): Ctrl + wheel toward the
+ * cursor, back to 100% (fit) at the bottom of the range; there are no zoom buttons. The sheet is laid out at
  * `fit × zoom` CSS pixels, so `SheetCanvas` converts the pointer exactly at any zoom. When zoomed,
  * dragging the background (or the middle button) pans; cards keep their own gestures.
  */
@@ -93,34 +93,14 @@ export function ZoomableSheet({ children }: { children: ReactNode }) {
     if (pan.current?.pointerId === event.pointerId) pan.current = null
   }
 
-  const percent = Math.round(zoom * 100)
-  const tool =
-    'inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[var(--radius-field)] border border-line bg-bg-raised px-3 text-base font-medium text-ink hover:bg-bg disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink'
-
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <div role="group" aria-label={LAYOUT_COPY.canvasZoom} className="flex items-center justify-end gap-1">
-        <span className="mr-2 text-sm text-ink-soft">{LAYOUT_COPY.canvasZoomHint}</span>
-        <button type="button" className={tool} aria-label={LAYOUT_COPY.canvasZoomOut} disabled={zoom <= CANVAS_ZOOM.min} onClick={() => applyZoom(stepCanvasZoom(zoom, 'out'))}>
-          −
-        </button>
-        <button
-          type="button"
-          className={`${tool} min-w-20 tabular-nums`}
-          aria-label={LAYOUT_COPY.canvasZoomFit(percent)}
-          data-testid="canvas-zoom"
-          onClick={() => applyZoom(CANVAS_ZOOM.min)}
-        >
-          {percent}%
-        </button>
-        <button type="button" className={tool} aria-label={LAYOUT_COPY.canvasZoomIn} disabled={zoom >= CANVAS_ZOOM.max} onClick={() => applyZoom(stepCanvasZoom(zoom, 'in'))}>
-          +
-        </button>
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-1">
+      <p className="text-right text-xs text-ink-soft">{LAYOUT_COPY.canvasZoomHint}</p>
       <div
         ref={viewportRef}
         data-testid="layout-viewport"
         data-zoom={zoom}
+        aria-label={LAYOUT_COPY.canvasZoom}
         className={`relative min-h-0 flex-1 overflow-auto rounded-[var(--radius-field)] border border-line bg-bg ${zoom > CANVAS_ZOOM.min ? 'cursor-grab' : ''}`}
         onPointerDown={startPan}
         onPointerMove={movePan}

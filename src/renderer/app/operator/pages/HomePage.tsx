@@ -12,7 +12,7 @@ import { LayoutEditor } from '@renderer/features/layout'
 export function HomePage() {
   const [editing, setEditing] = useState<PrintMode | null>(null)
   return (
-    <div className="mx-auto flex w-full max-w-[1280px] flex-col items-center px-6 py-5">
+    <div className="mx-auto flex w-full min-w-0 max-w-[1280px] flex-col items-center px-6 py-5">
       {/* RNF12: the full logo on the create-event screen, beside the title so the form fits the window. */}
       <CreateEventForm onEditLayout={setEditing} logo={<img src={logoUrl} alt="Foto Mágica" className="h-16 w-auto" draggable={false} />} />
       {editing ? <LayoutEditor initialMode={editing} onClose={() => setEditing(null)} /> : null}
