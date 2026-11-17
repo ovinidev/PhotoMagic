@@ -5,12 +5,15 @@ import '../../index.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { OperatorApp } from './OperatorApp'
+import { RenderErrorBoundary } from './components/RenderErrorBoundary'
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root element in operator.html')
 
 createRoot(root).render(
   <StrictMode>
-    <OperatorApp />
+    <RenderErrorBoundary>
+      <OperatorApp />
+    </RenderErrorBoundary>
   </StrictMode>,
 )
