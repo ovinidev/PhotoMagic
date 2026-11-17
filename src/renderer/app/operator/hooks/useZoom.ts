@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import type { ZoomState } from '@shared/ipc'
+import { useEffect } from 'react'
 
 type Step = 'in' | 'out' | 'reset'
 
@@ -16,35 +15,15 @@ export function zoomKeyStep(event: Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey
 const WHEEL_STEP_MS = 120
 
 /**
- * The laptop window zoom (DESIGN §3): main's state, kept current by `zoom:state`, plus the shortcuts
- * Ctrl + / Ctrl − / Ctrl 0 and Ctrl + wheel. A surface that zooms itself (the slot editor's sheet)
- * calls `preventDefault` on its wheel event first, and the window then leaves that wheel alone.
+ * The laptop window zoom shortcuts (DESIGN §3): Ctrl + / Ctrl − / Ctrl 0 and Ctrl + wheel, each one a
+ * `zoom:step` to main, which owns and saves the state. There are no zoom buttons. A surface that zooms itself
+ * (the slot editor's sheet) calls `preventDefault` on its wheel event first, and the window then leaves that wheel alone.
  */
-export function useZoom(): { state: ZoomState | null; step: (step: Step) => void } {
-  const [state, setState] = useState<ZoomState | null>(null)
-
-  useEffect(() => {
-    let active = true
-    let pushed = false
-    const unsubscribe = window.fotomagica.zoom.onState((value) => {
-      pushed = true
-      if (active) setState(value)
-    })
-    window.fotomagica.zoom
-      .get()
-      .then((value) => active && !pushed && setState(value))
-      .catch(() => {})
-    return () => {
-      active = false
-      unsubscribe()
-    }
-  }, [])
-
+export function useZoom(): void {
   useEffect(() => {
     const step = (direction: Step) => {
       void window.fotomagica.zoom
         .step(direction)
-        .then(setState)
         .catch(() => {})
     }
     const onKey = (event: KeyboardEvent) => {
@@ -68,14 +47,4 @@ export function useZoom(): { state: ZoomState | null; step: (step: Step) => void
       window.removeEventListener('wheel', onWheel)
     }
   }, [])
-
-  return {
-    state,
-    step: (direction) => {
-      void window.fotomagica.zoom
-        .step(direction)
-        .then(setState)
-        .catch(() => {})
-    },
-  }
 }
