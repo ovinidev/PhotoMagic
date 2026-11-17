@@ -143,12 +143,16 @@ export function createDnpPrinter({ bridge, log = () => {} }: { bridge: Pick<Help
 
 /**
  * The real thing: writes the helper script under `helperDir` and starts Windows PowerShell on the
- * first request. `dispose` stops the helper when the app quits.
+ * first request. Lines go to the console and to `file` (`userData/logs/print.log`). `dispose` stops
+ * the helper when the app quits.
  */
-export function createWindowsDnpPrinter({ helperDir }: { helperDir: string }): Printer & { dispose: () => void } {
+export function createWindowsDnpPrinter({ helperDir, file = () => {} }: { helperDir: string; file?: (line: string) => void }): Printer & { dispose: () => void } {
   const scriptPath = join(helperDir, 'dnp-helper.ps1')
   let written = false
-  const log = (line: string) => console.info(`[print] ${line}`)
+  const log = (line: string) => {
+    console.info(`[print] ${line}`)
+    file(line)
+  }
 
   const bridge = createHelperBridge({
     timeoutMs: (request) => TIMEOUTS[request.action],
