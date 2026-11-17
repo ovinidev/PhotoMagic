@@ -36,3 +36,11 @@ pnpm vitest run src/main/print/dnp/bridge.review.test.ts src/main/session/saveMo
 - **Severity:** low (refactor, no behavior change). The append-only file logger moved from `src/main/updater/log.ts` to `src/main/persist/log.ts` (`createFileLog`), so other main-process modules can write to `<userData>/logs/` the same way. `updater.log` keeps its path and format.
 - **Proving test:** `src/main/persist/log.test.ts`
 - **Status:** fixed
+
+## 5. No print diagnostics on disk for the hardware test
+
+- **Commit:** `20e3f4b` Write DS-RX1 print diagnostics to logs/print.log
+- **Severity:** low (diagnostics, no behavior change for the guest). Print lines and the PowerShell helper's stderr only went to the console, which is not visible in the installed app, so a failed DS-RX1 print on the notebook left nothing to send back.
+- **Fix:** `src/main/print/index.ts` passes a `createFileLog(userData, 'print.log')` sink to `createWindowsDnpPrinter` (`src/main/print/WindowsDnpPrinter.ts`). The simulated printer is unchanged.
+- **Proving test:** `src/main/persist/log.test.ts` (the shared file sink); `src/main/print/WindowsDnpPrinter.test.ts` still passes. No dedicated test for the wiring, since it only runs on Windows with the real driver.
+- **Status:** fixed
