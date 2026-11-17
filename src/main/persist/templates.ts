@@ -33,11 +33,20 @@ export async function importTemplate(userData: string, mode: PrintMode, fileName
   const check = checkTemplate({ format: meta.format, width: meta.width, height: meta.height })
   if (!check.ok) return check.reason === 'size' ? { ok: false, reason: 'size', width: check.width, height: check.height } : { ok: false, reason: 'format' }
 
+  // The header can be fine while the pixel data is cut off: decode the whole image (the preview)
+  // before anything is written, so a broken file is refused and never stored.
+  let preview: Buffer
+  try {
+    preview = await thumbnail(bytes)
+  } catch {
+    return { ok: false, reason: 'unreadable' }
+  }
+
   const file = `${mode}.${meta.format === 'png' ? 'png' : 'jpg'}`
   await mkdir(join(userData, TEMPLATES_DIR), { recursive: true })
   await writeFile(join(userData, TEMPLATES_DIR, file), bytes)
   await updateConfig(userData, (config) => ({ ...config, templates: { ...config.templates, [mode]: { file, fileName } } }))
-  return { ok: true, template: await info(mode, fileName, bytes) }
+  return { ok: true, template: { mode, fileName, width: meta.width, height: meta.height, preview } }
 }
 
 /** The stored template bytes of a mode, or `null` when none was imported or the file is gone. */
