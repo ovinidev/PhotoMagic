@@ -11,9 +11,9 @@ function zoomFactors(app: ElectronApplication): Promise<Record<string, number>> 
 }
 
 test.describe('laptop zoom (DESIGN §3)', () => {
-  test('grows with the window, steps with Ctrl + and the buttons, and is saved on this computer', async ({ app, operatorWindow, relaunch }) => {
-    const percent = operatorWindow.getByTestId('zoom-percent')
-    await expect(percent).toHaveText('100%')
+  test('grows with the window, steps with Ctrl + and is saved on this computer', async ({ app, operatorWindow, relaunch }) => {
+    await expect(operatorWindow.getByTestId('app-version')).toContainText('Versão')
+    await expect(operatorWindow.getByRole('button', { name: /zoom/i })).toHaveCount(0)
     // The E2E window is 1280×800: the reference size, so the automatic factor is 1.
     await expect.poll(async () => (await zoomFactors(app))['Foto Mágica']).toBe(1)
 
@@ -22,22 +22,23 @@ test.describe('laptop zoom (DESIGN §3)', () => {
     await expect.poll(async () => (await zoomFactors(app))['Foto Mágica']).toBeCloseTo(1.34, 2)
 
     await operatorWindow.keyboard.press('Control+=')
-    await expect(percent).toHaveText('110%')
     await expect.poll(async () => (await zoomFactors(app))['Foto Mágica']).toBeCloseTo(1.47, 2)
-    await operatorWindow.getByRole('button', { name: 'Aumentar zoom (Ctrl +)' }).click()
-    await expect(percent).toHaveText('125%')
+    await operatorWindow.keyboard.press('Control+=')
+    await expect.poll(async () => (await zoomFactors(app))['Foto Mágica']).toBeCloseTo(1.67, 1)
 
     const next = await relaunch()
-    await expect(next.operatorWindow.getByTestId('zoom-percent')).toHaveText('125%')
     await expect.poll(async () => (await zoomFactors(next.app))['Foto Mágica']).toBeCloseTo(1.25, 2)
+    await expect(next.operatorWindow.getByTestId('app-version')).toContainText('Versão')
     await next.operatorWindow.keyboard.press('Control+0')
-    await expect(next.operatorWindow.getByTestId('zoom-percent')).toHaveText('100%')
+    await expect.poll(async () => (await zoomFactors(next.app))['Foto Mágica']).toBe(1)
   })
 
   test('never zooms the TV window', async ({ app, operatorWindow }) => {
-    await operatorWindow.getByRole('button', { name: 'Aumentar zoom (Ctrl +)' }).click()
-    await operatorWindow.getByRole('button', { name: 'Aumentar zoom (Ctrl +)' }).click()
-    await expect(operatorWindow.getByTestId('zoom-percent')).toHaveText('125%')
+    await expect(operatorWindow.getByTestId('app-version')).toContainText('Versão')
+    await operatorWindow.keyboard.press('Control+=')
+    await expect.poll(async () => (await zoomFactors(app))['Foto Mágica']).toBeCloseTo(1.1, 2)
+    await operatorWindow.keyboard.press('Control+=')
+    await expect.poll(async () => (await zoomFactors(app))['Foto Mágica']).toBeCloseTo(1.25, 2)
     const tv = await startEvent(app, operatorWindow, { name: 'Festa', template: null })
     const factors = await zoomFactors(app)
     expect(factors['Foto Mágica']).toBeCloseTo(1.25, 2)
