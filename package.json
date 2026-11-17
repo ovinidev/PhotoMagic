@@ -26,6 +26,7 @@
     "build": "electron-vite build",
     "dist": "electron-vite build && electron-builder --win",
     "icon": "node scripts/build-icon.mjs",
+    "header-mark": "node scripts/build-header-mark.mjs",
     "prepare": "husky"
   },
   "pnpm": {
