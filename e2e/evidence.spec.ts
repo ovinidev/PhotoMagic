@@ -5,7 +5,11 @@ import { dirname, join } from 'node:path'
 import type { ElectronApplication, Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 import { PRINT_TIMEOUT, startEvent, takePhotos } from './event'
-import { ATTRACT_FADE_MS, ATTRACT_IDLE_MS, ATTRACT_SLIDE_MS } from '../src/renderer/features/attract/utils/slides'
+
+/** Mirrors `ATTRACT_IDLE_MS`, `ATTRACT_SLIDE_MS` and `ATTRACT_FADE_MS` in `features/attract/utils/slides.ts`. */
+const ATTRACT_IDLE_MS = 45_000
+const ATTRACT_SLIDE_MS = 6_000
+const ATTRACT_FADE_MS = 1_200
 
 /**
  * PR evidence video, not a check. Excluded from `pnpm test:e2e` by `playwright.config.ts`; run it with
