@@ -620,7 +620,9 @@ A logo mark, the symbol only, may sit in the corner of the print screen, outside
 
 The shutter flashes white for 80 ms. The countdown swaps numbers without bounce. The editor does not animate the slot during the drag: it sticks to the pointer, with snap already applied, and the panel shows that value in the same frame.
 
-`prefers-reduced-motion` turns off the flash and the bar transition. Snap and the countdown remain, because they are information, not decoration.
+TV screen changes animate in one place, `src/renderer/app/guest/GuestApp.tsx`, not in each screen. The screens are ordered: the camera, then the print screen over it (`GUEST_SCREENS` in `app/guest/screens.ts`); a move to a later screen is forward, to an earlier one is back. Forward (the third photo opens the print screen): the print screen fades in with a slight zoom, from 96% to 100%, 300 ms ease-out. Back (`Cancelar`, `Nova rodada`): the print screen slides out to the right over the camera, 300 ms ease-out, and is inert while it leaves; the camera never unmounts, so the stream does not restart. Changes inside the print screen (`printing`, `printed`, a failure) do not animate.
+
+`prefers-reduced-motion` turns off the flash and the bar transition, and turns the screen zoom and slide into a plain 300 ms fade. Snap and the countdown remain, because they are information, not decoration.
 
 ## 15. Logo
 
