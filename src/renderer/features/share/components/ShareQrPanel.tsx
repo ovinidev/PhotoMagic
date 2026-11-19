@@ -7,7 +7,7 @@ function Step({ title, caption, children }: { title: string; caption?: string | 
     <div className="flex flex-col items-center gap-4">
       <p className="text-3xl font-semibold text-white">{title}</p>
       {children}
-      {caption ? <p className="max-w-72 truncate text-2xl text-white/80">{caption}</p> : null}
+      {caption ? <p className="max-w-72 text-center text-2xl break-words text-white/80">{caption}</p> : null}
     </div>
   )
 }
