@@ -31,7 +31,7 @@ describe('config.json', () => {
 
   it('round-trips through disk', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'fotomagica-config-'))
-    const config = { layouts: SEED_LAYOUTS, templates: { 'two-strips': ref }, webcam: NO_WEBCAM, zoom: 1.25 }
+    const config = { layouts: SEED_LAYOUTS, templates: { 'two-strips': ref }, webcam: NO_WEBCAM, zoom: 1.25, share: defaultShareSettings() }
     await writeConfig(dir, config)
     expect(await readConfig(dir)).toEqual(config)
     expect(JSON.parse(await readFile(join(dir, CONFIG_FILE), 'utf8')).templates).toEqual({ 'two-strips': ref })
