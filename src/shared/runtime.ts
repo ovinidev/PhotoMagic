@@ -13,7 +13,12 @@ export type CameraFixture = { kind: 'pattern' } | { kind: 'file'; path: string }
 
 /** What the simulated printer answers (DESIGN §10): its status and whether the driver accepts the cut. */
 export type SimulatedPrinterStatus = 'ready' | 'offline' | 'no-paper' | 'no-ribbon'
-export type SimulatedPrinterFlags = { status: SimulatedPrinterStatus; cut: 'supported' | 'unsupported' }
+export type SimulatedPrinterFlags = {
+  status: SimulatedPrinterStatus
+  cut: 'supported' | 'unsupported'
+  /** How long an accepted print takes to answer. Always 0 at startup; only the E2E hook changes it. */
+  delayMs: number
+}
 
 export type RuntimeFlags = {
   /** Running under Playwright: fixtures replace the webcam and the second monitor, no auto-update. */
@@ -54,6 +59,7 @@ function readSimulatedPrinter(env: Env): SimulatedPrinterFlags {
   return {
     status: SIMULATED_STATUSES.find((status) => status === env['FOTOMAGICA_PRINTER_STATUS']) ?? 'ready',
     cut: env['FOTOMAGICA_PRINTER_CUT'] === 'unsupported' ? 'unsupported' : 'supported',
+    delayMs: 0,
   }
 }
 

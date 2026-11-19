@@ -357,7 +357,7 @@ type PrintResult =
 
 Two implementations of the same interface:
 
-- `SimulatedPrinter`, used with `FOTOMAGICA_PRINTER=simulated`. Copies the JPEG to `userData/simulated-prints/` and writes the ticket as JSON. `FOTOMAGICA_PRINTER_STATUS` forces `ready`, `offline`, `no-paper` or `no-ribbon`. `FOTOMAGICA_PRINTER_CUT=unsupported` returns `cut-unavailable`. Under E2E, the test hook `__fotomagicaE2E.setPrinter` changes both at runtime, so a spec can put the paper back and tap `Tentar novamente`
+- `SimulatedPrinter`, used with `FOTOMAGICA_PRINTER=simulated`. Copies the JPEG to `userData/simulated-prints/` and writes the ticket as JSON. `FOTOMAGICA_PRINTER_STATUS` forces `ready`, `offline`, `no-paper` or `no-ribbon`. `FOTOMAGICA_PRINTER_CUT=unsupported` returns `cut-unavailable`. Under E2E, the test hook `__fotomagicaE2E.setPrinter` changes both at runtime, so a spec can put the paper back and tap `Tentar novamente`; its `delayMs` (0 by default, no variable) holds an accepted print, so a spec can watch the job in flight
 - `WindowsDnpPrinter`, the only one that talks to the spooler, described below
 
 ### The Windows printer

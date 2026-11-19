@@ -57,6 +57,19 @@ test.describe('print', () => {
     expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(dirs.desktop, 'Festa', file!), copies: 2, mode: 'two-strips', cut: true }])
   })
 
+  test('the print animation follows the job: feeding while the printer holds it, ready only on its answer', async ({ app, operatorWindow }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
+    await takePhotos(tv, 3)
+    await setSimulatedPrinter(app, { delayMs: 2_000 })
+    await tv.getByRole('button', { name: 'Imprimir' }).click()
+    await expect(tv.getByTestId('print-photo')).toHaveAttribute('data-eject', 'feeding')
+    await expect(tv.getByTestId('print-message')).toHaveText('Imprimindo…')
+    await expect(tv.getByRole('progressbar', { name: 'Progresso da impressão' })).toHaveAttribute('aria-valuenow', '67')
+    await expect(tv.getByText('Sua foto está pronta!')).toHaveCount(0)
+    await expect(tv.getByTestId('print-message')).toHaveText('Sua foto está pronta!', { timeout: PRINT_TIMEOUT })
+    await expect(tv.getByTestId('print-photo')).toHaveAttribute('data-eject', 'out')
+  })
+
   test('RF11 1 tira writes a simulated ticket with cut off', async ({ app, operatorWindow, dirs }) => {
     const tv = await startEvent(app, operatorWindow, { name: 'Festa', mode: 'one-strip' })
     await takePhotos(tv, 3)

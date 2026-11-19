@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readRuntimeFlags } from './runtime'
 
 const defaultFixtures = { displays: 'portrait-tv', camera: { kind: 'pattern' }, paths: { userData: null, desktop: null } }
-const simulatedPrinter = { status: 'ready', cut: 'supported' }
+const simulatedPrinter = { status: 'ready', cut: 'supported', delayMs: 0 }
 
 describe('readRuntimeFlags', () => {
   it('defaults to production: no E2E and the Windows printer', () => {
@@ -49,6 +49,7 @@ describe('readRuntimeFlags', () => {
     expect(readRuntimeFlags({ FOTOMAGICA_PRINTER_STATUS: 'no-paper', FOTOMAGICA_PRINTER_CUT: 'unsupported' }).simulatedPrinter).toEqual({
       status: 'no-paper',
       cut: 'unsupported',
+      delayMs: 0,
     })
     expect(readRuntimeFlags({ FOTOMAGICA_PRINTER_STATUS: 'jammed' }).simulatedPrinter.status).toBe('ready')
   })
