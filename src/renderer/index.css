@@ -152,3 +152,29 @@
     animation: none;
   }
 }
+
+/*
+ * Montage reveal on the TV print screen (DESIGN §14, Motion; features/print MontageReveal).
+ * Each photo slides up and fades into its template box; delay and duration come from the box's style.
+ */
+.montage-reveal-photo {
+  animation: montage-reveal-slide var(--reveal-duration) cubic-bezier(0.22, 0.9, 0.3, 1) var(--reveal-delay) both;
+}
+
+@keyframes montage-reveal-slide {
+  from {
+    opacity: 0;
+    transform: translateY(14%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* No motion: the overlay never renders (usePrefersReducedMotion); this is the CSS backstop. */
+@media (prefers-reduced-motion: reduce) {
+  .montage-reveal {
+    display: none;
+  }
+}
