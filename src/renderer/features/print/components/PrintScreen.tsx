@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import markUrl from '@brand/mark.png'
 import { COPIES } from '@shared/constants'
 import type { EventSession, SessionState } from '@shared/ipc'
@@ -8,6 +8,8 @@ import { cn } from '@renderer/shared/utils/cn'
 import { GLASS } from '@renderer/shared/utils/glass'
 import { PRINT_COPY, copiesLabel } from '../copy'
 import { usePrinterStatus } from '../hooks/usePrinterStatus'
+import { revealBoxes } from '../utils/reveal'
+import { MontageReveal } from './MontageReveal'
 
 function TvAction({ label, icon, onClick, disabled, primary }: { label: string; icon: ReactNode; onClick: () => void; disabled?: boolean; primary?: boolean }) {
   return (
@@ -40,6 +42,10 @@ export function PrintScreen({ session }: { session: EventSession }) {
   const api = window.fotomagica.session
   const busy = phase.kind === 'printing'
   const setCopies = (delta: 1 | -1) => run(() => api.setCopies(stepCopies(copies, delta)))
+  // The montage reveal plays once, when the round first reaches review and its preview has loaded.
+  const [reveal] = useState(() => phase.kind === 'review')
+  const [loaded, setLoaded] = useState(false)
+  const revealed = useMemo(() => revealBoxes(session.mode, session.slots, session.boxes), [session.mode, session.slots, session.boxes])
 
   return (
     <div data-testid="print-screen" data-phase={phase.kind} className="absolute inset-0 flex flex-col items-center justify-center gap-16 bg-black/65 px-16">
@@ -68,12 +74,13 @@ export function PrintScreen({ session }: { session: EventSession }) {
         </div>
       </div>
 
-      <div className="flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[24px] bg-white/10 shadow-2xl">
+      <div className="relative flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[24px] bg-white/10 shadow-2xl">
         {preview.status === 'ready' && preview.url ? (
-          <img src={preview.url} alt={PRINT_COPY.previewAlt} data-testid="print-preview" className="h-full w-full object-contain" draggable={false} />
+          <img src={preview.url} alt={PRINT_COPY.previewAlt} data-testid="print-preview" className={cn('h-full w-full object-contain', reveal && !loaded && 'opacity-0')} draggable={false} onLoad={() => setLoaded(true)} />
         ) : (
           <p className="text-3xl text-white/80">{preview.status === 'error' ? PRINT_COPY.previewError : PRINT_COPY.previewLoading}</p>
         )}
+        {reveal && loaded && preview.status === 'ready' && preview.url ? <MontageReveal url={preview.url} boxes={revealed} /> : null}
       </div>
 
       <div role="status" aria-live="polite" className="min-h-24 text-center text-white">

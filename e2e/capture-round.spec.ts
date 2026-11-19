@@ -280,4 +280,32 @@ test.describe('capture round: live view and file (RF05)', () => {
     expect(closeTo(at(580, 620), GRAY), 'right of slot 1 is gray').toBe(true)
     expect(closeTo(at(322, 1150), GRAY), 'bottom of slot 1 is gray').toBe(true)
   })
+
+  /** Takes the round on `tv` and returns the most reveal boxes seen at once on the print screen. */
+  async function roundRevealBoxes(tv: Page): Promise<number> {
+    await takePhotos(tv, 2)
+    // The reveal lasts about a second; watch from before the last shot so a slow runner cannot miss it.
+    await tv.evaluate(() => {
+      const seen = { max: 0 }
+      ;(window as unknown as { __reveal: typeof seen }).__reveal = seen
+      new MutationObserver(() => {
+        seen.max = Math.max(seen.max, document.querySelectorAll('[data-testid="montage-reveal"] [data-reveal-box]').length)
+      }).observe(document.body, { childList: true, subtree: true })
+    })
+    await tv.getByRole('button', { name: 'Tirar foto' }).click()
+    await expect(tv.getByTestId('print-preview')).toHaveCSS('opacity', '1', { timeout: PHOTO_TIMEOUT })
+    await expect(tv.getByTestId('montage-reveal')).toHaveCount(0)
+    return tv.evaluate(() => (window as unknown as { __reveal: { max: number } }).__reveal.max)
+  }
+
+  test('slides each photo into its template box on the TV, then leaves only the montage', async ({ app, operatorWindow }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
+    expect(await roundRevealBoxes(tv)).toBe(5)
+  })
+
+  test('shows the montage at once, with no reveal, under prefers-reduced-motion', async ({ app, operatorWindow }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
+    await tv.emulateMedia({ reducedMotion: 'reduce' })
+    expect(await roundRevealBoxes(tv)).toBe(0)
+  })
 })
