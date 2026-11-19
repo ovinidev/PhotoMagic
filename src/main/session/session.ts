@@ -142,6 +142,9 @@ export function createSession(deps: SessionDeps): Session {
 
   /** Sends the saved montage; leaves the phase at `printed` or `print-failed`. */
   const send = async (open: OpenEvent, saved: { fileName: string; path: string }) => {
+    // The montage is on disk; from here the job is in the printer's hands (DESIGN §10, §14).
+    round.phase = { kind: 'printing', step: 'sending' }
+    notify()
     try {
       const result = await deps.printer.print(ticketFor(saved.path, copies, open.mode))
       if (result.ok) round.phase = { kind: 'printed', fileName: saved.fileName }
@@ -218,10 +221,9 @@ export function createSession(deps: SessionDeps): Session {
       const open = event
       if (!open || (round.phase.kind !== 'review' && round.phase.kind !== 'print-failed')) return state()
       const current = round
-      current.phase = { kind: 'printing' }
-      notify()
-
       if (!current.saved) {
+        current.phase = { kind: 'printing', step: 'saving' }
+        notify()
         try {
           const jpeg = await deps.render(sheetInput(open, current), { kind: 'montage' })
           current.saved = await deps.saveMontage(open.folder, jpeg)
@@ -240,8 +242,6 @@ export function createSession(deps: SessionDeps): Session {
       const open = event
       const current = round
       if (!open || current.phase.kind !== 'printed' || !current.saved) return state()
-      current.phase = { kind: 'printing' }
-      notify()
       await send(open, current.saved)
       return round === current ? notify() : state()
     },

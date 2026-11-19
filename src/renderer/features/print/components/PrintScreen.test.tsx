@@ -53,7 +53,7 @@ describe('PrintScreen (RF10, RF13)', () => {
 
   it('locks the controls while printing', () => {
     stubBridge()
-    render(<PrintScreen session={eventState({ taken: 3, phase: { kind: 'printing' } })} />)
+    render(<PrintScreen session={eventState({ taken: 3, phase: { kind: 'printing', step: 'sending' } })} />)
     expect(screen.getByText('Imprimindo…')).toBeInTheDocument()
     for (const name of ['Imprimir', 'Cancelar', 'Mais', 'Menos']) expect(screen.getByRole('button', { name })).toBeDisabled()
   })
