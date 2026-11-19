@@ -3,6 +3,7 @@ import markUrl from '@brand/mark.png'
 import { COPIES } from '@shared/constants'
 import type { EventSession, SessionState } from '@shared/ipc'
 import { stepCopies } from '@shared/round'
+import { ShareQrPanel, useShareState } from '@renderer/features/share'
 import { useMontagePreview } from '@renderer/shared/hooks/useMontagePreview'
 import { cn } from '@renderer/shared/utils/cn'
 import { GLASS } from '@renderer/shared/utils/glass'
@@ -39,6 +40,7 @@ function TvAction({ label, icon, onClick, disabled, primary }: { label: string; 
 export function PrintScreen({ session }: { session: EventSession }) {
   const preview = useMontagePreview(session.previewRevision)
   const printer = usePrinterStatus()
+  const [share] = useShareState()
   const { phase, copies } = session
   const run = (action: () => Promise<SessionState>) => void action().catch(() => {})
   const api = window.fotomagica.session
@@ -87,6 +89,9 @@ export function PrintScreen({ session }: { session: EventSession }) {
           )}
         </div>
       )}
+
+      {/* Offline photo download (DESIGN §15): shown once the montage is saved and the local server is up. */}
+      <ShareQrPanel state={share} />
 
       <div role="status" aria-live="polite" className="min-h-24 text-center text-white">
         {printer && printer.kind !== 'ready' && (phase.kind === 'review' || phase.kind === 'printed') ? (
