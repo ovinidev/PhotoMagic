@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { AttractScreen } from '@renderer/features/attract'
 import { CameraView, CloseHoldLayer } from '@renderer/features/camera'
 import { PrintScreen } from '@renderer/features/print'
 import { useSessionState } from '@renderer/shared/hooks/useSessionState'
@@ -27,7 +28,9 @@ function ScreenLayer({ className, leaving, onAnimationEnd, children }: { classNa
  * so the camera opens right away (DESIGN §14: dark glass over the image, no logo on it). After the
  * third photo the print screen floats over the darkened camera, which stays open for the next round.
  * Screen changes animate here, not in each screen: forward fades and zooms the print screen in, back
- * slides it out over the camera (DESIGN §14, Motion). Two fingers held for 2 s hide this window; the
+ * slides it out over the camera (DESIGN §14, Motion). A fresh round left untouched brings up the
+ * attract screen over the camera; a tap fades it out and the round goes on (DESIGN §14, Attract
+ * screen). Two fingers held for 2 s hide this window; the
  * laptop reopens it (DESIGN §3).
  */
 export function GuestApp() {
@@ -49,6 +52,7 @@ export function GuestApp() {
           <PrintScreen session={session} />
         </ScreenLayer>
       ) : null}
+      <AttractScreen active={screen === 'camera' && session !== null && session.taken === 0} />
       <CloseHoldLayer />
     </main>
   )

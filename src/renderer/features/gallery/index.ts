@@ -1,3 +1,5 @@
 export { GalleryPanel } from './components/GalleryPanel'
 export { TvGallery } from './components/TvGallery'
 export { GALLERY_COPY } from './copy'
+export { useGallery, type GalleryView } from './hooks/useGallery'
+export { useGalleryImage, type GalleryImageView } from './hooks/useGalleryImage'

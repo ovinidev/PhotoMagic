@@ -102,3 +102,53 @@
     animation-name: guest-screen-fade-out;
   }
 }
+
+/* TV attract screen (DESIGN §14, Attract screen). Reduced motion keeps only plain fades. */
+@keyframes attract-drift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes attract-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45), 0 0 0 0 rgba(255, 255, 255, 0.45);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45), 0 0 0 28px rgba(255, 255, 255, 0);
+  }
+}
+
+.attract-enter {
+  animation: guest-screen-fade-in 600ms ease-out both;
+}
+
+.attract-leave {
+  animation: guest-screen-fade-out 300ms ease-out both;
+}
+
+.attract-slide {
+  animation: guest-screen-fade-in var(--attract-fade, 1200ms) ease-in-out both;
+}
+
+.attract-drift {
+  animation: attract-drift var(--attract-slide, 7200ms) linear both;
+}
+
+.attract-pulse {
+  animation: attract-pulse 2400ms ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attract-slide,
+  .attract-drift,
+  .attract-pulse {
+    animation: none;
+  }
+}
