@@ -148,6 +148,22 @@ describe('renderSheet (RF08, RF12)', () => {
     const meta = await sharp(preview).metadata()
     expect(meta).toMatchObject({ format: 'jpeg', width: PREVIEW_WIDTH, height: Math.round((PREVIEW_WIDTH * 1240) / 1844) })
   })
+
+  it('composes the preview at its own size and still matches the montage scaled down, framing included', async () => {
+    const framings: Record<string, Framing> = {
+      'top-1': { zoom: 1.6, panX: 0.4, panY: -0.3, rotation: 12 },
+      'bottom-2': { zoom: 2, panX: -0.5, panY: 0.5, rotation: -30 },
+    }
+    const input = { mode: 'two-strips' as const, template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos(), framings }
+    const full = await composeSheet(input)
+    const half = await composeSheet(input, PREVIEW_WIDTH / 1844)
+    expect(half.info).toMatchObject({ width: 922, height: 620 })
+    const scaled = await sharp(full.data, { raw: { width: full.info.width, height: full.info.height, channels: 3 } }).resize(922, 620, { fit: 'fill' }).raw().toBuffer()
+    // Mean channel difference: only edge anti-aliasing differs, never a misplaced or missing photo.
+    let diff = 0
+    for (let i = 0; i < scaled.length; i++) diff += Math.abs(scaled[i]! - half.data[i]!)
+    expect(diff / scaled.length).toBeLessThan(3)
+  })
 })
 
 describe('renderSheet over the client 2 tiras artwork', () => {

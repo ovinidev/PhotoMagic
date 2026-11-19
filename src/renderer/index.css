@@ -154,32 +154,6 @@
 }
 
 /*
- * Montage reveal on the TV print screen (DESIGN §14, Motion; features/print MontageReveal).
- * Each photo slides up and fades into its template box; delay and duration come from the box's style.
- */
-.montage-reveal-photo {
-  animation: montage-reveal-slide var(--reveal-duration) cubic-bezier(0.22, 0.9, 0.3, 1) var(--reveal-delay) both;
-}
-
-@keyframes montage-reveal-slide {
-  from {
-    opacity: 0;
-    transform: translateY(14%);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* No motion: the overlay never renders (usePrefersReducedMotion); this is the CSS backstop. */
-@media (prefers-reduced-motion: reduce) {
-  .montage-reveal {
-    display: none;
-  }
-}
-
-/*
  * TV print animation (DESIGN §14, Print progress). The sheet slides out of the printer slot to the
  * position of the real job step (`data-eject`), and the bar grows to the stages reached; the stripes
  * only say a stage is running. Reduced motion: no slide and no stripes, the sheet fades in once printed.

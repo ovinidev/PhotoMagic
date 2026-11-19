@@ -1,6 +1,6 @@
-import sharp, { type OverlayOptions } from 'sharp'
+import sharp, { type OverlayOptions, type Sharp } from 'sharp'
 import { SHEET } from '@shared/constants'
-import { DEFAULT_FRAMING, clipToSheet, photoInBox, planSlot, type Framing, type GuideBox, type PhotoIndex, type PrintMode, type Slot } from '@shared/layout'
+import { DEFAULT_FRAMING, clipToSheet, photoInBox, planSlot, type Framing, type GuideBox, type PhotoIndex, type PrintMode, type Slot, type SlotPlan } from '@shared/layout'
 
 /** JPEG quality of the montage file (DESIGN §6). */
 export const MONTAGE_JPEG_QUALITY = 95
@@ -31,24 +31,48 @@ type Raw = { data: Buffer; info: { width: number; height: number; channels: numb
  * detected dark box, or the seed's gray box), planned on the box by the pure `planSlot` with the
  * round's framing, so it covers the whole box, and clipped to the box's rounded corners. The card
  * only turns the photo; its size and position never leave a gap or a second copy. `montage` is the file:
- * JPEG quality 95, 1844×1240, 300 DPI. `preview` is the same composition scaled to 922 px wide.
+ * JPEG quality 95, 1844×1240, 300 DPI. `preview` is the same composition at 922 px wide.
  */
 export async function renderSheet(input: SheetInput, output: SheetOutput): Promise<Buffer> {
-  const sheet = await composeSheet(input)
-  const composed = sharp(sheet.data, { raw: rawOf(sheet) })
   if (output.kind === 'preview') {
-    return composed.resize({ width: PREVIEW_WIDTH }).jpeg({ quality: PREVIEW_JPEG_QUALITY }).toBuffer()
+    // Composed at preview size from the start (DESIGN §6): the same plan with every sheet length
+    // scaled, about a quarter of the pixels of composing at 1844 px and scaling down.
+    const sheet = await composeSheet(input, PREVIEW_WIDTH / SHEET.width)
+    return sharp(sheet.data, { raw: rawOf(sheet) }).jpeg({ quality: PREVIEW_JPEG_QUALITY }).toBuffer()
   }
-  return composed
+  const sheet = await composeSheet(input)
+  return sharp(sheet.data, { raw: rawOf(sheet) })
     .jpeg({ quality: MONTAGE_JPEG_QUALITY, chromaSubsampling: '4:4:4' })
     .withMetadata({ density: SHEET.dpi })
     .toBuffer()
 }
 
-/** The composed sheet as raw RGB pixels, before encoding (exported for the pixel tests). */
-export async function composeSheet(input: SheetInput): Promise<Raw> {
+const TRANSPARENT = { r: 0, g: 0, b: 0, alpha: 0 }
+
+/** A slot or box scaled about the sheet origin. Framing pan and zoom are relative, so the plan scales with it. */
+const scaleSlot = (slot: Slot, s: number): Slot => ({
+  ...slot,
+  left: slot.left * s,
+  top: slot.top * s,
+  width: slot.width * s,
+  height: slot.height * s,
+  radius: slot.radius === undefined ? undefined : slot.radius * s,
+})
+const scaleBox = (box: GuideBox, s: number): GuideBox => ({
+  ...box,
+  rect: { left: box.rect.left * s, top: box.rect.top * s, width: box.rect.width * s, height: box.rect.height * s },
+  radius: box.radius * s,
+})
+
+/**
+ * The composed sheet as raw RGB pixels, before encoding (exported for the pixel tests). `scale` 1 is
+ * the 1844×1240 file; the preview passes 0.5 and gets the same composition at 922×620.
+ */
+export async function composeSheet(input: SheetInput, scale = 1): Promise<Raw> {
+  const sheet = { width: Math.round(SHEET.width * scale), height: Math.round(SHEET.height * scale) }
   const layers: OverlayOptions[] = []
-  const sizes = new Map<PhotoIndex, { width: number; height: number }>()
+  // Each capture is decoded once per composition, however many boxes show it.
+  const decoded = new Map<PhotoIndex, Raw>()
 
   for (const [index, slot] of input.slots.entries()) {
     if (slot.photo === null) continue
@@ -56,86 +80,80 @@ export async function composeSheet(input: SheetInput): Promise<Raw> {
     if (!photo) continue
     const placed = photoInBox(input.mode, slot, index, input.framings?.[slot.id] ?? DEFAULT_FRAMING, input.boxes)
     if (!placed) continue
-    let size = sizes.get(slot.photo)
-    if (!size) {
-      const meta = await sharp(photo).metadata()
-      size = { width: meta.width, height: meta.height }
-      sizes.set(slot.photo, size)
+    let pixels = decoded.get(slot.photo)
+    if (!pixels) {
+      pixels = await sharp(photo).raw().toBuffer({ resolveWithObject: true })
+      decoded.set(slot.photo, pixels)
     }
-    const layer = await renderBox(photo, planSlot(placed.slot, size, placed.framing), placed.box)
+    const plan = planSlot(scale === 1 ? placed.slot : scaleSlot(placed.slot, scale), pixels.info, placed.framing)
+    const layer = await renderBox(pixels, plan, scale === 1 ? placed.box : scaleBox(placed.box, scale), sheet)
     if (layer) layers.push(layer)
   }
 
   const base = input.template
-    ? sharp(input.template).resize(SHEET.width, SHEET.height, { fit: 'fill' })
-    : sharp({ create: { width: SHEET.width, height: SHEET.height, channels: 3, background: '#ffffff' } })
+    ? sharp(input.template).resize(sheet.width, sheet.height, { fit: 'fill' })
+    : sharp({ create: { ...sheet, channels: 3, background: '#ffffff' } })
   // sharp runs `composite` after every other step of a pipeline, so flatten in a second one: plain RGB.
   const composed = await base.composite(layers).raw().toBuffer({ resolveWithObject: true })
   return sharp(composed.data, { raw: rawOf(composed) }).flatten({ background: '#ffffff' }).raw().toBuffer({ resolveWithObject: true })
 }
 
+const roundedMask = (width: number, height: number, radius: number) =>
+  Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" rx="${radius}" ry="${radius}" fill="#fff"/></svg>`)
+
+/** Runs one sharp step on raw pixels and materializes it as raw pixels again. */
+const step = (image: Raw, run: (pipeline: Sharp) => Sharp): Promise<Raw> =>
+  run(sharp(image.data, { raw: rawOf(image) })).raw().toBuffer({ resolveWithObject: true })
+
 /**
  * One fixed box: the plan's tile drawn on a transparent canvas the size of the box, cut to its
  * rounded rectangle, placed on the sheet.
  */
-async function renderBox(photo: Uint8Array, plan: ReturnType<typeof planSlot>, box: GuideBox): Promise<OverlayOptions | null> {
+async function renderBox(photo: Raw, plan: SlotPlan, box: GuideBox, sheet: { width: number; height: number }): Promise<OverlayOptions | null> {
   const left = Math.round(box.rect.left)
   const top = Math.round(box.rect.top)
   const size = { width: Math.round(box.rect.width), height: Math.round(box.rect.height) }
   const tile = await renderSlot(photo, plan)
   const inBox = clipToSheet({ x: plan.center.x - left, y: plan.center.y - top }, tile.info, size)
   if (!inBox) return null
-  const inside = await sharp(tile.data, { raw: rawOf(tile) }).extract(inBox.source).raw().toBuffer({ resolveWithObject: true })
+  const inside = await step(tile, (p) => p.extract(inBox.source))
   const tiles: OverlayOptions[] = [{ input: inside.data, raw: rawOf(inside), left: inBox.target.left, top: inBox.target.top }]
   const radius = Math.max(0, Math.min(box.radius, size.width / 2, size.height / 2))
-  const mask = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}"><rect width="${size.width}" height="${size.height}" rx="${radius}" ry="${radius}" fill="#fff"/></svg>`)
-  const drawn = await sharp({ create: { ...size, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+  const drawn = await sharp({ create: { ...size, channels: 4, background: TRANSPARENT } })
     .composite(tiles)
-    .png()
-    .toBuffer()
-  const masked = await sharp(drawn).composite([{ input: mask, blend: 'dest-in' }]).raw().toBuffer({ resolveWithObject: true })
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  const masked = await step(drawn, (p) => p.composite([{ input: roundedMask(size.width, size.height, radius), blend: 'dest-in' }]))
   // The box itself may stick out of the sheet; keep only the part on it.
-  const clip = clipToSheet({ x: left + size.width / 2, y: top + size.height / 2 }, size)
+  const clip = clipToSheet({ x: left + size.width / 2, y: top + size.height / 2 }, size, sheet)
   if (!clip) return null
-  const kept = await sharp(masked.data, { raw: rawOf(masked) }).extract(clip.source).raw().toBuffer({ resolveWithObject: true })
+  const kept = await step(masked, (p) => p.extract(clip.source))
   return { input: kept.data, raw: rawOf(kept), left: clip.target.left, top: clip.target.top }
 }
 
 /**
- * Runs one slot plan into its turned tile, to be centered at `plan.center`. Each step is materialized before the next, because sharp otherwise reorders
- * rotate, resize and extract inside a single pipeline.
+ * Runs one slot plan into its turned tile, to be centered at `plan.center`. Each step is materialized
+ * (as raw pixels) before the next, because sharp otherwise reorders rotate, resize and extract inside
+ * a single pipeline.
  */
-async function renderSlot(photo: Uint8Array, plan: ReturnType<typeof planSlot>): Promise<Raw> {
-  const turned = plan.preRotate === 0 ? photo : await sharp(photo).rotate(plan.preRotate).toBuffer()
-  const resized = await sharp(turned).resize(plan.resize.width, plan.resize.height, { fit: 'fill' }).toBuffer()
-  let tile = sharp(resized).extract(plan.extract).ensureAlpha()
+async function renderSlot(photo: Raw, plan: SlotPlan): Promise<Raw> {
+  const turned = plan.preRotate === 0 ? photo : await step(photo, (p) => p.rotate(plan.preRotate))
+  const resized = await step(turned, (p) => p.resize(plan.resize.width, plan.resize.height, { fit: 'fill' }))
+  let tile = await step(resized, (p) => p.extract(plan.extract).ensureAlpha())
   if (plan.rotate !== 0) {
     // The framing rotation (RF09): turn the oversized tile, then keep the slot box from its center.
-    const turned = await sharp(await tile.png().toBuffer())
-      .rotate(plan.rotate, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png()
-      .toBuffer({ resolveWithObject: true })
-    const left = Math.max(0, Math.floor((turned.info.width - plan.box.width) / 2))
-    const top = Math.max(0, Math.floor((turned.info.height - plan.box.height) / 2))
-    tile = sharp(await sharp(turned.data).extract({ left, top, width: plan.box.width, height: plan.box.height }).png().toBuffer()).ensureAlpha()
+    const spun = await step(tile, (p) => p.rotate(plan.rotate, { background: TRANSPARENT }))
+    const left = Math.max(0, Math.floor((spun.info.width - plan.box.width) / 2))
+    const top = Math.max(0, Math.floor((spun.info.height - plan.box.height) / 2))
+    tile = await step(spun, (p) => p.extract({ left, top, width: plan.box.width, height: plan.box.height }).ensureAlpha())
   }
   if (plan.radius > 0) {
     // The artwork's rounded photo box: keep the tile inside a rounded rectangle of the same radius.
     // Done before the slot's turn, in the box's own axes; a rounded rectangle turns into itself.
     const { width, height } = plan.box
-    const mask = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" rx="${plan.radius}" ry="${plan.radius}" fill="#fff"/></svg>`)
-    tile = sharp(await tile.composite([{ input: mask, blend: 'dest-in' }]).png().toBuffer()).ensureAlpha()
+    tile = await step(tile, (p) => p.composite([{ input: roundedMask(width, height, plan.radius), blend: 'dest-in' }]))
   }
-  const rotated: Raw =
-    plan.angle === 0
-      ? await tile.raw().toBuffer({ resolveWithObject: true })
-      : await sharp(await tile.png().toBuffer())
-          .rotate(plan.angle, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
-          .ensureAlpha()
-          .raw()
-          .toBuffer({ resolveWithObject: true })
-
-  return rotated
+  return plan.angle === 0 ? tile : step(tile, (p) => p.rotate(plan.angle, { background: TRANSPARENT }).ensureAlpha())
 }
 
 function rawOf(image: Raw): { width: number; height: number; channels: 1 | 2 | 3 | 4 } {

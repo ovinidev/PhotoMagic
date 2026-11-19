@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import markUrl from '@brand/mark.png'
 import { COPIES } from '@shared/constants'
 import type { EventSession, SessionState } from '@shared/ipc'
@@ -8,8 +8,6 @@ import { cn } from '@renderer/shared/utils/cn'
 import { GLASS } from '@renderer/shared/utils/glass'
 import { PRINT_COPY, copiesLabel } from '../copy'
 import { usePrinterStatus } from '../hooks/usePrinterStatus'
-import { revealBoxes } from '../utils/reveal'
-import { MontageReveal } from './MontageReveal'
 import { printProgress } from '../utils/printProgress'
 import { PrintJob } from './PrintJob'
 
@@ -46,10 +44,6 @@ export function PrintScreen({ session }: { session: EventSession }) {
   const api = window.fotomagica.session
   const busy = phase.kind === 'printing'
   const setCopies = (delta: 1 | -1) => run(() => api.setCopies(stepCopies(copies, delta)))
-  // The montage reveal plays once, when the round first reaches review and its preview has loaded.
-  const [reveal] = useState(() => phase.kind === 'review')
-  const [loaded, setLoaded] = useState(false)
-  const revealed = useMemo(() => revealBoxes(session.mode, session.slots, session.boxes), [session.mode, session.slots, session.boxes])
   const progress = printProgress(phase)
   // Each job (Imprimir, Imprimir novamente) starts the sheet back inside the printer.
   const [job, setJob] = useState({ count: 0, busy })
@@ -87,11 +81,10 @@ export function PrintScreen({ session }: { session: EventSession }) {
       ) : (
         <div className="relative flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[24px] bg-white/10 shadow-2xl">
           {preview.status === 'ready' && preview.url ? (
-            <img src={preview.url} alt={PRINT_COPY.previewAlt} data-testid="print-preview" className={cn('h-full w-full object-contain', reveal && !loaded && 'opacity-0')} draggable={false} onLoad={() => setLoaded(true)} />
+            <img src={preview.url} alt={PRINT_COPY.previewAlt} data-testid="print-preview" className="h-full w-full object-contain" draggable={false} />
           ) : (
             <p className="text-3xl text-white/80">{preview.status === 'error' ? PRINT_COPY.previewError : PRINT_COPY.previewLoading}</p>
           )}
-          {reveal && loaded && preview.status === 'ready' && preview.url ? <MontageReveal url={preview.url} boxes={revealed} /> : null}
         </div>
       )}
 
