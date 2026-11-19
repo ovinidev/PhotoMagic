@@ -59,7 +59,7 @@ if (!app.requestSingleInstanceLock()) {
     app.setAppUserModelId('com.fotomagica.desktop')
 
     const userData = app.getPath('userData')
-    // Offline photo download over the event Wi-Fi (DESIGN §15); off until the operator turns it on.
+    // Offline photo download over the event Wi-Fi (DESIGN §17); off until the operator turns it on.
     const share = createShareService({
       settings: (await readConfig(userData)).share,
       interfaces: networkInterfaces,

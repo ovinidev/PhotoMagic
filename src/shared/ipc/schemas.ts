@@ -42,7 +42,7 @@ export const zoomStepInputSchema = z.strictObject({ step: z.enum(['in', 'out', '
 export type ZoomState = z.infer<typeof zoomStateSchema>
 
 /**
- * `share:*` (DESIGN §15): offline photo download over the event Wi-Fi. The operator reads and saves
+ * `share:*` (DESIGN §17): offline photo download over the event Wi-Fi. The operator reads and saves
  * the settings; both windows get the state. `url` is the current round's photo link, set once its
  * montage is saved and cleared by the next round; `wifiQr` is the join string, `null` with no SSID.
  */

@@ -4,7 +4,7 @@ import { saveShare } from '../persist'
 import type { ShareService } from '../share'
 import { broadcast, handleInvoke } from './handle'
 
-/** `share:*` (DESIGN §15). Only the laptop saves the settings; the TV reads the state. */
+/** `share:*` (DESIGN §17). Only the laptop saves the settings; the TV reads the state. */
 export function registerShareHandlers({ share, userData, isGuestWindow }: { share: ShareService; userData: string; isGuestWindow: (contents: WebContents) => boolean }): void {
   handleInvoke(IPC_CHANNELS.shareGetSettings, () => share.settings())
   handleInvoke(IPC_CHANNELS.shareGetState, () => share.state())

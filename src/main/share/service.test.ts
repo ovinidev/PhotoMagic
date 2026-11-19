@@ -15,7 +15,7 @@ const settings = (patch: Partial<ShareSettings> = {}): ShareSettings => ({
   ...patch,
 })
 
-describe('share service (DESIGN §15)', () => {
+describe('share service (DESIGN §17)', () => {
   it('stays off and binds nothing until the operator turns it on', async () => {
     const service = createShareService({ settings: defaultShareSettings(), interfaces: () => ({}), onChange: () => {} })
     expect(await service.start()).toMatchObject({ status: 'off', url: null, wifiQr: null })

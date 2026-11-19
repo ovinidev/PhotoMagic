@@ -12,7 +12,7 @@ export type ShareServiceDeps = {
 }
 
 /**
- * Offline photo download (DESIGN §15): owns the token registry and the local server, restarts it
+ * Offline photo download (DESIGN §17): owns the token registry and the local server, restarts it
  * when the operator saves the settings, and tells both windows the current round's link. The
  * server binds only the laptop's address on the guests' Wi-Fi, never every interface.
  */

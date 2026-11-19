@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 
-/** A QR code drawn as SVG on the device, no network (DESIGN §15). Black on white with a quiet zone. */
+/** A QR code drawn as SVG on the device, no network (DESIGN §17). Black on white with a quiet zone. */
 export function QrCode({ text, label, className, testId }: { text: string; label: string; className?: string; testId?: string }) {
   const [svg, setSvg] = useState<string | null>(null)
   useEffect(() => {

@@ -9,7 +9,7 @@ const PRIVATE = [/^10\./, /^192\.168\./, /^172\.(1[6-9]|2\d|3[01])\./]
 const isIpv4Family = (family: string | number) => family === 'IPv4' || family === 4
 
 /**
- * The laptop's address on the guests' Wi-Fi (DESIGN §15): the operator's override, else the Windows
+ * The laptop's address on the guests' Wi-Fi (DESIGN §17): the operator's override, else the Windows
  * hotspot address when it is up, else the first private IPv4 (a standalone router), else `null`.
  * Loopback and link-local (`169.254.*`, no DHCP) never qualify.
  */

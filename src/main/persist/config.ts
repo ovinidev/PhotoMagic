@@ -29,7 +29,7 @@ export type Config = {
   webcam: { values: WebcamValues; capabilities: WebcamCapabilities | null }
   /** The operator's laptop zoom on this computer (DESIGN §3), times the automatic factor. */
   zoom: number
-  /** Offline photo download over the event Wi-Fi (DESIGN §15). */
+  /** Offline photo download over the event Wi-Fi (DESIGN §17). */
   share: ShareSettings
 }
 
@@ -120,7 +120,7 @@ export function saveLayout(userData: string, mode: PrintMode, slots: readonly Sl
   return updateConfig(userData, (config) => ({ ...config, layouts: { ...config.layouts, [mode]: [...slots] } }))
 }
 
-/** Writes the photo download settings and leaves everything else as it is (DESIGN §15). */
+/** Writes the photo download settings and leaves everything else as it is (DESIGN §17). */
 export function saveShare(userData: string, share: ShareSettings): Promise<Config> {
   return updateConfig(userData, (config) => ({ ...config, share }))
 }

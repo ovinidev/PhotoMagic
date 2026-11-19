@@ -1,5 +1,5 @@
 /**
- * The only URLs the local photo server answers (DESIGN §15): `/p/<token>` (the guest page) and
+ * The only URLs the local photo server answers (DESIGN §17): `/p/<token>` (the guest page) and
  * `/p/<token>/foto.jpg` (the montage download). Anything else, a directory, `..`, an encoded slash
  * or a token of the wrong shape, is `null` and gets a 404. The token is the only key: the server
  * never builds a file path from the URL.

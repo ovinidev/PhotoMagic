@@ -90,7 +90,7 @@ export function PrintScreen({ session }: { session: EventSession }) {
         </div>
       )}
 
-      {/* Offline photo download (DESIGN §15): shown once the montage is saved and the local server is up. */}
+      {/* Offline photo download (DESIGN §17): shown once the montage is saved and the local server is up. */}
       <ShareQrPanel state={share} />
 
       <div role="status" aria-live="polite" className="min-h-24 text-center text-white">

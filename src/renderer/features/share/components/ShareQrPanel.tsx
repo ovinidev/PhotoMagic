@@ -13,7 +13,7 @@ function Step({ title, caption, children }: { title: string; caption?: string | 
 }
 
 /**
- * The TV's two QR codes once the round's montage is saved (DESIGN §15): first join the party
+ * The TV's two QR codes once the round's montage is saved (DESIGN §17): first join the party
  * Wi-Fi, then open the photo link. Static, no motion. Hidden while there is no link; the Wi-Fi
  * step is left out when the operator set no SSID (guests already on the venue's network).
  */

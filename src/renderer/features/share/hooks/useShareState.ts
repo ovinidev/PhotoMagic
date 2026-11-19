@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ShareState } from '@shared/ipc'
 
-/** The local photo server and the round's link as main reports them (DESIGN §15); `null` until known. */
+/** The local photo server and the round's link as main reports them (DESIGN §17); `null` until known. */
 export function useShareState(): [ShareState | null, (state: ShareState) => void] {
   const [state, setState] = useState<ShareState | null>(null)
   useEffect(() => {

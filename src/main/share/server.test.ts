@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createShareRegistry } from './registry'
 import { startShareServer, stopServer } from './server'
 
-describe('local photo server over localhost (DESIGN §15)', () => {
+describe('local photo server over localhost (DESIGN §17)', () => {
   let server: Server
   let base: string
   let token: string

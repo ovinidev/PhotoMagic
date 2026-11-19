@@ -1,6 +1,6 @@
 import type { ShareState } from '@shared/ipc'
 
-/** pt-BR copy of the offline photo download (DESIGN §15). */
+/** pt-BR copy of the offline photo download (DESIGN §17). */
 export const SHARE_COPY = {
   panelTitle: 'Baixe sua foto no celular',
   stepWifi: '1. Conecte-se ao Wi-Fi',

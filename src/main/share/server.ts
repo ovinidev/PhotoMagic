@@ -57,7 +57,7 @@ async function handle(registry: ShareRegistry, req: IncomingMessage, res: Server
 }
 
 /**
- * The read-only photo server on the event Wi-Fi (DESIGN §15): plain `node:http`, bound to one
+ * The read-only photo server on the event Wi-Fi (DESIGN §17): plain `node:http`, bound to one
  * address, answering only the registry's tokens. No listing, no upload, no path from the URL.
  */
 export function startShareServer(registry: ShareRegistry, host: string, port: number): Promise<Server> {

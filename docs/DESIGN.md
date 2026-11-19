@@ -304,7 +304,7 @@ Unlike the slot editor, framing does go to main during the gesture, because the 
 
 | Data | Location |
 | --- | --- |
-| Both layouts, both templates, webcam values, the controls the camera last advertised and the laptop zoom | `app.getPath('userData')/config.json` |
+| Both layouts, both templates, webcam values, the controls the camera last advertised, the laptop zoom and the photo-download settings (§17) | `app.getPath('userData')/config.json` |
 | Each mode's template file (`two-strips.png` or `.jpg`, `one-strip.…`) | `app.getPath('userData')/templates/` |
 | JPG montage | `app.getPath('desktop')/<event name>/HH-mm-ss.jpg` |
 | Auto-update log (§11) | `app.getPath('userData')/logs/updater.log` |
@@ -666,3 +666,19 @@ The cutout was done on the raster. The thin edges of the frame and the camera ho
 ## 16. Briefing figures used here
 
 All thirteen are in `docs/assets/briefing/`. The ones this design did not repeat stay in the PRD: physical assembly (image7), laptop (image13), numbers panel (image1), current camera (image9), iPhone reference (image5), webcam adjustments (image10) and the settings screen that does not come back (image11).
+
+## 17. Offline photo download
+
+Guests download the round's montage on their phone over the party's own Wi-Fi. There is no internet at the event and no cloud: the laptop serves the file itself. Off by default.
+
+**Settings** (`share` in `config.json`, `src/shared/share/settings.ts`, Zod): `enabled`, `port` (1024 to 65535, default 8787), `hostOverride` (empty, or an IPv4 the operator types) and the Wi-Fi the guests join (`ssid`, `password`, `security` `WPA`/`WEP`/`nopass`, `hidden`). The laptop home screen has the `Foto no celular` card next to the create-event form; saving writes `config.json` and restarts the server. Only the laptop can save (`share:save-settings` from the TV is ignored).
+
+**Address.** `pickLanIp` (`src/shared/share/lanIp.ts`): the override, else `192.168.137.1` when Windows Mobile Hotspot is up, else the first private IPv4 (a standalone router), else none. Loopback and `169.254.*` never qualify. With no address the card says `Sem rede local. Ligue o hotspot ou conecte ao roteador` and no QR shows.
+
+**Server** (`src/main/share/`). Plain `node:http`, bound to that one address, never `0.0.0.0`. It answers only `GET`/`HEAD` of `/p/<token>` (a pt-BR page with the montage and `Baixar foto`, no script, strict CSP) and `/p/<token>/foto.jpg` (the JPEG). `parseShareRoute` (`src/shared/share/routes.ts`) refuses any other shape, `..`, encoded slashes and tokens that are not 22 base64url characters; everything else is 404. The token is 128 random bits and maps, in memory only, to one montage the app saved (`registry.ts`): the server never builds a path from the URL, so there is no listing and no traversal. The three loose photos are never served.
+
+**Lifetime.** Saving the montage at `Imprimir` publishes it and makes its link the round's link. A new round takes the link off the screens (phones that have it can still download until the event ends); `Encerrar evento` forgets every token. Nothing about the tokens touches the disk.
+
+**TV.** Once the round has a link, the print screen shows two QR codes (`features/share`, the `qrcode` package, drawn as SVG on the device): `1. Conecte-se ao Wi-Fi` with the Wi-Fi join string, then `2. Escaneie para baixar` with `http://<address>:<port>/p/<token>`. Without an SSID only the link QR shows (`1. Escaneie para baixar`). No motion. The Wi-Fi string is `WIFI:T:<sec>;S:<ssid>;P:<pass>;H:true;;` with `\ ; , : "` escaped by a backslash (`src/shared/share/wifi.ts`).
+
+**Tests.** Unit: route parsing and traversal rejection, token registry, Wi-Fi escaping, address choice, the service's state. Integration: `server.test.ts` starts the server on `127.0.0.1` and fetches the page, the JPEG and refused URLs. Setup on Windows (hotspot, firewall prompt, router fallback) is in [HARDWARE-TEST.md](HARDWARE-TEST.md) §5.

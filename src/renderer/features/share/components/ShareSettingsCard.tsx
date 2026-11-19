@@ -25,7 +25,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 /**
- * Laptop card for the offline photo download (DESIGN §15): turn it on, the port, the laptop's
+ * Laptop card for the offline photo download (DESIGN §17): turn it on, the port, the laptop's
  * address on the guests' Wi-Fi (empty detects it) and the Wi-Fi the TV's first QR joins. Saving
  * restarts the local server; the line below says whether it is listening.
  */

@@ -144,7 +144,7 @@ export type FotomagicaApi = {
     onState: (listener: (state: ZoomState) => void) => Unsubscribe
   }
   share: {
-    /** The operator's offline download settings: on/off, port, address override, hotspot Wi-Fi (DESIGN §15). */
+    /** The operator's offline download settings: on/off, port, address override, hotspot Wi-Fi (DESIGN §17). */
     getSettings: () => Promise<ShareSettings>
     /** Saves the settings and restarts the local server; returns the new state. Laptop only. */
     saveSettings: (settings: ShareSettings) => Promise<ShareState>

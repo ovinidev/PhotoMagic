@@ -16,7 +16,7 @@ const RUNNING: ShareState = {
   url: 'http://192.168.137.1:8787/p/abc',
 }
 
-describe('ShareQrPanel (DESIGN §15)', () => {
+describe('ShareQrPanel (DESIGN §17)', () => {
   it('shows nothing until the round has a link', () => {
     const { container } = render(<ShareQrPanel state={SHARE_OFF} />)
     expect(container).toBeEmptyDOMElement()
@@ -38,7 +38,7 @@ describe('ShareQrPanel (DESIGN §15)', () => {
   })
 })
 
-describe('ShareSettingsCard (DESIGN §15)', () => {
+describe('ShareSettingsCard (DESIGN §17)', () => {
   it('saves the Wi-Fi and the address', async () => {
     const { api } = stubBridge({ share: { saveSettings: () => Promise.resolve(RUNNING) } })
     render(<ShareSettingsCard />)

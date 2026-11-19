@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 /**
- * Offline photo download over the event's own Wi-Fi (DESIGN §15): the operator's settings, kept in
+ * Offline photo download over the event's own Wi-Fi (DESIGN §17): the operator's settings, kept in
  * `config.json`. No internet and no cloud: the laptop serves the montage on the local network.
  */
 

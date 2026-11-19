@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto'
 export type SharedFile = { path: string; fileName: string }
 
 /**
- * Token → montage on disk, in memory only (DESIGN §15). A token is 128 random bits; only a token
+ * Token → montage on disk, in memory only (DESIGN §17). A token is 128 random bits; only a token
  * handed out here maps to a file, so a URL can never name a path. The oldest entries go first once
  * `max` is reached, and the event's end forgets them all.
  */
