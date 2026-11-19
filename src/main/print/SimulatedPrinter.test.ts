@@ -15,7 +15,7 @@ async function setup() {
 describe('SimulatedPrinter', () => {
   it('copies the JPEG and writes the ticket, one pair per print', async () => {
     const { jpegPath, dir } = await setup()
-    const printer = createSimulatedPrinter({ dir, flags: { status: 'ready', cut: 'supported' } })
+    const printer = createSimulatedPrinter({ dir, flags: { status: 'ready', cut: 'supported', delayMs: 0 } })
     expect(await printer.print(ticketFor(jpegPath, 3, 'two-strips'))).toEqual({ ok: true })
     expect(await printer.print(ticketFor(jpegPath, 1, 'two-strips'))).toEqual({ ok: true })
     expect((await readdir(dir)).sort()).toEqual(['001-21-45-08.jpg', '001-21-45-08.json', '002-21-45-08.jpg', '002-21-45-08.json'])
@@ -24,7 +24,7 @@ describe('SimulatedPrinter', () => {
 
   it.each(['offline', 'no-paper', 'no-ribbon'] as const)('reports %s and prints nothing', async (status) => {
     const { jpegPath, dir } = await setup()
-    const printer = createSimulatedPrinter({ dir, flags: { status, cut: 'supported' } })
+    const printer = createSimulatedPrinter({ dir, flags: { status, cut: 'supported', delayMs: 0 } })
     expect(await printer.status()).toEqual({ kind: status })
     expect(await printer.print(ticketFor(jpegPath, 1, 'one-strip'))).toMatchObject({ ok: false, reason: status })
     await expect(readdir(dir)).rejects.toThrow()
@@ -32,19 +32,19 @@ describe('SimulatedPrinter', () => {
 
   it('returns cut-unavailable when the driver refuses the cut, in both modes', async () => {
     const { jpegPath, dir } = await setup()
-    const printer = createSimulatedPrinter({ dir, flags: { status: 'ready', cut: 'unsupported' } })
+    const printer = createSimulatedPrinter({ dir, flags: { status: 'ready', cut: 'unsupported', delayMs: 0 } })
     expect(await printer.print(ticketFor(jpegPath, 1, 'two-strips'))).toMatchObject({ ok: false, reason: 'cut-unavailable' })
     expect(await printer.print(ticketFor(jpegPath, 1, 'one-strip'))).toMatchObject({ ok: false, reason: 'cut-unavailable' })
   })
 
   it('changes its state at runtime, so a retry can succeed', async () => {
     const { jpegPath, dir } = await setup()
-    const printer = createSimulatedPrinter({ dir, flags: { status: 'no-paper', cut: 'unsupported' } })
+    const printer = createSimulatedPrinter({ dir, flags: { status: 'no-paper', cut: 'unsupported', delayMs: 0 } })
     expect(await printer.print(ticketFor(jpegPath, 1, 'two-strips'))).toMatchObject({ ok: false, reason: 'no-paper' })
     printer.setFlags({ status: 'ready' })
     expect(await printer.status()).toEqual({ kind: 'ready' })
     expect(await printer.print(ticketFor(jpegPath, 1, 'two-strips'))).toMatchObject({ ok: false, reason: 'cut-unavailable' })
-    printer.setFlags({ cut: 'supported' })
+    printer.setFlags({ cut: 'supported', delayMs: 0 })
     expect(await printer.print(ticketFor(jpegPath, 1, 'two-strips'))).toEqual({ ok: true })
   })
 })

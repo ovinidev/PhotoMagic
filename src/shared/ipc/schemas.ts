@@ -262,14 +262,21 @@ export const printFailureReasonSchema = z.enum([
 ])
 
 /**
+ * The real stages of a print job, in order: `saving` composes and writes the montage JPG to the
+ * event folder, `sending` hands it to the printer and waits for its answer (DESIGN §10, §14).
+ */
+export const PRINT_STEPS = ['saving', 'sending'] as const
+export type PrintStep = (typeof PRINT_STEPS)[number]
+
+/**
  * Where the round is. `capturing` until the third photo, then `review` (the TV print screen),
- * `printing`, and `printed` or `print-failed`. `fileName` is the montage already in the event
+ * `printing` (with its real `step`), and `printed` or `print-failed`. `fileName` is the montage already in the event
  * folder: a failed send keeps it, and trying again resends it instead of writing another.
  */
 export const roundPhaseSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('capturing') }),
   z.strictObject({ kind: z.literal('review') }),
-  z.strictObject({ kind: z.literal('printing') }),
+  z.strictObject({ kind: z.literal('printing'), step: z.enum(PRINT_STEPS) }),
   z.strictObject({ kind: z.literal('printed'), fileName: z.string().min(1) }),
   z.strictObject({
     kind: z.literal('print-failed'),

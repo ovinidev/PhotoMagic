@@ -12,7 +12,7 @@ describe('guestScreen', () => {
 
   it('shows the print screen from review to the end of the round', () => {
     expect(guestScreen(session({ kind: 'review' }))).toBe('print')
-    expect(guestScreen(session({ kind: 'printing' }))).toBe('print')
+    expect(guestScreen(session({ kind: 'printing', step: 'sending' }))).toBe('print')
     expect(guestScreen(session({ kind: 'printed', fileName: '21-45-08.jpg' }))).toBe('print')
     expect(guestScreen(session({ kind: 'print-failed', reason: 'offline', detail: '', fileName: null }))).toBe('print')
   })

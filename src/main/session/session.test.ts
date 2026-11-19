@@ -102,6 +102,27 @@ describe('session', () => {
     expect(print).toHaveBeenCalledWith({ jpegPath: '/Desktop/Aniversário AJ/21-45-08.jpg', copies: 2, mode: 'two-strips', cut: true })
   })
 
+  it('announces the real print steps in order: saving, sending, then printed (DESIGN §14)', async () => {
+    const { session, states } = setup()
+    session.start(EVENT)
+    capture3(session)
+    const before = states.length
+    await session.print()
+    // A preview revision may notify mid-step with the same phase, so keep each change once.
+    const phases = states
+      .slice(before)
+      .map(phase)
+      .filter((next, index, all) => next?.kind !== 'review' && JSON.stringify(next) !== JSON.stringify(all[index - 1]))
+    expect(phases).toEqual([
+      { kind: 'printing', step: 'saving' },
+      { kind: 'printing', step: 'sending' },
+      { kind: 'printed', fileName: '21-45-08.jpg' },
+    ])
+    const again = states.length
+    await session.reprint()
+    expect(states.slice(again).map(phase)).toEqual([{ kind: 'printing', step: 'sending' }, { kind: 'printed', fileName: '21-45-08.jpg' }])
+  })
+
   it('does not print before the third photo', async () => {
     const { session, print } = setup()
     session.start(EVENT)

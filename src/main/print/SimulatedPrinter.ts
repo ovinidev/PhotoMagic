@@ -7,7 +7,8 @@ import type { Printer, PrinterStatus } from './types'
  * `FOTOMAGICA_PRINTER=simulated` (DESIGN §10): no driver, no dialog. Each accepted print copies the
  * JPEG to `<dir>/NNN-<name>.jpg` and writes the ticket next to it as `NNN-<name>.json`.
  * `FOTOMAGICA_PRINTER_STATUS` forces a printer state and `FOTOMAGICA_PRINTER_CUT=unsupported` makes
- * the driver refuse the cut. Under E2E, `setFlags` changes both at runtime.
+ * the driver refuse the cut. Under E2E, `setFlags` changes both at runtime, and `delayMs` holds an
+ * accepted print that long, so a spec can watch the job in flight.
  */
 export function createSimulatedPrinter({ dir, flags: initial }: { dir: string; flags: SimulatedPrinterFlags }): Printer & {
   /** E2E only: changes the forced state at runtime, e.g. paper loaded again before `Tentar novamente`. */
@@ -26,6 +27,7 @@ export function createSimulatedPrinter({ dir, flags: initial }: { dir: string; f
       if (flags.cut === 'unsupported') {
         return { ok: false, reason: 'cut-unavailable', detail: ticket.cut ? 'simulated driver refuses 2inch cut Enable' : 'simulated driver refuses 2inch cut Disable' }
       }
+      if (flags.delayMs > 0) await new Promise((resolve) => setTimeout(resolve, flags.delayMs))
       try {
         await mkdir(dir, { recursive: true })
         const count = (await readdir(dir)).filter((name) => name.endsWith('.json')).length

@@ -91,7 +91,7 @@ export async function simulatedTickets(userData: string): Promise<Array<{ jpegPa
 }
 
 /** Changes what the simulated printer reports, at runtime (test hook installed by main under E2E). */
-export function setSimulatedPrinter(app: ElectronApplication, next: { status?: 'ready' | 'offline' | 'no-paper' | 'no-ribbon'; cut?: 'supported' | 'unsupported' }): Promise<void> {
+export function setSimulatedPrinter(app: ElectronApplication, next: { status?: 'ready' | 'offline' | 'no-paper' | 'no-ribbon'; cut?: 'supported' | 'unsupported'; delayMs?: number }): Promise<void> {
   return app.evaluate((_electron, flags) => {
     const hook = (globalThis as { __fotomagicaE2E?: { setPrinter: (flags: unknown) => void } }).__fotomagicaE2E
     if (!hook) throw new Error('E2E hook missing: is FOTOMAGICA_E2E=1 set?')

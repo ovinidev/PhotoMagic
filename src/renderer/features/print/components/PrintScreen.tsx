@@ -10,6 +10,8 @@ import { PRINT_COPY, copiesLabel } from '../copy'
 import { usePrinterStatus } from '../hooks/usePrinterStatus'
 import { revealBoxes } from '../utils/reveal'
 import { MontageReveal } from './MontageReveal'
+import { printProgress } from '../utils/printProgress'
+import { PrintJob } from './PrintJob'
 
 function TvAction({ label, icon, onClick, disabled, primary }: { label: string; icon: ReactNode; onClick: () => void; disabled?: boolean; primary?: boolean }) {
   return (
@@ -32,7 +34,9 @@ function TvAction({ label, icon, onClick, disabled, primary }: { label: string; 
  * `Cancelar` on one side, `Mais` and `Menos` on the other, the copies in the middle and the sheet
  * preview below. After a print, `Imprimir novamente` and `Nova rodada`; a failure keeps the round
  * and offers to try again. A printer that is not ready shows its state before anyone taps
- * `Imprimir`. Every action is an invoke; main owns the round.
+ * `Imprimir`. While a job runs and once it is printed, the sheet preview becomes the print
+ * animation (`PrintJob`), driven only by the steps main reports. Every action is an invoke; main
+ * owns the round.
  */
 export function PrintScreen({ session }: { session: EventSession }) {
   const preview = useMontagePreview(session.previewRevision)
@@ -46,6 +50,10 @@ export function PrintScreen({ session }: { session: EventSession }) {
   const [reveal] = useState(() => phase.kind === 'review')
   const [loaded, setLoaded] = useState(false)
   const revealed = useMemo(() => revealBoxes(session.mode, session.slots, session.boxes), [session.mode, session.slots, session.boxes])
+  const progress = printProgress(phase)
+  // Each job (Imprimir, Imprimir novamente) starts the sheet back inside the printer.
+  const [job, setJob] = useState({ count: 0, busy })
+  if (job.busy !== busy) setJob({ count: job.count + (busy ? 1 : 0), busy })
 
   return (
     <div data-testid="print-screen" data-phase={phase.kind} className="absolute inset-0 flex flex-col items-center justify-center gap-16 bg-black/65 px-16">
@@ -74,14 +82,18 @@ export function PrintScreen({ session }: { session: EventSession }) {
         </div>
       </div>
 
-      <div className="relative flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[24px] bg-white/10 shadow-2xl">
-        {preview.status === 'ready' && preview.url ? (
-          <img src={preview.url} alt={PRINT_COPY.previewAlt} data-testid="print-preview" className={cn('h-full w-full object-contain', reveal && !loaded && 'opacity-0')} draggable={false} onLoad={() => setLoaded(true)} />
-        ) : (
-          <p className="text-3xl text-white/80">{preview.status === 'error' ? PRINT_COPY.previewError : PRINT_COPY.previewLoading}</p>
-        )}
-        {reveal && loaded && preview.status === 'ready' && preview.url ? <MontageReveal url={preview.url} boxes={revealed} /> : null}
-      </div>
+      {progress.kind === 'job' ? (
+        <PrintJob key={job.count} progress={progress} previewUrl={preview.status === 'ready' ? preview.url : null} />
+      ) : (
+        <div className="relative flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[24px] bg-white/10 shadow-2xl">
+          {preview.status === 'ready' && preview.url ? (
+            <img src={preview.url} alt={PRINT_COPY.previewAlt} data-testid="print-preview" className={cn('h-full w-full object-contain', reveal && !loaded && 'opacity-0')} draggable={false} onLoad={() => setLoaded(true)} />
+          ) : (
+            <p className="text-3xl text-white/80">{preview.status === 'error' ? PRINT_COPY.previewError : PRINT_COPY.previewLoading}</p>
+          )}
+          {reveal && loaded && preview.status === 'ready' && preview.url ? <MontageReveal url={preview.url} boxes={revealed} /> : null}
+        </div>
+      )}
 
       <div role="status" aria-live="polite" className="min-h-24 text-center text-white">
         {printer && printer.kind !== 'ready' && (phase.kind === 'review' || phase.kind === 'printed') ? (
@@ -89,8 +101,6 @@ export function PrintScreen({ session }: { session: EventSession }) {
             {PRINT_COPY.status[printer.kind]}
           </p>
         ) : null}
-        {phase.kind === 'printing' ? <p className="text-4xl font-semibold">{PRINT_COPY.printing}</p> : null}
-        {phase.kind === 'printed' ? <p className="text-4xl font-semibold">{PRINT_COPY.printed}</p> : null}
         {phase.kind === 'print-failed' ? (
           <>
             <p className="text-4xl font-semibold">{PRINT_COPY.failures[phase.reason]}</p>
