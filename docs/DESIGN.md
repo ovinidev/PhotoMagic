@@ -645,9 +645,7 @@ The shutter flashes white for 80 ms. The countdown swaps numbers without bounce.
 
 TV screen changes animate in one place, `src/renderer/app/guest/GuestApp.tsx`, not in each screen. The screens are ordered: the camera, then the print screen over it (`GUEST_SCREENS` in `app/guest/screens.ts`); a move to a later screen is forward, to an earlier one is back. Forward (the third photo opens the print screen): the print screen fades in with a slight zoom, from 96% to 100%, 300 ms ease-out. Back (`Cancelar`, `Nova rodada`): the print screen slides out to the right over the camera, 300 ms ease-out, and is inert while it leaves; the camera never unmounts, so the stream does not restart. Changes inside the print screen (`printing`, `printed`, a failure) do not move the screen; the print animation inside it is described in Print progress.
 
-When a round reaches review, the print screen builds the montage in front of the guest (`features/print` `MontageReveal`): every fixed box starts as the template's empty gray slot, and its photo, cropped from the montage JPEG itself, slides up 14% of the box and fades in, then the overlay goes and only the montage remains. No frame, border, tilt or color effect: the photo is already the printed pixels. Boxes of the same photo fill together, photo 1 first, 220 ms apart, 560 ms each, so a three-photo round is in place in about 1 s (under 1.2 s). It plays once per round, not again after `Imprimir`.
-
-`prefers-reduced-motion` turns off the flash, the bar transition and the montage reveal (the montage shows at once), and turns the screen zoom and slide into a plain 300 ms fade. Snap and the countdown remain, because they are information, not decoration.
+`prefers-reduced-motion` turns off the flash and the bar transition, and turns the screen zoom and slide into a plain 300 ms fade. Snap and the countdown remain, because they are information, not decoration.
 
 ## 15. Logo
 
