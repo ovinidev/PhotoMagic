@@ -4,14 +4,15 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { ElectronApplication, Page } from '@playwright/test'
 import { expect, test } from './fixtures'
-import { PRINT_TIMEOUT, setSimulatedPrinter, startEvent, takePhotos } from './event'
+import { PRINT_TIMEOUT, startEvent, takePhotos } from './event'
+import { enableShare } from './share'
 
 /**
  * PR evidence video, not a check. Excluded from `pnpm test:e2e` by `playwright.config.ts`; run it with
  * `FOTOMAGICA_EVIDENCE=<output.webm> pnpm exec playwright test e2e/evidence.spec.ts` (needs `ffmpeg`).
  * It drives the built app in the CI simulated camera and printer mode and films the TV window.
- * Run it with `FOTOMAGICA_EVIDENCE=/workspace/photomagic-verify/feat-print-animation.webm`; it also
- * writes the PR screenshots `docs/assets/pr/feat-print-animation-*.png`.
+ * Run it with `FOTOMAGICA_EVIDENCE=/workspace/photomagic-verify/feat-qr-local-download.webm`; it also
+ * writes the PR screenshots `docs/assets/pr/feat-qr-local-download-*.png`.
  * Playwright's `recordVideo` stalls Electron windows created with `show: false`, so the frames come
  * from a CDP screencast and ffmpeg encodes them with their real timing.
  */
@@ -45,36 +46,26 @@ async function film(app: ElectronApplication, page: Page) {
   }
 }
 
-/** Where the PR screenshots go (`docs/assets/pr/feat-print-animation-*.png`). */
-const SHOTS = join(__dirname, '..', 'docs', 'assets', 'pr', 'feat-print-animation')
+/** Where the PR screenshots go (`docs/assets/pr/feat-qr-local-download-*.png`). */
+const SHOTS = join(__dirname, '..', 'docs', 'assets', 'pr', 'feat-qr-local-download')
 
-/** How long the simulated printer holds the job, so the `sending` step is on screen long enough to see. */
-const HOLD_MS = 2_500
-
-test('evidence: the TV print animation follows the real print steps to Sua foto está pronta!', async ({ app, operatorWindow }) => {
+test('evidence: after Imprimir the TV shows the Wi-Fi QR and the photo link QR', async ({ app, operatorWindow }) => {
   test.skip(!OUTPUT, 'set FOTOMAGICA_EVIDENCE to the output .webm path')
   test.setTimeout(120_000)
+  await enableShare(operatorWindow, { ssid: 'FotoMagica', password: 'festa2026' })
+  await operatorWindow.getByTestId('share-settings').screenshot({ path: `${SHOTS}-settings.png` })
   const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
   await takePhotos(tv, 3)
   await expect(tv.getByTestId('print-preview')).toBeVisible()
-  await setSimulatedPrinter(app, { delayMs: HOLD_MS })
 
   const stop = await film(app, tv)
   await tv.waitForTimeout(800)
   await tv.getByRole('button', { name: 'Imprimir' }).click()
-  await expect(tv.getByTestId('print-photo')).toHaveAttribute('data-eject', 'feeding')
-  await tv.waitForTimeout(1_700)
-  await tv.screenshot({ path: `${SHOTS}-printing.png` })
-  await expect(tv.getByTestId('print-message')).toHaveText('Sua foto está pronta!', { timeout: PRINT_TIMEOUT })
-  await tv.waitForTimeout(1_600)
-  await tv.screenshot({ path: `${SHOTS}-ready.png` })
-  await tv.waitForTimeout(600)
+  await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
+  await expect(tv.getByTestId('share-qr-link').locator('img')).toBeVisible()
+  await expect(tv.getByTestId('share-qr-wifi').locator('img')).toBeVisible()
+  await tv.waitForTimeout(3_000)
+  await tv.screenshot({ path: `${SHOTS}-tv.png` })
+  await tv.waitForTimeout(800)
   await stop(OUTPUT)
-
-  // Reduced motion: Imprimir novamente runs a new job with no slide; the sheet only fades in once printed.
-  await tv.emulateMedia({ reducedMotion: 'reduce' })
-  await tv.getByRole('button', { name: 'Imprimir novamente' }).click()
-  await expect(tv.getByTestId('print-photo')).toHaveAttribute('data-eject', 'feeding')
-  expect(await tv.getByTestId('print-photo').evaluate((node) => getComputedStyle(node).transform)).toBe('none')
-  await expect(tv.getByTestId('print-message')).toHaveText('Sua foto está pronta!', { timeout: PRINT_TIMEOUT })
 })
