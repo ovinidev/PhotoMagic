@@ -353,7 +353,7 @@ type PrintResult =
     }
 ```
 
-`PrinterStatus` lives in `src/shared/ipc/schemas.ts`, because `printer:status` carries it. The session adds `save-failed` (the JPG could not be written) to the failure reasons in the round phase.
+`PrinterStatus` lives in `src/shared/ipc/schemas.ts`, because `printer:status` carries it. The round phase `printing` carries the real job step: `saving` while the montage is composed and written, `sending` while the printer has the ticket (`PRINT_STEPS`); a reprint goes straight to `sending`. The TV print animation reads only that (DESIGN §14, Print progress). The session adds `save-failed` (the JPG could not be written) to the failure reasons in the round phase.
 
 Two implementations of the same interface:
 
@@ -614,6 +614,19 @@ The print screen keeps the image of the last preview in the background, darkened
 
 ![Figure 9 — Layout the print screen keeps](assets/briefing/image3.png)
 
+### Print progress
+
+After `Imprimir` (or `Imprimir novamente`) the sheet preview becomes the print animation (`PrintJob` in `features/print`): a dark printer body with a paper slot, the montage coming out of the slot, a progress bar and one line of text. It follows only what main reports, never a timer, so it can never announce a print that did not happen. The mapping is `printProgress` (`features/print/utils/printProgress.ts`):
+
+| Round phase | Sheet | Bar | Line |
+| --- | --- | --- | --- |
+| `printing`, step `saving` (composing and writing the JPG) | inside the printer | 33%, striped | `Preparando sua foto…` |
+| `printing`, step `sending` (handed to the printer, waiting for its answer) | part way out | 67%, striped | `Imprimindo…` |
+| `printed` | fully out | 100% | `Sua foto está pronta!` |
+| `print-failed` | the plain preview and the existing failure copy and `Tentar novamente`; no bar | | |
+
+The stripes only say a stage is running. Each job starts with the sheet back inside the printer. `prefers-reduced-motion`: no slide and no stripes; the sheet appears with a plain fade once printed.
+
 A logo mark, the symbol only, may sit in the corner of the print screen, outside the sheet preview, no taller than 48 px. The live image, the countdown and the sheet preview carry no logo.
 
 ### Attract screen
@@ -630,7 +643,7 @@ When a fresh round (nothing taken yet) sits on the camera screen for 45 s with n
 
 The shutter flashes white for 80 ms. The countdown swaps numbers without bounce. The editor does not animate the slot during the drag: it sticks to the pointer, with snap already applied, and the panel shows that value in the same frame.
 
-TV screen changes animate in one place, `src/renderer/app/guest/GuestApp.tsx`, not in each screen. The screens are ordered: the camera, then the print screen over it (`GUEST_SCREENS` in `app/guest/screens.ts`); a move to a later screen is forward, to an earlier one is back. Forward (the third photo opens the print screen): the print screen fades in with a slight zoom, from 96% to 100%, 300 ms ease-out. Back (`Cancelar`, `Nova rodada`): the print screen slides out to the right over the camera, 300 ms ease-out, and is inert while it leaves; the camera never unmounts, so the stream does not restart. Changes inside the print screen (`printing`, `printed`, a failure) do not animate.
+TV screen changes animate in one place, `src/renderer/app/guest/GuestApp.tsx`, not in each screen. The screens are ordered: the camera, then the print screen over it (`GUEST_SCREENS` in `app/guest/screens.ts`); a move to a later screen is forward, to an earlier one is back. Forward (the third photo opens the print screen): the print screen fades in with a slight zoom, from 96% to 100%, 300 ms ease-out. Back (`Cancelar`, `Nova rodada`): the print screen slides out to the right over the camera, 300 ms ease-out, and is inert while it leaves; the camera never unmounts, so the stream does not restart. Changes inside the print screen (`printing`, `printed`, a failure) do not move the screen; the print animation inside it is described in Print progress.
 
 When a round reaches review, the print screen builds the montage in front of the guest (`features/print` `MontageReveal`): every fixed box starts as the template's empty gray slot, and its photo, cropped from the montage JPEG itself, slides up 14% of the box and fades in, then the overlay goes and only the montage remains. No frame, border, tilt or color effect: the photo is already the printed pixels. Boxes of the same photo fill together, photo 1 first, 220 ms apart, 560 ms each, so a three-photo round is in place in about 1 s (under 1.2 s). It plays once per round, not again after `Imprimir`.
 
