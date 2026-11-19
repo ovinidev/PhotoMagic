@@ -1,6 +1,7 @@
 import { vi, type Mock } from 'vitest'
 import { SEED_LAYOUTS } from '@shared/layout'
-import type { CameraStatus, DisplayState, FotomagicaApi, PrinterStatus, SessionState, Templates, UpdateStatus, WebcamState, ZoomState } from '@shared/ipc'
+import type { CameraStatus, DisplayState, FotomagicaApi, PrinterStatus, SessionState, Templates, ShareState, UpdateStatus, WebcamState, ZoomState } from '@shared/ipc'
+import { defaultShareSettings } from '@shared/share'
 
 type Listener<T> = (value: T) => void
 
@@ -26,12 +27,14 @@ export type BridgeStub = {
   pushWebcam: (state: WebcamState) => void
   pushUpdate: (status: UpdateStatus) => void
   pushZoom: (state: ZoomState) => void
+  pushShare: (state: ShareState) => void
 }
 
 const CLOSED: DisplayState = { guest: { kind: 'missing' }, tv: { kind: 'closed' } }
 const NO_TEMPLATES: Templates = { 'two-strips': null, 'one-strip': null }
 const IDLE: SessionState = { kind: 'idle' }
 const DEFAULT_ZOOM: ZoomState = { user: 1, auto: 1, effective: 1 }
+export const SHARE_OFF: ShareState = { status: 'off', error: null, host: null, port: 8787, ssid: '', wifiQr: null, url: null }
 const NO_WEBCAM: WebcamState = { values: { controls: {} }, capabilities: null, live: false }
 
 function listeners<T>() {
@@ -59,6 +62,7 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
   const webcam = listeners<WebcamState>()
   const update = listeners<UpdateStatus>()
   const zoom = listeners<ZoomState>()
+  const share = listeners<ShareState>()
   const o = overrides
 
   const api: MockedBridge = {
@@ -132,10 +136,16 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
       step: vi.fn(o.zoom?.step ?? (() => Promise.resolve<ZoomState>(DEFAULT_ZOOM))),
       onState: vi.fn(o.zoom?.onState ?? zoom.add),
     },
+    share: {
+      getSettings: vi.fn(o.share?.getSettings ?? (() => Promise.resolve(defaultShareSettings()))),
+      saveSettings: vi.fn(o.share?.saveSettings ?? (() => Promise.resolve<ShareState>(SHARE_OFF))),
+      getState: vi.fn(o.share?.getState ?? (() => Promise.resolve<ShareState>(SHARE_OFF))),
+      onState: vi.fn(o.share?.onState ?? share.add),
+    },
   }
 
   window.fotomagica = api
-  return { api, pushDisplay: display.push, pushCamera: camera.push, pushSession: session.push, pushShutter: () => shutter.push(), pushPrinter: printer.push, pushGallery: () => gallery.push(), pushWebcam: webcam.push, pushUpdate: update.push, pushZoom: zoom.push }
+  return { api, pushDisplay: display.push, pushCamera: camera.push, pushSession: session.push, pushShutter: () => shutter.push(), pushPrinter: printer.push, pushGallery: () => gallery.push(), pushWebcam: webcam.push, pushUpdate: update.push, pushZoom: zoom.push, pushShare: share.push }
 }
 
 /** An open event in 2 tiras, capturing, for renderer tests. */

@@ -1,11 +1,14 @@
+import { networkInterfaces } from 'node:os'
 import { app, BrowserWindow, type WebContents } from 'electron'
 import type { DisplayFixture, SimulatedPrinterFlags } from '@shared/runtime'
 import { readRuntimeFlags } from '@shared/runtime'
 import { renderSheet } from './compose/renderSheet'
-import { broadcastGalleryChanged, broadcastPrinterStatus, broadcastSession, broadcastUpdateStatus, broadcastZoomState, registerIpcHandlers } from './ipc'
+import { broadcastGalleryChanged, broadcastPrinterStatus, broadcastSession, broadcastShareState, broadcastUpdateStatus, broadcastZoomState, registerIpcHandlers } from './ipc'
 import { applyCameraFixture, restrictPermissions } from './media'
 import { createPrinter, createPrinterMonitor, type Printer } from './print'
+import { readConfig } from './persist'
 import { createSession, saveMontage } from './session'
+import { createShareService } from './share'
 import { createUpdater } from './updater'
 import {
   createFixtureDisplaySource,
@@ -52,10 +55,19 @@ if (!app.requestSingleInstanceLock()) {
     app.quit()
   })
 
-  void app.whenReady().then(() => {
+  void app.whenReady().then(async () => {
     app.setAppUserModelId('com.fotomagica.desktop')
 
     const userData = app.getPath('userData')
+    // Offline photo download over the event Wi-Fi (DESIGN §15); off until the operator turns it on.
+    const share = createShareService({
+      settings: (await readConfig(userData)).share,
+      interfaces: networkInterfaces,
+      onChange: broadcastShareState,
+      log: (message, error) => console.warn(`[share] ${message}`, error),
+    })
+    void share.start()
+    app.on('will-quit', () => void share.stop())
     const printerHandle = createPrinter(flags, userData)
     const printerMonitor = createPrinterMonitor({ printer: printerHandle.printer, intervalMs: printerHandle.pollMs, onChange: broadcastPrinterStatus })
     // After every send the line on both screens shows what the spooler says now, not 5 s later.
@@ -102,10 +114,16 @@ if (!app.requestSingleInstanceLock()) {
       saveMontage: async (folder, jpeg) => {
         const saved = await saveMontage(folder, jpeg)
         broadcastGalleryChanged()
+        share.publish(saved)
         return saved
       },
       printer,
-      onChange: broadcastSession,
+      onChange: (state) => {
+        // The link belongs to one round: a fresh round takes it off the screens, the event's end revokes them all.
+        if (state.kind === 'idle') share.endEvent()
+        else if (state.phase.kind === 'capturing') share.endRound()
+        broadcastSession(state)
+      },
       onError: (error) => console.error('[session] preview failed', error),
     })
 
@@ -122,6 +140,7 @@ if (!app.requestSingleInstanceLock()) {
       printer,
       updateStatus: updater.status,
       zoom,
+      share,
       userData,
       desktop,
       isGuestWindow,
