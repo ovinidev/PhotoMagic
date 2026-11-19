@@ -9,8 +9,13 @@ export const PRINT_COPY = {
   again: 'Imprimir novamente',
   newRound: 'Nova rodada',
   retry: 'Tentar novamente',
-  printing: 'Imprimindo…',
-  printed: 'Montagem impressa',
+  /** The print animation's line for each real job stage (DESIGN §14). */
+  stage: {
+    saving: 'Preparando sua foto…',
+    sending: 'Imprimindo…',
+    done: 'Sua foto está pronta!',
+  },
+  progress: 'Progresso da impressão',
   previewAlt: 'Prévia da montagem',
   previewLoading: 'Montando a prévia…',
   previewError: 'Não foi possível mostrar a prévia',
