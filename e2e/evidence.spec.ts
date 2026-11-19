@@ -4,19 +4,14 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { ElectronApplication, Page } from '@playwright/test'
 import { expect, test } from './fixtures'
-import { PRINT_TIMEOUT, startEvent, takePhotos } from './event'
-
-/** Mirrors `ATTRACT_IDLE_MS`, `ATTRACT_SLIDE_MS` and `ATTRACT_FADE_MS` in `features/attract/utils/slides.ts`. */
-const ATTRACT_IDLE_MS = 45_000
-const ATTRACT_SLIDE_MS = 6_000
-const ATTRACT_FADE_MS = 1_200
+import { PRINT_TIMEOUT, setSimulatedPrinter, startEvent, takePhotos } from './event'
 
 /**
  * PR evidence video, not a check. Excluded from `pnpm test:e2e` by `playwright.config.ts`; run it with
  * `FOTOMAGICA_EVIDENCE=<output.webm> pnpm exec playwright test e2e/evidence.spec.ts` (needs `ffmpeg`).
  * It drives the built app in the CI simulated camera and printer mode and films the TV window.
- * Run it with `FOTOMAGICA_EVIDENCE=/workspace/photomagic-verify/feat-attract-screen.webm`; it also
- * writes the PR screenshots `docs/assets/pr/feat-attract-screen-*.png`.
+ * Run it with `FOTOMAGICA_EVIDENCE=/workspace/photomagic-verify/feat-print-animation.webm`; it also
+ * writes the PR screenshots `docs/assets/pr/feat-print-animation-*.png`.
  * Playwright's `recordVideo` stalls Electron windows created with `show: false`, so the frames come
  * from a CDP screencast and ffmpeg encodes them with their real timing.
  */
@@ -50,47 +45,36 @@ async function film(app: ElectronApplication, page: Page) {
   }
 }
 
-/** Where the PR screenshots go (`docs/assets/pr/feat-attract-screen-*.png`). */
-const SHOTS = join(__dirname, '..', 'docs', 'assets', 'pr', 'feat-attract-screen')
+/** Where the PR screenshots go (`docs/assets/pr/feat-print-animation-*.png`). */
+const SHOTS = join(__dirname, '..', 'docs', 'assets', 'pr', 'feat-print-animation')
 
-/** One full round to `Imprimir`, then `Nova rodada`: a montage lands in the event gallery. */
-async function printRound(tv: Page): Promise<void> {
-  await takePhotos(tv, 3)
-  await tv.getByRole('button', { name: 'Imprimir' }).click()
-  await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
-  await tv.getByRole('button', { name: 'Nova rodada' }).click()
-  await expect(tv.getByTestId('photo-counter')).toHaveText('1/3')
-}
+/** How long the simulated printer holds the job, so the `sending` step is on screen long enough to see. */
+const HOLD_MS = 2_500
 
-test('evidence: the TV attract screen cycles the event montages and a tap returns to the camera', async ({ app, operatorWindow }) => {
+test('evidence: the TV print animation follows the real print steps to Sua foto está pronta!', async ({ app, operatorWindow }) => {
   test.skip(!OUTPUT, 'set FOTOMAGICA_EVIDENCE to the output .webm path')
   test.setTimeout(120_000)
   const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
-  await printRound(tv)
-  await tv.waitForTimeout(1_500)
-  await printRound(tv)
+  await takePhotos(tv, 3)
+  await expect(tv.getByTestId('print-preview')).toBeVisible()
+  await setSimulatedPrinter(app, { delayMs: HOLD_MS })
 
   const stop = await film(app, tv)
   await tv.waitForTimeout(800)
-  // Skip the 45 s idle on a fake clock, then let time run for real so the crossfade plays.
-  await tv.clock.install()
-  await tv.evaluate(() => window.dispatchEvent(new Event('pointerdown')))
-  await tv.clock.fastForward(ATTRACT_IDLE_MS)
-  await tv.clock.resume()
-  await expect(tv.getByTestId('attract-slide').first()).toBeVisible()
-  await tv.waitForTimeout(1_500)
-  await tv.screenshot({ path: `${SHOTS}-carousel.png` })
-  await tv.waitForTimeout(ATTRACT_SLIDE_MS + ATTRACT_FADE_MS)
-  await tv.getByRole('button', { name: 'Toque para começar' }).click()
-  await expect(tv.getByTestId('attract-screen')).toHaveCount(0)
-  await tv.waitForTimeout(1_200)
+  await tv.getByRole('button', { name: 'Imprimir' }).click()
+  await expect(tv.getByTestId('print-photo')).toHaveAttribute('data-eject', 'feeding')
+  await tv.waitForTimeout(1_700)
+  await tv.screenshot({ path: `${SHOTS}-printing.png` })
+  await expect(tv.getByTestId('print-message')).toHaveText('Sua foto está pronta!', { timeout: PRINT_TIMEOUT })
+  await tv.waitForTimeout(1_600)
+  await tv.screenshot({ path: `${SHOTS}-ready.png` })
+  await tv.waitForTimeout(600)
   await stop(OUTPUT)
 
-  // Reduced motion: the newest montage, still, with a steady call to action.
+  // Reduced motion: Imprimir novamente runs a new job with no slide; the sheet only fades in once printed.
   await tv.emulateMedia({ reducedMotion: 'reduce' })
-  await tv.evaluate(() => window.dispatchEvent(new Event('pointerdown')))
-  await tv.clock.fastForward(ATTRACT_IDLE_MS)
-  await expect(tv.getByTestId('attract-screen')).toHaveAttribute('data-motion', 'reduced')
-  await tv.waitForTimeout(800)
-  await tv.screenshot({ path: `${SHOTS}-reduced-motion.png` })
+  await tv.getByRole('button', { name: 'Imprimir novamente' }).click()
+  await expect(tv.getByTestId('print-photo')).toHaveAttribute('data-eject', 'feeding')
+  expect(await tv.getByTestId('print-photo').evaluate((node) => getComputedStyle(node).transform)).toBe('none')
+  await expect(tv.getByTestId('print-message')).toHaveText('Sua foto está pronta!', { timeout: PRINT_TIMEOUT })
 })
