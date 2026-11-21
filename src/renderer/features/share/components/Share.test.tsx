@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { ShareState } from '@shared/ipc'
 import { defaultShareSettings } from '@shared/share'
 import { SHARE_OFF, stubBridge } from '@renderer/test/bridge'
+import { EventGalleryQr } from './EventGalleryQr'
 import { ShareQrPanel } from './ShareQrPanel'
 import { ShareSettingsCard } from './ShareSettingsCard'
 
@@ -81,5 +82,27 @@ describe('ShareSettingsCard (DESIGN §17)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }))
     expect(await screen.findByText(/Confira a porta/)).toBeInTheDocument()
     expect(api.share.saveSettings).not.toHaveBeenCalled()
+  })
+})
+
+describe('EventGalleryQr (DESIGN §17)', () => {
+  it('shows nothing without an event gallery link', () => {
+    const { container } = render(<EventGalleryQr state={{ ...RUNNING, galleryUrl: null }} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('shows the gallery QR and the Wi-Fi QR beside it', () => {
+    stubBridge()
+    render(<EventGalleryQr state={RUNNING} />)
+    expect(screen.getByText('Galeria do evento no celular')).toBeInTheDocument()
+    expect(screen.getByTestId('event-gallery-qr-link')).toHaveAttribute('data-qr-text', RUNNING.galleryUrl)
+    expect(screen.getByTestId('event-gallery-qr-wifi')).toHaveAttribute('data-qr-text', RUNNING.wifiQr)
+  })
+
+  it('leaves the Wi-Fi QR out with no SSID', () => {
+    stubBridge()
+    render(<EventGalleryQr state={{ ...RUNNING, ssid: '', wifiQr: null }} />)
+    expect(screen.getByTestId('event-gallery-qr-link')).toBeInTheDocument()
+    expect(screen.queryByTestId('event-gallery-qr-wifi')).toBeNull()
   })
 })

@@ -8,6 +8,13 @@ export const SHARE_COPY = {
   wifiAlt: (ssid: string) => `QR code para entrar no Wi-Fi ${ssid}`,
   linkAlt: 'QR code para baixar a foto',
   noInternet: 'Rede local da festa, sem internet',
+  gallery: {
+    title: 'Galeria do evento no celular',
+    caption: 'Escaneie para ver e baixar todas as fotos desta festa',
+    alt: 'QR code da galeria do evento',
+    wifiTitle: 'Wi-Fi da festa',
+    wifiAlt: (ssid: string) => `QR code para entrar no Wi-Fi ${ssid}`,
+  },
   loading: 'Carregando…',
   loadError: 'Não foi possível carregar as configurações da foto no celular',
   settings: {

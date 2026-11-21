@@ -1,6 +1,7 @@
 import logoUrl from '@brand/logo.png'
 import markUrl from '@brand/mark-header.png'
 import { EndEventButton, RoundScreen, SESSION_COPY } from '@renderer/features/session'
+import { EventGalleryQr, useShareState } from '@renderer/features/share'
 import { useSessionState } from '@renderer/shared/hooks/useSessionState'
 import type { UpdateStatus } from '@shared/ipc'
 import { useAppVersion, type AppVersionState } from './hooks/useAppVersion'
@@ -59,6 +60,7 @@ export function OperatorApp() {
   useZoom()
   const [sessionView] = useSessionState()
   const session = sessionView.status === 'ready' && sessionView.value.kind === 'event' ? sessionView.value : null
+  const [share] = useShareState()
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg text-ink">
@@ -83,6 +85,8 @@ export function OperatorApp() {
       <main className="flex min-h-0 flex-1 justify-center overflow-auto">
         {sessionView.status === 'loading' ? <Splash /> : session ? <RoundScreen session={session} /> : <HomePage />}
       </main>
+      {/* DESIGN §17: the event gallery QR, under the page so it never adds a vertical scroll. */}
+      {session ? <EventGalleryQr state={share} /> : null}
     </div>
   )
 }
