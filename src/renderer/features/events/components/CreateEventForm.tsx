@@ -15,9 +15,10 @@ import { TemplatePicker } from './TemplatePicker'
  * opens the TV and creates or reuses `Desktop\<name>`.
  *
  * `onEditLayout` opens the slot editor (PRD §5, "Slot editor, optional"): right after a template is
- * accepted, and from the button below the template. The home page owns the editor.
+ * accepted, and from the button below the template. The home page owns the editor. `footer` is a
+ * slot under `Iniciar evento` (the home page puts the photo-download row there, DESIGN §17).
  */
-export function CreateEventForm({ onEditLayout, logo }: { onEditLayout?: (mode: PrintMode) => void; logo?: ReactNode } = {}) {
+export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?: (mode: PrintMode) => void; logo?: ReactNode; footer?: ReactNode } = {}) {
   const nameId = useId()
   const nameHintId = useId()
   const [name, setName] = useState('')
@@ -151,6 +152,7 @@ export function CreateEventForm({ onEditLayout, logo }: { onEditLayout?: (mode: 
             {pending ? EVENTS_COPY.starting : EVENTS_COPY.start}
           </Button>
         </div>
+        {footer}
         </div>
 
         <div className="flex min-w-0 flex-col gap-3" data-testid="template-column">

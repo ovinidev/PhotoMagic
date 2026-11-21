@@ -39,10 +39,29 @@ describe('ShareQrPanel (DESIGN §17)', () => {
 })
 
 describe('ShareSettingsCard (DESIGN §17)', () => {
+  it('starts collapsed to one row with the status', async () => {
+    stubBridge()
+    render(<ShareSettingsCard />)
+    const toggle = await screen.findByRole('button', { name: 'Configurar' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByLabelText('Nome do Wi-Fi (SSID)')).toBeNull()
+    expect(screen.getByTestId('share-status')).toHaveTextContent('Desligado')
+  })
+
+  it('opens the fields in a dialog and closes it with Escape', async () => {
+    stubBridge()
+    render(<ShareSettingsCard />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Configurar' }))
+    expect(screen.getByRole('dialog', { name: 'Foto no celular' })).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('saves the Wi-Fi and the address', async () => {
     const { api } = stubBridge({ share: { saveSettings: () => Promise.resolve(RUNNING) } })
     render(<ShareSettingsCard />)
-    fireEvent.click(await screen.findByLabelText('Mostrar QR code para baixar a foto'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Configurar' }))
+    fireEvent.click(screen.getByLabelText('Mostrar QR code para baixar a foto'))
     fireEvent.change(screen.getByLabelText('Nome do Wi-Fi (SSID)'), { target: { value: 'Festa' } })
     fireEvent.change(screen.getByLabelText('Senha do Wi-Fi'), { target: { value: 'segredo' } })
     fireEvent.change(screen.getByLabelText('Endereço do notebook'), { target: { value: '192.168.137.1' } })
@@ -55,7 +74,8 @@ describe('ShareSettingsCard (DESIGN §17)', () => {
   it('refuses a bad address without saving', async () => {
     const { api } = stubBridge()
     render(<ShareSettingsCard />)
-    fireEvent.click(await screen.findByLabelText('Mostrar QR code para baixar a foto'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Configurar' }))
+    fireEvent.click(screen.getByLabelText('Mostrar QR code para baixar a foto'))
     fireEvent.change(screen.getByLabelText('Endereço do notebook'), { target: { value: '192.168.1' } })
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }))
     expect(await screen.findByText(/Confira a porta/)).toBeInTheDocument()

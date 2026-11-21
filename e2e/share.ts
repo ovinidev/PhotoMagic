@@ -9,12 +9,15 @@ export const E2E_SHARE_PORT = 18787
  * test can fetch the link: CI machines have no hotspot.
  */
 export async function enableShare(operatorWindow: Page, options: { ssid?: string; password?: string } = {}): Promise<void> {
-  const card = operatorWindow.getByTestId('share-settings')
-  await card.getByLabel('Mostrar QR code para baixar a foto').check()
-  await card.getByLabel('Nome do Wi-Fi (SSID)').fill(options.ssid ?? 'FotoMagica')
-  await card.getByLabel('Senha do Wi-Fi').fill(options.password ?? 'festa2026')
-  await card.getByLabel('Endereço do notebook').fill('127.0.0.1')
-  await card.getByLabel('Porta').fill(String(E2E_SHARE_PORT))
-  await card.getByRole('button', { name: 'Salvar' }).click()
-  await expect(card.getByTestId('share-status')).toContainText(`Ativo em http://127.0.0.1:${E2E_SHARE_PORT}`)
+  await operatorWindow.getByTestId('share-settings').getByRole('button', { name: 'Configurar' }).click()
+  const panel = operatorWindow.getByTestId('share-settings-panel')
+  await panel.getByLabel('Mostrar QR code para baixar a foto').check()
+  await panel.getByLabel('Nome do Wi-Fi (SSID)').fill(options.ssid ?? 'FotoMagica')
+  await panel.getByLabel('Senha do Wi-Fi').fill(options.password ?? 'festa2026')
+  await panel.getByLabel('Endereço do notebook').fill('127.0.0.1')
+  await panel.getByLabel('Porta').fill(String(E2E_SHARE_PORT))
+  await panel.getByRole('button', { name: 'Salvar' }).click()
+  await expect(panel.getByTestId('share-status')).toContainText(`Ativo em http://127.0.0.1:${E2E_SHARE_PORT}`)
+  await panel.getByRole('button', { name: 'Fechar' }).click()
+  await expect(panel).toHaveCount(0)
 }

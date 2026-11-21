@@ -22,6 +22,8 @@ export const SHARE_COPY = {
     security: 'Segurança',
     securities: { WPA: 'WPA/WPA2', WEP: 'WEP', nopass: 'Sem senha' },
     hidden: 'Rede oculta',
+    open: 'Configurar',
+    close: 'Fechar',
     save: 'Salvar',
     saved: 'Salvo',
     invalid: 'Confira a porta (1024 a 65535) e o endereço (ex.: 192.168.137.1)',
