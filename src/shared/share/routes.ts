@@ -15,8 +15,11 @@ export const SHARE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{22}$/
 export const DOWNLOAD_FILE = 'foto.jpg'
 
 export type ShareRoute =
-  | { kind: 'page' | 'download' | 'gallery'; token: string }
-  | { kind: 'gallery-thumb' | 'gallery-file'; token: string; fileName: string }
+  | { kind: 'page'; token: string }
+  | { kind: 'download'; token: string }
+  | { kind: 'gallery'; token: string }
+  | { kind: 'gallery-thumb'; token: string; fileName: string }
+  | { kind: 'gallery-file'; token: string; fileName: string }
 
 export function parseShareRoute(rawUrl: string): ShareRoute | null {
   if (!rawUrl.startsWith('/')) return null
