@@ -9,7 +9,7 @@ import { cn } from '@renderer/shared/utils/cn'
 const buttonVariants = cva(
   [
     'inline-flex cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-field)]',
-    'font-medium whitespace-nowrap transition-colors',
+    'font-medium whitespace-nowrap',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink',
     'disabled:cursor-not-allowed disabled:opacity-50',
   ],

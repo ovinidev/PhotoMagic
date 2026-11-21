@@ -634,19 +634,18 @@ A logo mark, the symbol only, may sit in the corner of the print screen, outside
 
 When a fresh round (nothing taken yet) sits on the camera screen for 45 s with no touch or key on the TV (`ATTRACT_IDLE_MS`), the TV shows the attract screen over the camera, which keeps running underneath. It lives in `src/renderer/features/attract` and is TV-only presentation: main is not told and the round does not change.
 
-- Background: the event's newest montages, taken from the gallery list (`gallery:list`) and loaded as the 480 px gallery thumbnails, at most 12 (`ATTRACT_PHOTO_LIMIT`). One montage at a time, centered over a blurred copy of itself; every 6 s the next one crossfades in over 1.2 s with a slow zoom from 100% to 106%. Only the leaving and the entering thumbnail are mounted, so memory stays at two images
+- Background: the event's newest montages, taken from the gallery list (`gallery:list`) and loaded as the 480 px gallery thumbnails, at most 12 (`ATTRACT_PHOTO_LIMIT`). One montage at a time, centered over a blurred copy of itself; every 6 s the next one replaces it at once, with no fade and no zoom. Only the current thumbnail is mounted
 - With no montage yet (or while the list loads), the full logo on the light paper. This is not the live image, so the logo rule above does not apply
-- Call to action: `Toque para começar` in a dark pill near the bottom, 64 px text, pulsing slowly (scale 100% to 106%, 2.4 s)
-- The whole surface is one button. A touch fades it out in 300 ms and the round goes on exactly as it was. A round with a photo taken and the print screen never show it; leaving the fresh round hides it at once
-- `prefers-reduced-motion`: the newest montage only, still, no zoom and no pulse; entering and leaving stay plain fades
+- Call to action: `Toque para começar` in a dark pill near the bottom, 64 px text, still
+- The whole surface is one button. A touch hides it at once and the round goes on exactly as it was. A round with a photo taken and the print screen never show it; leaving the fresh round hides it at once
 
 ### Motion
 
-The shutter flashes white for 80 ms. The countdown swaps numbers without bounce. The editor does not animate the slot during the drag: it sticks to the pointer, with snap already applied, and the panel shows that value in the same frame.
+The shutter flashes white for 80 ms (an instant overlay, hidden under `prefers-reduced-motion`). The countdown swaps numbers without bounce. The editor does not animate the slot during the drag: it sticks to the pointer, with snap already applied, and the panel shows that value in the same frame.
 
-TV screen changes animate in one place, `src/renderer/app/guest/GuestApp.tsx`, not in each screen. The screens are ordered: the camera, then the print screen over it (`GUEST_SCREENS` in `app/guest/screens.ts`); a move to a later screen is forward, to an earlier one is back. Forward (the third photo opens the print screen): the print screen fades in with a slight zoom, from 96% to 100%, 300 ms ease-out. Back (`Cancelar`, `Nova rodada`): the print screen slides out to the right over the camera, 300 ms ease-out, and is inert while it leaves; the camera never unmounts, so the stream does not restart. Changes inside the print screen (`printing`, `printed`, a failure) do not move the screen; the print animation inside it is described in Print progress.
+The only animation in the app is the TV print animation (Print progress above), the sole CSS keyframes and transitions left in `index.css` (`.print-photo`, `.print-progress`, `.print-led`). Everything else has none: no screen transitions, no fades, no attract crossfade, zoom or pulse, no other keyframes or transitions and no `requestAnimationFrame`-driven motion. Every other state change is instant. `requestAnimationFrame` is only used to draw camera frames and to sample the close-hold timer, not for decoration.
 
-`prefers-reduced-motion` turns off the flash and the bar transition, and turns the screen zoom and slide into a plain 300 ms fade. Snap and the countdown remain, because they are information, not decoration.
+TV screens are decided in one place, `src/renderer/app/guest/GuestApp.tsx` (`guestScreen` in `app/guest/screens.ts`): the camera, and from `review` on the print screen over it. The print screen appears and leaves at once; the camera never unmounts, so the stream does not restart. Changes inside the print screen (`printing`, `printed`, a failure) do not move the screen; the print animation inside it is described in Print progress.
 
 ## 15. Logo
 

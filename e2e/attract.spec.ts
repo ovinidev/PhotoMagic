@@ -24,17 +24,16 @@ test.describe('attract screen', () => {
     const attract = tv.getByRole('button', { name: 'Toque para começar' })
     await expect(attract).toBeVisible()
     await expect(tv.getByTestId('attract-brand')).toBeVisible()
-    expect(await tv.getByTestId('attract-cta').evaluate((node) => getComputedStyle(node).animationName)).toBe('attract-pulse')
+    expect(await tv.getByTestId('attract-cta').evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
 
     await attract.click()
-    await tv.clock.fastForward(500)
     await expect(tv.getByTestId('attract-screen')).toHaveCount(0)
     // The round is untouched: the camera is live and still at 1/3.
     await expect(tv.getByTestId('camera-view')).toHaveAttribute('data-camera-state', 'live')
     await expect(tv.getByTestId('photo-counter')).toHaveText('1/3')
   })
 
-  test('DESIGN §14 after a print the attract screen shows the event montage, still under reduced motion', async ({ app, operatorWindow }) => {
+  test('DESIGN §14 after a print the attract screen shows the event montage', async ({ app, operatorWindow }) => {
     const tv = await startEvent(app, operatorWindow, { name: 'Festa', template: null })
     await takePhotos(tv, 3)
     await tv.getByRole('button', { name: 'Imprimir' }).click()
@@ -42,13 +41,11 @@ test.describe('attract screen', () => {
     await tv.getByRole('button', { name: 'Nova rodada' }).click()
     await expect(tv.getByTestId('photo-counter')).toHaveText('1/3')
 
-    await tv.emulateMedia({ reducedMotion: 'reduce' })
     await fakeIdleClock(tv)
     await goIdle(tv)
-    await expect(tv.getByTestId('attract-screen')).toHaveAttribute('data-motion', 'reduced')
+    await expect(tv.getByTestId('attract-screen')).toBeVisible()
     await expect(tv.getByTestId('attract-slide')).toHaveCount(1)
     await expect(tv.getByAltText('Montagem recente do evento')).toBeVisible()
-    expect(await tv.getByTestId('attract-cta').evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
   })
 
   test('DESIGN §14 a round in progress never shows the attract screen', async ({ app, operatorWindow }) => {
