@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { ElectronApplication, Page } from '@playwright/test'
 import { expect, test } from './fixtures'
-import { closeLayoutEditor, layoutEditor, validTemplate } from './event'
+import { closeLayoutEditor, layoutEditor, startEvent, validTemplate } from './event'
+import { enableShare } from './share'
 
 /** Sets the laptop window's content size; the minimum is lowered so 900 px can be checked too. */
 async function resizeLaptop(app: ElectronApplication, page: Page, width: number, height: number): Promise<void> {
@@ -65,6 +66,22 @@ test.describe('laptop layout fits the window', () => {
     const editorScroll = await editor.evaluate((node) => node.scrollHeight - node.clientHeight)
     expect(editorScroll).toBeLessThanOrEqual(0)
     await closeLayoutEditor(operatorWindow)
+  })
+
+  test('at 1280×800 with sharing on, the home has no vertical scroll and the event gallery QR footer stays pinned in the window', async ({ app, operatorWindow }) => {
+    await resizeLaptop(app, operatorWindow, 1280, 800)
+    await enableShare(operatorWindow)
+    await expectNoVerticalScroll(operatorWindow)
+    await startEvent(app, operatorWindow, { name: 'Festa' })
+    const footer = operatorWindow.getByTestId('event-gallery-qr')
+    await expect(footer.getByTestId('event-gallery-qr-link')).toBeVisible()
+    await expect(footer.getByTestId('event-gallery-qr-wifi')).toBeVisible()
+    const box = (await footer.boundingBox())!
+    expect(box.y + box.height).toBeLessThanOrEqual(800)
+    // The round screen scrolls inside <main> (as before the footer); the window itself never does.
+    expect(await operatorWindow.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
+    await operatorWindow.locator('main').evaluate((node) => node.scrollTo(0, node.scrollHeight))
+    expect((await footer.boundingBox())!.y).toBe(box.y)
   })
 
   for (const width of [1280, 900]) {
