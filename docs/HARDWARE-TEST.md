@@ -81,3 +81,48 @@ Also send:
   `Get-Printer | Select-Object Name, DriverName, PrinterStatus | Format-Table -AutoSize`
 
 `%APPDATA%\Foto Mágica\helpers\dnp-helper.ps1` is the print helper the app writes on each launch. It does not need to be sent.
+
+## 5. Photo on the phone over local Wi-Fi (no internet)
+
+Guests scan two QR codes on the TV print screen: first they join the party Wi-Fi, then they open the photo link the notebook serves itself (DESIGN §17). During the event the laptop also shows, at the bottom, the event gallery QR (every montage of this event) and the Wi-Fi QR beside it. Nothing goes to the internet. Settings are in the `Foto no celular` card on the laptop home screen and saved as `share` in `config.json` (`src/shared/share/settings.ts`).
+
+### Option A: Windows Mobile Hotspot
+
+1. Settings → Network & Internet → Mobile hotspot. Set **Network name** and **Network password** (Edit), band 2.4 GHz for older phones, and turn it **On**. The notebook gets `192.168.137.1` on that network.
+2. In the app, `Foto no celular`: tick `Mostrar QR code para baixar a foto`, type the same SSID and password, security `WPA/WPA2`, leave `Endereço do notebook` empty (it detects `192.168.137.1`) and the port at `8787`. Click `Salvar`. The status line must say `Ativo em http://192.168.137.1:8787`.
+3. **Firewall prompt.** The first time the server starts, Windows Defender Firewall asks whether `Foto Mágica` may communicate on networks. Tick **Private networks** and click Allow. If it was dismissed or denied, phones will time out. Fix it in Windows Security → Firewall & network protection → Allow an app through firewall → `Foto Mágica` → tick Private, or in an admin PowerShell:
+   `New-NetFirewallRule -DisplayName "Foto Magica photo" -Direction Inbound -Protocol TCP -LocalPort 8787 -Action Allow -Profile Private,Public`
+   The hotspot network can be classed as Public. Use the rule above, or set the adapter to Private.
+
+**Hotspot will not turn on without internet.** Windows Mobile Hotspot usually wants a connection to share and greys out or fails with none. Workarounds:
+
+- **Loopback adapter:** in Device Manager → Action → Add legacy hardware → Network adapters → Microsoft → **Microsoft KM-TEST Loopback Adapter**. Then pick it under "Share my internet connection from". Windows treats it as a connection and the hotspot starts. This varies with the Windows build.
+- **Hosted network**, if the Wi-Fi card supports it: run `netsh wlan show drivers` and look for `Hosted network supported : Yes`. Then, in an admin prompt:
+  `netsh wlan set hostednetwork mode=allow ssid=FotoMagica key=<password>` and `netsh wlan start hostednetwork`.
+  Most modern Wi-Fi drivers say `No`. The address is then usually `192.168.137.1` only after enabling Internet Connection Sharing on it, so check it with `ipconfig` and type it in `Endereço do notebook` if needed.
+
+### Option B (reliable fallback): a standalone Wi-Fi router
+
+A cheap travel router works with no internet uplink. Its DHCP is enough.
+
+1. Power the router, set its SSID and WPA2 password, and leave the WAN port empty.
+2. Connect the notebook to it by Wi-Fi or Ethernet. Ignore "No internet".
+3. Find the notebook's address: `ipconfig` in a prompt, under the adapter connected to the router, `IPv4 Address` (for example `192.168.0.105`). The app picks the first private address by itself. Type it in `Endereço do notebook` anyway if the notebook has several adapters (a VPN, a virtual switch, Ethernet and Wi-Fi). In the router's admin page, reserve that address for the notebook (DHCP reservation) so it does not change between events.
+4. Mark the network Private and allow the firewall prompt as in Option A.
+
+### Checks
+
+| # | Check | Expected |
+| --- | --- | --- |
+| P1 | Save the settings with the hotspot or router on | `Ativo em http://<address>:8787` |
+| P2 | Print a round | The TV shows `1. Conecte-se ao Wi-Fi` and `2. Escaneie para baixar` with two QR codes |
+| P3 | Scan the first QR with an iPhone and an Android phone | The phone joins the Wi-Fi without typing the password |
+| P4 | Scan the second QR | A page `Sua Foto Mágica` with the montage. `Baixar foto` saves it (on iPhone, press and hold → Save to Photos) |
+| P5 | `Nova rodada` | The QR codes leave the TV. The old link still opens on the phone |
+| P6 | `Encerrar evento`, then reload the page on the phone | `Não encontrado` |
+| P7 | Turn the hotspot off and save again | `Sem rede local. Ligue o hotspot ou conecte ao roteador`, and no QR on the TV or the laptop |
+| P8 | With an event open, look at the bottom of the laptop | `Galeria do evento no celular` and `Wi-Fi da festa` QR codes, fully visible at 1280×800 |
+| P9 | Scan the gallery QR after two prints | `Fotos da festa <name>`, `2 fotos`, a thumbnail and `Baixar foto das HH:mm:ss` for each; each download saves the montage |
+| P10 | `Encerrar evento`, then reload the gallery on the phone | `Não encontrado`; a new event shows a different gallery QR |
+
+If phones join but the page never loads, the cause is almost always the firewall (Public profile) or a wrong address. Check `ipconfig` and the status line.

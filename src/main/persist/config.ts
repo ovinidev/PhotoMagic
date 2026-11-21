@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { slotListSchema, webcamCapabilitiesSchema, webcamValuesSchema } from '@shared/ipc'
 import { SEED_LAYOUTS, type Layouts, type PrintMode, type Slot } from '@shared/layout'
 import { NO_WEBCAM_VALUES, type WebcamCapabilities, type WebcamValues } from '@shared/webcam'
+import { defaultShareSettings, shareSettingsSchema, type ShareSettings } from '@shared/share'
 import { DEFAULT_USER_ZOOM, sanitizeUserZoom } from '@shared/zoom'
 
 /**
@@ -28,6 +29,8 @@ export type Config = {
   webcam: { values: WebcamValues; capabilities: WebcamCapabilities | null }
   /** The operator's laptop zoom on this computer (DESIGN §3), times the automatic factor. */
   zoom: number
+  /** Offline photo download over the event Wi-Fi (DESIGN §17). */
+  share: ShareSettings
 }
 
 const noWebcam = (): Config['webcam'] => ({ values: { controls: {} }, capabilities: null })
@@ -52,13 +55,14 @@ const configSchema = z.object({
     })
     .catch(noWebcam),
   zoom: z.number().optional().catch(undefined),
+  share: shareSettingsSchema.catch(defaultShareSettings),
 })
 
 export const CONFIG_FILE = 'config.json'
 export const TEMPLATES_DIR = 'templates'
 
 export function defaultConfig(): Config {
-  return { layouts: { ...SEED_LAYOUTS }, templates: {}, webcam: noWebcam(), zoom: DEFAULT_USER_ZOOM }
+  return { layouts: { ...SEED_LAYOUTS }, templates: {}, webcam: noWebcam(), zoom: DEFAULT_USER_ZOOM, share: defaultShareSettings() }
 }
 
 /** Parses whatever is on disk; never throws. */
@@ -70,7 +74,7 @@ export function parseConfig(raw: unknown): Config {
     const ref = parsed.data.templates[mode]
     if (ref) templates[mode] = ref
   }
-  return { layouts: parsed.data.layouts, templates, webcam: parsed.data.webcam as Config['webcam'], zoom: sanitizeUserZoom(parsed.data.zoom) }
+  return { layouts: parsed.data.layouts, templates, webcam: parsed.data.webcam as Config['webcam'], zoom: sanitizeUserZoom(parsed.data.zoom), share: parsed.data.share }
 }
 
 export async function readConfig(userData: string): Promise<Config> {
@@ -114,4 +118,9 @@ export function saveWebcam(userData: string, webcam: Partial<Config['webcam']>):
 /** Writes one mode's layout and leaves the other one, and the templates, as they are (RF03). */
 export function saveLayout(userData: string, mode: PrintMode, slots: readonly Slot[]): Promise<Config> {
   return updateConfig(userData, (config) => ({ ...config, layouts: { ...config.layouts, [mode]: [...slots] } }))
+}
+
+/** Writes the photo download settings and leaves everything else as it is (DESIGN §17). */
+export function saveShare(userData: string, share: ShareSettings): Promise<Config> {
+  return updateConfig(userData, (config) => ({ ...config, share }))
 }

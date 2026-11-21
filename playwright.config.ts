@@ -6,8 +6,6 @@ import { defineConfig } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './e2e',
-  // PR evidence video only (e2e/evidence.spec.ts): never part of the normal run or CI.
-  testIgnore: process.env['FOTOMAGICA_EVIDENCE'] ? [] : ['**/evidence.spec.ts'],
   globalSetup: './e2e/global-setup.ts',
   fullyParallel: false,
   workers: 1,

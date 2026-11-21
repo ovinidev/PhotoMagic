@@ -112,6 +112,12 @@ const api: FotomagicaApi = {
     step: (step) => invoke(IPC_CHANNELS.zoomStep, { step }),
     onState: (listener) => subscribe(IPC_CHANNELS.zoomState, listener),
   },
+  share: {
+    getSettings: () => invoke(IPC_CHANNELS.shareGetSettings, undefined),
+    saveSettings: (settings) => invoke(IPC_CHANNELS.shareSaveSettings, settings),
+    getState: () => invoke(IPC_CHANNELS.shareGetState, undefined),
+    onState: (listener) => subscribe(IPC_CHANNELS.shareState, listener),
+  },
 }
 
 contextBridge.exposeInMainWorld('fotomagica', api)

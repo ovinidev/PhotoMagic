@@ -34,6 +34,9 @@ export const IPC_CHANNELS = {
   updateGetStatus: 'update:get-status',
   zoomGet: 'zoom:get',
   zoomStep: 'zoom:step',
+  shareGetSettings: 'share:get-settings',
+  shareSaveSettings: 'share:save-settings',
+  shareGetState: 'share:get-state',
   // send: renderer → main, no answer
   cameraReport: 'camera:report',
   cameraRequestPreviewPort: 'camera:request-preview-port',
@@ -50,6 +53,7 @@ export const IPC_CHANNELS = {
   webcamState: 'webcam:state',
   updateStatus: 'update:status',
   zoomState: 'zoom:state',
+  shareState: 'share:state',
 } as const
 
 /**

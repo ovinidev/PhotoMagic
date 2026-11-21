@@ -4,6 +4,7 @@ import type { DisplayInfo, GuestChoice } from '../displays'
 import { WEBCAM_CONTROL_IDS, WHITE_BALANCE_MODES, type WebcamCapabilities, type WebcamValues } from '../webcam'
 import { EVENT_NAME_MAX_LENGTH, isMontageFileName } from '../files'
 import { FRAMING_ROTATION_RANGE, PRINT_MODES, ZOOM_RANGE, type Framing } from '../layout'
+import { shareSettingsSchema } from '../share/settings'
 
 /** `app:get-version` takes no input. */
 export const appGetVersionInputSchema = z.undefined()
@@ -39,6 +40,30 @@ export const zoomStateSchema = z.strictObject({
 export const zoomStepInputSchema = z.strictObject({ step: z.enum(['in', 'out', 'reset']) })
 
 export type ZoomState = z.infer<typeof zoomStateSchema>
+
+/**
+ * `share:*` (DESIGN §17): offline photo download over the event Wi-Fi. The operator reads and saves
+ * the settings; both windows get the state. `url` is the current round's photo link, set once its
+ * montage is saved and cleared by the next round; `wifiQr` is the join string, `null` with no SSID;
+ * `galleryUrl` lists every montage of the open event and dies with `Encerrar evento`.
+ */
+export const shareStateSchema = z.strictObject({
+  status: z.enum(['off', 'running', 'error']),
+  /** Why the server is not running: no network address, or the port is taken or not allowed. */
+  error: z.enum(['no-address', 'port-in-use', 'failed']).nullable(),
+  host: z.string().max(64).nullable(),
+  port: z.number().int().min(1).max(65535),
+  ssid: z.string().max(32),
+  wifiQr: z.string().max(400).nullable(),
+  url: z.string().max(200).nullable(),
+  /** The open event's gallery link for the operator's QR (`/e/<token>`); `null` with no event or no server. */
+  galleryUrl: z.string().max(200).nullable(),
+})
+
+export type ShareState = z.infer<typeof shareStateSchema>
+
+export const shareSettingsOutputSchema = shareSettingsSchema
+export const shareSaveInputSchema = shareSettingsSchema
 
 /** Channels that take no input. */
 export const noInputSchema = z.undefined()

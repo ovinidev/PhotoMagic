@@ -67,6 +67,7 @@ export {
   updateStatusSchema,
   zoomStateSchema,
   zoomStepInputSchema,
+  shareStateSchema,
   type AppVersion,
   type CameraErrorReason,
   type CameraStatus,
@@ -101,6 +102,7 @@ export {
   type TvWindowState,
   type UpdateStatus,
   type ZoomState,
+  type ShareState,
   type WebcamReport,
   type WebcamState,
 } from './schemas'

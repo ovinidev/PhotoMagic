@@ -161,6 +161,8 @@ test.describe('layout editor (RF03)', () => {
     const opened = next.app.waitForEvent('window')
     await next.operatorWindow.getByRole('button', { name: 'Iniciar evento' }).click()
     await opened
+    // The TV window opens before main creates the folder and starts the session, so wait for the state.
+    await expect.poll(async () => (await next.operatorWindow.evaluate(() => window.fotomagica.session.getState())).kind).toBe('event')
     const state = await next.operatorWindow.evaluate(() => window.fotomagica.session.getState())
     expect(state.kind).toBe('event')
     if (state.kind !== 'event') return

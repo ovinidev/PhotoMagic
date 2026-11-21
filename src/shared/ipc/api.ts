@@ -1,4 +1,5 @@
 import type { Layouts, PhotoIndex } from '../layout'
+import type { ShareSettings } from '../share/settings'
 import type { WebcamValues } from '../webcam'
 import type {
   AppVersion,
@@ -23,6 +24,7 @@ import type {
   Timer,
   UpdateStatus,
   ZoomState,
+  ShareState,
   WebcamReport,
   WebcamState,
 } from './schemas'
@@ -140,5 +142,14 @@ export type FotomagicaApi = {
     step: (step: 'in' | 'out' | 'reset') => Promise<ZoomState>
     /** Pushed when the window is resized or the operator zooms. */
     onState: (listener: (state: ZoomState) => void) => Unsubscribe
+  }
+  share: {
+    /** The operator's offline download settings: on/off, port, address override, hotspot Wi-Fi (DESIGN §17). */
+    getSettings: () => Promise<ShareSettings>
+    /** Saves the settings and restarts the local server; returns the new state. Laptop only. */
+    saveSettings: (settings: ShareSettings) => Promise<ShareState>
+    getState: () => Promise<ShareState>
+    /** Pushed when the server starts or stops and when a round's photo link appears or goes. */
+    onState: (listener: (state: ShareState) => void) => Unsubscribe
   }
 }
