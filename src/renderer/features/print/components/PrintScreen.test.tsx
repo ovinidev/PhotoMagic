@@ -58,30 +58,26 @@ describe('PrintScreen (RF10, RF13)', () => {
     for (const name of ['Imprimir', 'Cancelar', 'Mais', 'Menos']) expect(screen.getByRole('button', { name })).toBeDisabled()
   })
 
-  it('follows the real job steps: the sheet stays inside while saving, then feeds out while sending', () => {
+  it('names the real job step as static text: saving, then sending', () => {
     stubBridge()
     const { rerender } = render(<PrintScreen session={eventState({ taken: 3, phase: { kind: 'printing', step: 'saving' } })} />)
     expect(screen.getByTestId('print-message')).toHaveTextContent('Preparando sua foto…')
-    expect(screen.getByRole('progressbar', { name: 'Progresso da impressão' })).toHaveAttribute('aria-valuenow', '33')
-    expect(screen.getByTestId('print-photo')).toHaveAttribute('data-eject', 'inside')
     rerender(<PrintScreen session={eventState({ taken: 3, phase: { kind: 'printing', step: 'sending' } })} />)
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '67')
-    expect(screen.getByTestId('print-photo')).toHaveAttribute('data-eject', 'feeding')
+    expect(screen.getByTestId('print-message')).toHaveTextContent('Imprimindo…')
     expect(screen.queryByText('Sua foto está pronta!')).toBeNull()
+    expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
-  it('announces Sua foto está pronta! with a full bar only once printed', () => {
+  it('announces Sua foto está pronta! only once printed', () => {
     stubBridge()
     render(<PrintScreen session={eventState({ taken: 3, phase: { kind: 'printed', fileName: '21-45-08.jpg' } })} />)
     expect(screen.getByTestId('print-message')).toHaveTextContent('Sua foto está pronta!')
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
-    expect(screen.getByTestId('print-photo')).toHaveAttribute('data-eject', 'out')
   })
 
-  it('a failure drops the animation for the existing error screen', () => {
+  it('a failure shows the existing error copy and no job status', () => {
     stubBridge()
     render(<PrintScreen session={eventState({ taken: 3, phase: { kind: 'print-failed', reason: 'offline', detail: '', fileName: '21-45-08.jpg' } })} />)
-    expect(screen.queryByRole('progressbar')).toBeNull()
+    expect(screen.queryByTestId('print-message')).toBeNull()
     expect(screen.queryByText('Sua foto está pronta!')).toBeNull()
     expect(screen.getByText('Impressora desligada')).toBeInTheDocument()
   })

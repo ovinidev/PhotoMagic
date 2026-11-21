@@ -5,11 +5,8 @@
 /** At most this many recent montages cycle on the attract screen, so memory stays bounded. */
 export const ATTRACT_PHOTO_LIMIT = 12
 
-/** How long each montage stays before the next one crossfades in. */
+/** How long each montage stays before the next one replaces it. */
 export const ATTRACT_SLIDE_MS = 6_000
-
-/** Length of the crossfade between two montages, kept in sync with `attract-fade-in` in `index.css`. */
-export const ATTRACT_FADE_MS = 1_200
 
 /** A fresh round left untouched this long on the TV shows the attract screen. */
 export const ATTRACT_IDLE_MS = 45_000

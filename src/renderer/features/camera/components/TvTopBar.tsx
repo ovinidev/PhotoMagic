@@ -4,7 +4,7 @@ import { cn } from '@renderer/shared/utils/cn'
 import { BAR } from '@renderer/shared/utils/glass'
 
 const TARGET =
-  'flex min-h-16 min-w-16 cursor-pointer items-center justify-center rounded-full px-6 text-3xl font-semibold text-white transition-colors focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white'
+  'flex min-h-16 min-w-16 cursor-pointer items-center justify-center rounded-full px-6 text-3xl font-semibold text-white focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white'
 
 /** Sun with rays, the adjustments icon, drawn in white line like the iPhone's top icons. */
 function AdjustIcon() {

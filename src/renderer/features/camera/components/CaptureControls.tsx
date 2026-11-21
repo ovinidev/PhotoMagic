@@ -48,7 +48,7 @@ export function CaptureControls({ session, shutter, disabled }: { session: Event
             onClick={shutter.trigger}
             className="group flex size-60 cursor-pointer items-center justify-center rounded-full border-[10px] border-white disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-4 focus-visible:outline-offset-8 focus-visible:outline-white"
           >
-            <span className="size-48 rounded-full bg-shutter shadow-[0_4px_24px_rgba(0,0,0,0.35)] transition-transform duration-100 group-active:scale-[0.86] group-active:bg-white/75 group-disabled:scale-100 motion-reduce:transition-none" />
+            <span className="size-48 rounded-full bg-shutter shadow-[0_4px_24px_rgba(0,0,0,0.35)] group-active:scale-[0.86] group-active:bg-white/75 group-disabled:scale-100" />
           </button>
           <div role="radiogroup" aria-label={CAPTURE_COPY.timer} className="flex justify-self-end gap-1 rounded-full bg-black/40 p-2">
             {TIMER_OPTIONS.map((option) => (

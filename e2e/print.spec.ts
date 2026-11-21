@@ -49,25 +49,20 @@ test.describe('print', () => {
     await tv.getByRole('button', { name: 'Mais' }).click()
     await tv.getByRole('button', { name: 'Imprimir' }).click()
     await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
-    // The print animation reaches its end only on the printer's answer (DESIGN §14, Print progress).
+    // The status line says ready only on the printer's answer (DESIGN §14, Print status).
     await expect(tv.getByTestId('print-message')).toHaveText('Sua foto está pronta!')
-    await expect(tv.getByRole('progressbar', { name: 'Progresso da impressão' })).toHaveAttribute('aria-valuenow', '100')
-    await expect(tv.getByTestId('print-photo')).toHaveAttribute('data-eject', 'out')
     const [file] = readdirSync(join(dirs.desktop, 'Festa'))
     expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(dirs.desktop, 'Festa', file!), copies: 2, mode: 'two-strips', cut: true }])
   })
 
-  test('the print animation follows the job: feeding while the printer holds it, ready only on its answer', async ({ app, operatorWindow }) => {
+  test('the print status follows the job: printing while the printer holds it, ready only on its answer', async ({ app, operatorWindow }) => {
     const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
     await takePhotos(tv, 3)
     await setSimulatedPrinter(app, { delayMs: 2_000 })
     await tv.getByRole('button', { name: 'Imprimir' }).click()
-    await expect(tv.getByTestId('print-photo')).toHaveAttribute('data-eject', 'feeding')
     await expect(tv.getByTestId('print-message')).toHaveText('Imprimindo…')
-    await expect(tv.getByRole('progressbar', { name: 'Progresso da impressão' })).toHaveAttribute('aria-valuenow', '67')
     await expect(tv.getByText('Sua foto está pronta!')).toHaveCount(0)
     await expect(tv.getByTestId('print-message')).toHaveText('Sua foto está pronta!', { timeout: PRINT_TIMEOUT })
-    await expect(tv.getByTestId('print-photo')).toHaveAttribute('data-eject', 'out')
   })
 
   test('RF11 1 tira writes a simulated ticket with cut off', async ({ app, operatorWindow, dirs }) => {
@@ -127,7 +122,7 @@ test.describe('print', () => {
       await tv.getByRole('button', { name: 'Imprimir' }).click()
       await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed', { timeout: PRINT_TIMEOUT })
       await expect(tv.getByText('Não foi possível ajustar o corte da impressora')).toBeVisible()
-      await expect(tv.getByRole('progressbar')).toHaveCount(0)
+      await expect(tv.getByTestId('print-message')).toHaveCount(0)
       await expect(tv.getByText('Sua foto está pronta!')).toHaveCount(0)
       await expect(operatorWindow.getByTestId('round-status')).toHaveText('Não foi possível ajustar o corte da impressora')
       await expect(tv.getByRole('button', { name: 'Imprimir novamente' })).toHaveCount(0)

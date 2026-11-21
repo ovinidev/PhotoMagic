@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import markUrl from '@brand/mark.png'
 import { COPIES } from '@shared/constants'
 import type { EventSession, SessionState } from '@shared/ipc'
@@ -9,8 +9,7 @@ import { cn } from '@renderer/shared/utils/cn'
 import { GLASS } from '@renderer/shared/utils/glass'
 import { PRINT_COPY, copiesLabel } from '../copy'
 import { usePrinterStatus } from '../hooks/usePrinterStatus'
-import { printProgress } from '../utils/printProgress'
-import { PrintJob } from './PrintJob'
+import { printStage } from '../utils/printStage'
 
 function TvAction({ label, icon, onClick, disabled, primary }: { label: string; icon: ReactNode; onClick: () => void; disabled?: boolean; primary?: boolean }) {
   return (
@@ -33,9 +32,8 @@ function TvAction({ label, icon, onClick, disabled, primary }: { label: string; 
  * `Cancelar` on one side, `Mais` and `Menos` on the other, the copies in the middle and the sheet
  * preview below. After a print, `Imprimir novamente` and `Nova rodada`; a failure keeps the round
  * and offers to try again. A printer that is not ready shows its state before anyone taps
- * `Imprimir`. While a job runs and once it is printed, the sheet preview becomes the print
- * animation (`PrintJob`), driven only by the steps main reports. Every action is an invoke; main
- * owns the round.
+ * `Imprimir`. While a job runs and once it is printed, a static line under the preview names the
+ * step main reports. Every action is an invoke; main owns the round.
  */
 export function PrintScreen({ session }: { session: EventSession }) {
   const preview = useMontagePreview(session.previewRevision)
@@ -46,10 +44,7 @@ export function PrintScreen({ session }: { session: EventSession }) {
   const api = window.fotomagica.session
   const busy = phase.kind === 'printing'
   const setCopies = (delta: 1 | -1) => run(() => api.setCopies(stepCopies(copies, delta)))
-  const progress = printProgress(phase)
-  // Each job (Imprimir, Imprimir novamente) starts the sheet back inside the printer.
-  const [job, setJob] = useState({ count: 0, busy })
-  if (job.busy !== busy) setJob({ count: job.count + (busy ? 1 : 0), busy })
+  const stage = printStage(phase)
 
   return (
     <div data-testid="print-screen" data-phase={phase.kind} className="absolute inset-0 flex flex-col items-center justify-center gap-16 bg-black/65 px-16">
@@ -78,22 +73,23 @@ export function PrintScreen({ session }: { session: EventSession }) {
         </div>
       </div>
 
-      {progress.kind === 'job' ? (
-        <PrintJob key={job.count} progress={progress} previewUrl={preview.status === 'ready' ? preview.url : null} />
-      ) : (
-        <div className="relative flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[24px] bg-white/10 shadow-2xl">
-          {preview.status === 'ready' && preview.url ? (
-            <img src={preview.url} alt={PRINT_COPY.previewAlt} data-testid="print-preview" className="h-full w-full object-contain" draggable={false} />
-          ) : (
-            <p className="text-3xl text-white/80">{preview.status === 'error' ? PRINT_COPY.previewError : PRINT_COPY.previewLoading}</p>
-          )}
-        </div>
-      )}
+      <div className="relative flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[24px] bg-white/10 shadow-2xl">
+        {preview.status === 'ready' && preview.url ? (
+          <img src={preview.url} alt={PRINT_COPY.previewAlt} data-testid="print-preview" className="h-full w-full object-contain" draggable={false} />
+        ) : (
+          <p className="text-3xl text-white/80">{preview.status === 'error' ? PRINT_COPY.previewError : PRINT_COPY.previewLoading}</p>
+        )}
+      </div>
 
       {/* Offline photo download (DESIGN §17): shown once the montage is saved and the local server is up. */}
       <ShareQrPanel state={share} />
 
       <div role="status" aria-live="polite" className="min-h-24 text-center text-white">
+        {stage ? (
+          <p data-testid="print-message" data-stage={stage} className={cn('font-semibold', stage === 'done' ? 'text-6xl' : 'text-4xl')}>
+            {PRINT_COPY.stage[stage]}
+          </p>
+        ) : null}
         {printer && printer.kind !== 'ready' && (phase.kind === 'review' || phase.kind === 'printed') ? (
           <p data-testid="tv-printer-status" className="text-3xl font-semibold text-white/90">
             {PRINT_COPY.status[printer.kind]}

@@ -183,33 +183,15 @@ test.describe('capture round', () => {
     expect(readdirSync(join(dirs.desktop, 'Festa'))).toEqual([])
   })
 
-  test('DESIGN §14 the print screen zooms in forward and slides out back', async ({ app, operatorWindow }) => {
+  test('DESIGN §14 the print screen appears and leaves at once, with no animation', async ({ app, operatorWindow }) => {
     const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
     await takePhotos(tv, 3)
-    const entering = tv.getByTestId('guest-screen')
-    await expect(entering).toHaveClass(/guest-screen-enter-forward/)
-    expect(await entering.evaluate((node) => getComputedStyle(node).animationName)).toBe('guest-screen-enter-forward')
-
-    // The leaving layer lives for one transition; record it as it is added instead of racing it.
-    await tv.evaluate(() => {
-      const seen: string[] = []
-      ;(window as unknown as { __leaving: string[] }).__leaving = seen
-      new MutationObserver((records) => {
-        for (const record of records)
-          for (const node of record.addedNodes)
-            if (node instanceof HTMLElement && node.dataset['testid'] === 'guest-screen-leaving') seen.push(`${node.className}|${node.getAttribute('aria-hidden')}|${node.inert}`)
-      }).observe(document.body, { childList: true, subtree: true })
-    })
+    const layer = tv.getByTestId('guest-screen')
+    await expect(layer).toBeVisible()
+    expect(await layer.evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
     await tv.getByRole('button', { name: 'Cancelar' }).click()
     await expect(tv.getByTestId('print-screen')).toHaveCount(0)
-    expect(await tv.evaluate(() => (window as unknown as { __leaving: string[] }).__leaving)).toEqual(['absolute inset-0 guest-screen-exit-back|true|true'])
-  })
-
-  test('DESIGN §14 reduced motion keeps a plain fade with no zoom', async ({ app, operatorWindow }) => {
-    const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
-    await tv.emulateMedia({ reducedMotion: 'reduce' })
-    await takePhotos(tv, 3)
-    expect(await tv.getByTestId('guest-screen').evaluate((node) => getComputedStyle(node).animationName)).toBe('guest-screen-fade-in')
+    await expect(tv.getByTestId('guest-screen')).toHaveCount(0)
   })
 
   test('RNF04 the laptop shows the live camera sent by the TV over the MessageChannel', async ({ app, operatorWindow }) => {
