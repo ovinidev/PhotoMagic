@@ -34,7 +34,7 @@ const CLOSED: DisplayState = { guest: { kind: 'missing' }, tv: { kind: 'closed' 
 const NO_TEMPLATES: Templates = { 'two-strips': null, 'one-strip': null }
 const IDLE: SessionState = { kind: 'idle' }
 const DEFAULT_ZOOM: ZoomState = { user: 1, auto: 1, effective: 1 }
-export const SHARE_OFF: ShareState = { status: 'off', error: null, host: null, port: 8787, ssid: '', wifiQr: null, url: null }
+export const SHARE_OFF: ShareState = { status: 'off', error: null, host: null, port: 8787, ssid: '', wifiQr: null, url: null, galleryUrl: null }
 const NO_WEBCAM: WebcamState = { values: { controls: {} }, capabilities: null, live: false }
 
 function listeners<T>() {

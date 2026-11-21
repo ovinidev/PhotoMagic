@@ -1,6 +1,7 @@
 import type { Server } from 'node:http'
 import type { ShareState } from '@shared/ipc'
-import { pickLanIp, sharePageUrl, wifiQrText, type InterfaceAddress, type ShareSettings } from '@shared/share'
+import { galleryPageUrl, pickLanIp, sharePageUrl, wifiQrText, type InterfaceAddress, type ShareSettings } from '@shared/share'
+import { createEventGallery } from './eventGallery'
 import { createShareRegistry, type SharedFile } from './registry'
 import { startShareServer, stopServer } from './server'
 
@@ -18,6 +19,7 @@ export type ShareServiceDeps = {
  */
 export function createShareService(deps: ShareServiceDeps) {
   const registry = createShareRegistry()
+  const gallery = createEventGallery()
   let settings = deps.settings
   let server: Server | null = null
   let host: string | null = null
@@ -37,6 +39,7 @@ export function createShareService(deps: ShareServiceDeps) {
       ssid,
       wifiQr: settings.enabled && ssid ? wifiQrText(settings.wifi) : null,
       url: running && current && host ? sharePageUrl(host, settings.port, current) : null,
+      galleryUrl: running && host && gallery.current() ? galleryPageUrl(host, settings.port, gallery.current()!.token) : null,
     }
   }
   const emit = () => deps.onChange(state())
@@ -52,7 +55,7 @@ export function createShareService(deps: ShareServiceDeps) {
       return
     }
     try {
-      server = await startShareServer(registry, host, settings.port)
+      server = await startShareServer({ registry, gallery }, host, settings.port)
     } catch (failure) {
       const code = (failure as NodeJS.ErrnoException).code
       error = code === 'EADDRINUSE' ? 'port-in-use' : 'failed'
@@ -89,8 +92,15 @@ export function createShareService(deps: ShareServiceDeps) {
       current = null
       emit()
     },
-    /** The event ended: every link stops working. */
+    /** An event is open: its gallery gets one token (the same one while the event lasts). */
+    openEvent(event: { name: string; folder: string }): void {
+      const before = gallery.current()
+      if (gallery.open(event) !== before) emit()
+    },
+    /** The event ended (`Encerrar evento`): every link, the gallery's included, stops working. */
     endEvent(): void {
+      if (current === null && registry.size === 0 && gallery.current() === null) return
+      gallery.close()
       registry.clear()
       current = null
       emit()

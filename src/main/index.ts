@@ -120,8 +120,13 @@ if (!app.requestSingleInstanceLock()) {
       printer,
       onChange: (state) => {
         // The link belongs to one round: a fresh round takes it off the screens, the event's end revokes them all.
+        // The event gallery link lives as long as the event (DESIGN §17).
         if (state.kind === 'idle') share.endEvent()
-        else if (state.phase.kind === 'capturing') share.endRound()
+        else {
+          const open = session.openEvent()
+          if (open) share.openEvent(open)
+          if (state.phase.kind === 'capturing') share.endRound()
+        }
         broadcastSession(state)
       },
       onError: (error) => console.error('[session] preview failed', error),

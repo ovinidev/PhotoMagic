@@ -14,6 +14,7 @@ const RUNNING: ShareState = {
   ssid: 'Festa',
   wifiQr: 'WIFI:T:WPA;S:Festa;P:segredo;;',
   url: 'http://192.168.137.1:8787/p/abc',
+  galleryUrl: 'http://192.168.137.1:8787/e/xyz',
 }
 
 describe('ShareQrPanel (DESIGN §17)', () => {

@@ -1,9 +1,15 @@
 import { createReadStream } from 'node:fs'
-import { stat } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
+import sharp from 'sharp'
 import { parseShareRoute } from '@shared/share'
-import { sharePage } from './page'
+import { listMontages, THUMBNAIL_WIDTH } from '../gallery'
+import { resolveEventFile, type EventGallery } from './eventGallery'
+import { galleryPage, sharePage } from './page'
 import type { ShareRegistry } from './registry'
+
+/** What the server can answer: the rounds' montages by token and the open event's folder by token. */
+export type ShareSources = { registry: ShareRegistry; gallery: EventGallery }
 
 const BASE_HEADERS = {
   'Cache-Control': 'no-store',
@@ -17,52 +23,77 @@ function notFound(res: ServerResponse): void {
   res.end('Não encontrado')
 }
 
-async function handle(registry: ShareRegistry, req: IncomingMessage, res: ServerResponse): Promise<void> {
+function sendHtml(req: IncomingMessage, res: ServerResponse, body: string): void {
+  res.writeHead(200, {
+    ...BASE_HEADERS,
+    'Content-Type': 'text/html; charset=utf-8',
+    'Content-Length': Buffer.byteLength(body),
+    'Content-Security-Policy': "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'",
+  })
+  res.end(req.method === 'HEAD' ? undefined : body)
+}
+
+async function sendJpeg(req: IncomingMessage, res: ServerResponse, path: string, fileName: string): Promise<void> {
+  const info = await stat(path).catch(() => null)
+  if (!info?.isFile()) return notFound(res)
+  res.writeHead(200, {
+    ...BASE_HEADERS,
+    'Content-Type': 'image/jpeg',
+    'Content-Length': info.size,
+    'Content-Disposition': `inline; filename="foto-magica-${fileName.replace(/[^\w.-]/g, '')}"`,
+  })
+  if (req.method === 'HEAD') {
+    res.end()
+    return
+  }
+  const stream = createReadStream(path)
+  stream.on('error', () => res.destroy())
+  stream.pipe(res)
+}
+
+async function sendThumbnail(req: IncomingMessage, res: ServerResponse, path: string): Promise<void> {
+  const thumb = await readFile(path)
+    .then((bytes) => sharp(bytes).resize({ width: THUMBNAIL_WIDTH }).jpeg({ quality: 75 }).toBuffer())
+    .catch(() => null)
+  if (!thumb) return notFound(res)
+  res.writeHead(200, { ...BASE_HEADERS, 'Content-Type': 'image/jpeg', 'Content-Length': thumb.length })
+  res.end(req.method === 'HEAD' ? undefined : thumb)
+}
+
+async function handle(sources: ShareSources, req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405, { ...BASE_HEADERS, Allow: 'GET, HEAD' })
     res.end()
     return
   }
   const route = parseShareRoute(req.url ?? '')
-  const file = route ? registry.get(route.token) : null
-  if (!route || !file) return notFound(res)
+  if (!route) return notFound(res)
 
-  if (route.kind === 'page') {
-    const body = sharePage(route.token, file.fileName)
-    res.writeHead(200, {
-      ...BASE_HEADERS,
-      'Content-Type': 'text/html; charset=utf-8',
-      'Content-Length': Buffer.byteLength(body),
-      'Content-Security-Policy': "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'",
-    })
-    res.end(req.method === 'HEAD' ? undefined : body)
-    return
+  if (route.kind === 'page' || route.kind === 'download') {
+    const file = sources.registry.get(route.token)
+    if (!file) return notFound(res)
+    if (route.kind === 'page') return sendHtml(req, res, sharePage(route.token, file.fileName))
+    return sendJpeg(req, res, file.path, file.fileName)
   }
 
-  const info = await stat(file.path).catch(() => null)
-  if (!info?.isFile()) return notFound(res)
-  res.writeHead(200, {
-    ...BASE_HEADERS,
-    'Content-Type': 'image/jpeg',
-    'Content-Length': info.size,
-    'Content-Disposition': `inline; filename="foto-magica-${file.fileName.replace(/[^\w.-]/g, '')}"`,
-  })
-  if (req.method === 'HEAD') {
-    res.end()
-    return
-  }
-  const stream = createReadStream(file.path)
-  stream.on('error', () => res.destroy())
-  stream.pipe(res)
+  // The event gallery: the token names the open event's folder, and only its montages are served.
+  const event = sources.gallery.get(route.token)
+  if (!event) return notFound(res)
+  if (route.kind === 'gallery') return sendHtml(req, res, galleryPage(route.token, event.name, await listMontages(event.folder)))
+  const path = resolveEventFile(event.folder, route.fileName)
+  if (!path) return notFound(res)
+  return route.kind === 'gallery-file' ? sendJpeg(req, res, path, route.fileName) : sendThumbnail(req, res, path)
 }
 
 /**
  * The read-only photo server on the event Wi-Fi (DESIGN §17): plain `node:http`, bound to one
- * address, answering only the registry's tokens. No listing, no upload, no path from the URL.
+ * address, answering only the registry's round tokens and the open event's gallery token. No
+ * listing outside the event folder, no upload, and a file name from the URL is only used after it
+ * is checked to be a montage name that resolves directly inside the event folder.
  */
-export function startShareServer(registry: ShareRegistry, host: string, port: number): Promise<Server> {
+export function startShareServer(sources: ShareSources, host: string, port: number): Promise<Server> {
   const server = createServer((req, res) => {
-    handle(registry, req, res).catch(() => {
+    handle(sources, req, res).catch(() => {
       if (!res.headersSent) notFound(res)
       else res.destroy()
     })
