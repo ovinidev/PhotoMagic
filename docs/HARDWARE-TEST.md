@@ -84,7 +84,7 @@ Also send:
 
 ## 5. Photo on the phone over local Wi-Fi (no internet)
 
-Guests scan two QR codes on the TV print screen: first they join the party Wi-Fi, then they open the photo link the notebook serves itself (DESIGN §17). Nothing goes to the internet. Settings are in the `Foto no celular` card on the laptop home screen and saved as `share` in `config.json` (`src/shared/share/settings.ts`).
+Guests scan two QR codes on the TV print screen: first they join the party Wi-Fi, then they open the photo link the notebook serves itself (DESIGN §17). During the event the laptop also shows, at the bottom, the event gallery QR (every montage of this event) and the Wi-Fi QR beside it. Nothing goes to the internet. Settings are in the `Foto no celular` card on the laptop home screen and saved as `share` in `config.json` (`src/shared/share/settings.ts`).
 
 ### Option A: Windows Mobile Hotspot
 
@@ -120,6 +120,9 @@ A cheap travel router works with no internet uplink. Its DHCP is enough.
 | P4 | Scan the second QR | A page `Sua Foto Mágica` with the montage. `Baixar foto` saves it (on iPhone, press and hold → Save to Photos) |
 | P5 | `Nova rodada` | The QR codes leave the TV. The old link still opens on the phone |
 | P6 | `Encerrar evento`, then reload the page on the phone | `Não encontrado` |
-| P7 | Turn the hotspot off and save again | `Sem rede local. Ligue o hotspot ou conecte ao roteador`, and no QR on the TV |
+| P7 | Turn the hotspot off and save again | `Sem rede local. Ligue o hotspot ou conecte ao roteador`, and no QR on the TV or the laptop |
+| P8 | With an event open, look at the bottom of the laptop | `Galeria do evento no celular` and `Wi-Fi da festa` QR codes, fully visible at 1280×800 |
+| P9 | Scan the gallery QR after two prints | `Fotos da festa <name>`, `2 fotos`, a thumbnail and `Baixar foto das HH:mm:ss` for each; each download saves the montage |
+| P10 | `Encerrar evento`, then reload the gallery on the phone | `Não encontrado`; a new event shows a different gallery QR |
 
 If phones join but the page never loads, the cause is almost always the firewall (Public profile) or a wrong address. Check `ipconfig` and the status line.
