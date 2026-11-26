@@ -3,8 +3,6 @@ import {
   EVENT_CONTRACT,
   INVOKE_CONTRACT,
   IPC_CHANNELS,
-  PORT_CHANNELS,
-  PREVIEW_PORT_MESSAGE,
   SEND_CONTRACT,
   type EventChannel,
   type EventPayload,
@@ -57,7 +55,6 @@ const api: FotomagicaApi = {
     getStatus: () => invoke(IPC_CHANNELS.cameraGetStatus, undefined),
     onStatus: (listener) => subscribe(IPC_CHANNELS.cameraStatus, listener),
     report: (status) => send(IPC_CHANNELS.cameraReport, status),
-    requestPreviewPort: () => send(IPC_CHANNELS.cameraRequestPreviewPort, undefined),
   },
   template: {
     getAll: () => invoke(IPC_CHANNELS.templateGetAll, undefined),
@@ -121,13 +118,3 @@ const api: FotomagicaApi = {
 }
 
 contextBridge.exposeInMainWorld('fotomagica', api)
-
-/** The page's `window`, typed for the one call below (the preload's tsconfig has no DOM lib). */
-const page = globalThis as unknown as { postMessage: (message: string, targetOrigin: string, transfer: unknown[]) => void }
-
-// The live-preview port cannot cross `contextBridge`; hand it to the page with `postMessage` (DESIGN §5).
-// The target is this same window, so '*' does not leak it: `file://` pages have the opaque origin 'null'.
-ipcRenderer.on(PORT_CHANNELS.cameraPreviewPort, (event) => {
-  const [port] = event.ports
-  if (port) page.postMessage(PREVIEW_PORT_MESSAGE, '*', [port])
-})

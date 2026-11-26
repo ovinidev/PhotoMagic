@@ -3,7 +3,6 @@ import { useApplyWebcam } from '@renderer/features/webcam'
 import type { EventSession } from '@shared/ipc'
 import { CAMERA_COPY } from '../copy'
 import { useCamera } from '../hooks/useCamera'
-import { usePreviewSender } from '../hooks/usePreviewSender'
 import { useShutter } from '../hooks/useShutter'
 import { CameraPreview } from './CameraPreview'
 import { CaptureControls } from './CaptureControls'
@@ -32,7 +31,6 @@ export function CameraView({ session = null }: { session?: EventSession | null }
   const { state, retry } = useCamera()
   const videoRef = useRef<HTMLVideoElement>(null)
   const shutter = useShutter({ session, videoRef })
-  usePreviewSender(videoRef)
   const stream = state.kind === 'live' ? state.stream : null
   const track = useMemo(() => stream?.getVideoTracks()[0] ?? null, [stream])
   useApplyWebcam(track)

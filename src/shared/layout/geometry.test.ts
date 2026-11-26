@@ -5,14 +5,12 @@ import {
   clampFraming,
   isDefaultFraming,
   clipToSheet,
-  guideCrop,
   nearestQuarterTurn,
   normalizeAngle,
   planSlot,
   photoPlacement,
   photoPlacementCss,
   slotBounds,
-  slotCrop,
 } from './geometry'
 import { ONE_STRIP_SEED, TWO_STRIPS_SEED } from './seed'
 
@@ -157,37 +155,6 @@ describe('clipToSheet', () => {
       target: { left: 1794, top: 1190 },
     })
     expect(clipToSheet({ x: -100, y: 10 }, { width: 100, height: 100 })).toBeNull()
-  })
-})
-
-describe('slotCrop and guideCrop', () => {
-  const FRAME = { width: 9, height: 16 }
-
-  it('keeps the whole height for a slot taller than the frame aspect', () => {
-    const crop = slotCrop(ONE_STRIP_SEED[0]!, FRAME)
-    expect(crop.height).toBe(1)
-    expect(crop.width).toBeCloseTo((560 / 1160) * (16 / 9), 6)
-    expect(crop.left).toBeCloseTo((1 - crop.width) / 2, 6)
-  })
-
-  it('shows the bottom strip band for photo 1 in 2 tiras', () => {
-    const guide = guideCrop(TWO_STRIPS_SEED, 1, FRAME)
-    // Cima 1 (356:532) is wider than 9:16, so it keeps the whole width; the band is the bottom slot's height.
-    expect(guide?.width).toBeCloseTo(1, 6)
-    expect(guide?.height).toBeCloseTo((402 / 602) * (9 / 16), 6)
-    expect(guide!.top).toBeCloseTo((1 - guide!.height) / 2, 6)
-  })
-
-  it('follows the only, vertical slot of photo 3 in 2 tiras', () => {
-    const guide = guideCrop(TWO_STRIPS_SEED, 3, FRAME)
-    expect(guide).toEqual(slotCrop(TWO_STRIPS_SEED[2]!, FRAME))
-    // The client's portrait box is wider than 9:16: it keeps the whole width and crops a little height.
-    expect(guide!.width).toBe(1)
-    expect(guide!.height).toBeCloseTo((532 / 358) * (9 / 16), 6)
-  })
-
-  it('is null when no slot uses the photo', () => {
-    expect(guideCrop(TWO_STRIPS_SEED.slice(3), 3, FRAME)).toBeNull()
   })
 })
 

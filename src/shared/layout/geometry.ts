@@ -1,6 +1,6 @@
 import { coverFit, normalizeRotation, type QuarterTurn, type Size } from '../capture'
 import { SHEET } from '../constants'
-import type { PhotoIndex, Slot } from './types'
+import type { Slot } from './types'
 
 /**
  * Slot geometry of the montage (DESIGN §6). Pure numbers: `src/main/compose/` runs them with sharp,
@@ -196,32 +196,6 @@ export function clipToSheet(
     source: { left: x0 - left, top: y0 - top, width: x1 - x0, height: y1 - y0 },
     target: { left: x0, top: y0 },
   }
-}
-
-/**
- * Part of the upright photo a slot keeps at the default framing, as fractions of the photo (0 to 1).
- * The slot's visible shape is its rotated box, filled by the upright photo with `cover`.
- */
-export function slotCrop(slot: Slot, photo: Size): Rect {
-  const turn = nearestQuarterTurn(slot.angle)
-  const visible = turn === 90 || turn === 270 ? { width: slot.height, height: slot.width } : { width: slot.width, height: slot.height }
-  const fit = coverFit(photo, visible)
-  const width = Math.min(1, visible.width / (photo.width * fit.scale))
-  const height = Math.min(1, visible.height / (photo.height * fit.scale))
-  return { left: (1 - width) / 2, top: (1 - height) / 2, width, height }
-}
-
-/**
- * The live-camera guide on the laptop (DESIGN §8): the part of the frame that every slot of the next
- * photo keeps, as fractions of the frame. In 2 tiras, photos 1 and 2 show the bottom strip's
- * horizontal band; in 1 tira, the portrait slot. `null` when no slot uses that photo.
- */
-export function guideCrop(slots: readonly Slot[], photo: PhotoIndex, frame: Size): Rect | null {
-  const crops = slots.filter((slot) => slot.photo === photo).map((slot) => slotCrop(slot, frame))
-  if (crops.length === 0) return null
-  const width = Math.min(...crops.map((crop) => crop.width))
-  const height = Math.min(...crops.map((crop) => crop.height))
-  return { left: (1 - width) / 2, top: (1 - height) / 2, width, height }
 }
 
 /** Rounds away the 1e-17 noise of `Math.cos(Math.PI / 2)` and friends. */

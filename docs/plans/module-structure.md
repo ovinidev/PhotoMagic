@@ -70,7 +70,7 @@ src/
     shared/
       components/ui/button/{button.tsx, index.ts}
       hooks/useMontagePreview/ useObjectUrl/ useSessionState/
-      utils/cn/ glass/ previewPort/
+      utils/cn/ glass/
     test/setup.ts, test/bridge.ts              (not wrapped: test infrastructure, like PilatePay test/setup.ts)
 ```
 
@@ -213,7 +213,6 @@ Every file under `src/` (232). "unchanged" means the file stays where it is. Eac
 | `src/renderer/features/camera/hooks/useCameraStatus.ts` | `src/renderer/features/camera/hooks/useCameraStatus/useCameraStatus.ts` |
 | `src/renderer/features/camera/hooks/useCloseHold.ts` | `src/renderer/features/camera/hooks/useCloseHold/useCloseHold.ts` |
 | `src/renderer/features/camera/hooks/useDisplayState.ts` | `src/renderer/features/camera/hooks/useDisplayState/useDisplayState.ts` |
-| `src/renderer/features/camera/hooks/usePreviewSender.ts` | `src/renderer/features/camera/hooks/usePreviewSender/usePreviewSender.ts` |
 | `src/renderer/features/camera/hooks/useShutter.test.tsx` | `src/renderer/features/camera/hooks/useShutter/useShutter.test.tsx` |
 | `src/renderer/features/camera/hooks/useShutter.ts` | `src/renderer/features/camera/hooks/useShutter/useShutter.ts` |
 | `src/renderer/features/camera/index.ts` | unchanged |
@@ -267,7 +266,6 @@ Every file under `src/` (232). "unchanged" means the file stays where it is. Eac
 | `src/renderer/features/session/components/EndEventButton.tsx` | `src/renderer/features/session/components/EndEventButton/EndEventButton.tsx` |
 | `src/renderer/features/session/components/FramingEditor.test.tsx` | `src/renderer/features/session/components/FramingEditor/FramingEditor.test.tsx` |
 | `src/renderer/features/session/components/FramingEditor.tsx` | `src/renderer/features/session/components/FramingEditor/FramingEditor.tsx` |
-| `src/renderer/features/session/components/LivePreview.tsx` | `src/renderer/features/session/components/LivePreview/LivePreview.tsx` |
 | `src/renderer/features/session/components/MontagePreview.tsx` | `src/renderer/features/session/components/MontagePreview/MontagePreview.tsx` |
 | `src/renderer/features/session/components/RoundControls.test.tsx` | `src/renderer/features/session/components/RoundControls/RoundControls.test.tsx` |
 | `src/renderer/features/session/components/RoundControls.tsx` | `src/renderer/features/session/components/RoundControls/RoundControls.tsx` |
@@ -294,7 +292,6 @@ Every file under `src/` (232). "unchanged" means the file stays where it is. Eac
 | `src/renderer/shared/hooks/useSessionState.ts` | `src/renderer/shared/hooks/useSessionState/useSessionState.ts` |
 | `src/renderer/shared/utils/cn.ts` | `src/renderer/shared/utils/cn/cn.ts` |
 | `src/renderer/shared/utils/glass.ts` | `src/renderer/shared/utils/glass/glass.ts` |
-| `src/renderer/shared/utils/previewPort.ts` | `src/renderer/shared/utils/previewPort/previewPort.ts` |
 | `src/renderer/test/bridge.ts` | unchanged |
 | `src/renderer/test/setup.ts` | unchanged |
 | `src/shared/capture/camera.test.ts` | `src/shared/capture/camera/camera.test.ts` |
