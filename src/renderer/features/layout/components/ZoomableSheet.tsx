@@ -4,7 +4,7 @@ import { LAYOUT_COPY } from '../copy'
 import { CANVAS_ZOOM, clampCanvasZoom, fitSheetWidth, scrollForZoom, stepCanvasZoom } from '../utils/canvasZoom'
 
 /** Room around the sheet: the rotation handle sits 28 px below a card, so a bottom card needs space. */
-const PAD = { x: 16, top: 16, bottom: 48 } as const
+const PAD = { x: 12, top: 16, bottom: 48 } as const
 
 type Pan = { pointerId: number; x: number; y: number }
 
@@ -103,7 +103,7 @@ export function ZoomableSheet({ children }: { children: ReactNode }) {
         data-testid="layout-viewport"
         data-zoom={zoom}
         aria-label={LAYOUT_COPY.canvasZoom}
-        className={`relative min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable] rounded-[var(--radius-field)] border border-line bg-bg ${zoom > CANVAS_ZOOM.min ? 'cursor-grab' : ''}`}
+        className={`relative min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable] [scrollbar-width:thin] rounded-[var(--radius-field)] border border-line bg-bg ${zoom > CANVAS_ZOOM.min ? 'cursor-grab' : ''}`}
         onPointerDown={startPan}
         onPointerMove={movePan}
         onPointerUp={endPan}
