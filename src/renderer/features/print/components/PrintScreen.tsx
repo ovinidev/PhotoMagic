@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import markUrl from '@brand/mark.png'
 import { COPIES } from '@shared/constants'
 import type { EventSession, SessionState } from '@shared/ipc'
@@ -10,7 +10,6 @@ import { BAR, GLASS } from '@renderer/shared/utils/glass'
 import { PRINT_COPY, copiesLabel } from '../copy'
 import { usePrinterStatus } from '../hooks/usePrinterStatus'
 import { printProgress } from '../utils/printProgress'
-import { PrintJob } from './PrintJob'
 
 function TvAction({ label, icon, onClick, disabled, primary }: { label: string; icon: ReactNode; onClick: () => void; disabled?: boolean; primary?: boolean }) {
   return (
@@ -31,7 +30,7 @@ function TvAction({ label, icon, onClick, disabled, primary }: { label: string; 
 /**
  * The TV print screen (PRD §6.5, DESIGN §14, figure 9). The operator runs the TV; the guests watch
  * from a distance. Over the darkened camera: a printer warning on top when there is one, the sheet
- * preview (or the print animation, `PrintJob`, driven only by the steps main reports) and the
+ * preview (or, while a job runs, only the line for the step main reports, with no animation) and the
  * download QR codes. Every action sits in one bottom bar that never moves between phases, where the
  * shutter was: `Menos`, the copies and `Mais`, then the main action and the secondary one. Before a
  * print `Imprimir` leads; after it `Nova rodada` leads and `Imprimir novamente` is secondary; a
@@ -48,9 +47,6 @@ export function PrintScreen({ session }: { session: EventSession }) {
   const busy = phase.kind === 'printing'
   const setCopies = (delta: 1 | -1) => run(() => api.setCopies(stepCopies(copies, delta)))
   const progress = printProgress(phase)
-  // Each job (Imprimir, Imprimir novamente) starts the sheet back inside the printer.
-  const [job, setJob] = useState({ count: 0, busy })
-  if (job.busy !== busy) setJob({ count: job.count + (busy ? 1 : 0), busy })
   const printerWarning = printer && printer.kind !== 'ready' && (phase.kind === 'review' || phase.kind === 'printed') ? PRINT_COPY.status[printer.kind] : null
 
   return (
@@ -78,7 +74,15 @@ export function PrintScreen({ session }: { session: EventSession }) {
         {/* The sheet stays narrower than the screen so preview, animation and QR codes fit above the action bar. */}
         <div className="flex w-[78%] justify-center">
         {progress.kind === 'job' ? (
-          <PrintJob key={job.count} progress={progress} previewUrl={preview.status === 'ready' ? preview.url : null} />
+          <p
+            data-testid="print-message"
+            data-stage={progress.stage}
+            role="status"
+            aria-live="polite"
+            className={cn('py-24 text-center font-semibold text-white', progress.stage === 'done' ? 'text-6xl' : 'text-5xl')}
+          >
+            {PRINT_COPY.stage[progress.stage]}
+          </p>
         ) : (
           <div className="relative flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[24px] bg-white/10 shadow-2xl">
             {preview.status === 'ready' && preview.url ? (

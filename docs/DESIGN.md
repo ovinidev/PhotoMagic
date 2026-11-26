@@ -350,7 +350,7 @@ type PrintResult =
     }
 ```
 
-`PrinterStatus` lives in `src/shared/ipc/schemas.ts`, because `printer:status` carries it. The round phase `printing` carries the real job step: `saving` while the montage is composed and written, `sending` while the printer has the ticket (`PRINT_STEPS`); a reprint goes straight to `sending`. The TV print animation reads only that (DESIGN §14, Print progress). The session adds `save-failed` (the JPG could not be written) to the failure reasons in the round phase.
+`PrinterStatus` lives in `src/shared/ipc/schemas.ts`, because `printer:status` carries it. The round phase `printing` carries the real job step: `saving` while the montage is composed and written, `sending` while the printer has the ticket (`PRINT_STEPS`); a reprint goes straight to `sending`. The TV print status line reads only that (DESIGN §14, Print progress). The session adds `save-failed` (the JPG could not be written) to the failure reasons in the round phase.
 
 Two implementations of the same interface:
 
@@ -621,22 +621,20 @@ The TV and laptop grids request thumbnails near the visible area and release the
 
 The webcam panel opens from the adjustments icon as a strong-glass sheet under the top bar, with the same controls as the laptop card. The gallery grid and the fullscreen view are rendered into `document.body`, because the bottom bar's `backdrop-filter` would make `position: fixed` relative to the bar.
 
-The print screen keeps the image of the last preview in the background, darkened. On top, an amber banner (`--warning`, dark ink) when the printer is not ready or the print failed; then the sheet preview (or the print animation) and the download QR codes. All the controls sit in one bottom bar, the same translucent bar as the shutter's, and never move between phases: `Menos`, the quantity and `Mais` on the first row; the main action (white circle) and the secondary one below (`Imprimir`/`Cancelar`, then `Nova rodada`/`Imprimir novamente`, or `Tentar novamente`/`Cancelar` after a failure). Each target is at least 64 px; the drawn circle may be larger. Label under the icon, in white. The operator runs the TV; the guests only watch.
+The print screen keeps the image of the last preview in the background, darkened. On top, an amber banner (`--warning`, dark ink) when the printer is not ready or the print failed; then the sheet preview (or, while printing, the status line) and the download QR codes. All the controls sit in one bottom bar, the same translucent bar as the shutter's, and never move between phases: `Menos`, the quantity and `Mais` on the first row; the main action (white circle) and the secondary one below (`Imprimir`/`Cancelar`, then `Nova rodada`/`Imprimir novamente`, or `Tentar novamente`/`Cancelar` after a failure). Each target is at least 64 px; the drawn circle may be larger. Label under the icon, in white. The operator runs the TV; the guests only watch.
 
 ![Figure 9 — Reference: the current app's print screen; the controls now sit in the bottom bar](assets/briefing/image3.png)
 
 ### Print progress
 
-After `Imprimir` (or `Imprimir novamente`) the sheet preview becomes the print animation (`PrintJob` in `features/print`): a dark printer body with a paper slot, the montage coming out of the slot, a progress bar and one line of text. It follows only what main reports, never a timer, so it can never announce a print that did not happen. The mapping is `printProgress` (`features/print/utils/printProgress.ts`):
+After `Imprimir` (or `Imprimir novamente`) the sheet preview gives way to one line of large white text (`print-message`), with no animation, progress bar or sheet: the print animation was removed to keep the event laptop light. The line follows only what main reports, never a timer, so it can never announce a print that did not happen. The mapping is `printProgress` (`features/print/utils/printProgress.ts`):
 
-| Round phase | Sheet | Bar | Line |
-| --- | --- | --- | --- |
-| `printing`, step `saving` (composing and writing the JPG) | inside the printer | 33%, striped | `Preparando sua foto…` |
-| `printing`, step `sending` (handed to the printer, waiting for its answer) | part way out | 67%, striped | `Imprimindo…` |
-| `printed` | fully out | 100% | `Sua foto está pronta!` |
-| `print-failed` | the plain preview and the existing failure copy and `Tentar novamente`; no bar | | |
-
-The stripes only say a stage is running. Each job starts with the sheet back inside the printer. `prefers-reduced-motion`: no slide and no stripes; the sheet appears with a plain fade once printed.
+| Round phase | Line |
+| --- | --- |
+| `printing`, step `saving` (composing and writing the JPG) | `Preparando sua foto…` |
+| `printing`, step `sending` (handed to the printer, waiting for its answer) | `Imprimindo…` |
+| `printed` | `Sua foto está pronta!` |
+| `print-failed` | the plain preview with the existing failure copy and `Tentar novamente` |
 
 A logo mark, the symbol only, may sit in the corner of the print screen, outside the sheet preview, no taller than 48 px. The live image, the countdown and the sheet preview carry no logo.
 
@@ -653,9 +651,9 @@ When a fresh round (nothing taken yet) sits on the camera screen for 45 s with n
 
 The shutter flashes white for 80 ms (an instant overlay, hidden under `prefers-reduced-motion`). The countdown swaps numbers without bounce. The editor does not animate the slot during the drag: it sticks to the pointer, with snap already applied, and the panel shows that value in the same frame.
 
-The only animation in the app is the TV print animation (Print progress above), the sole CSS keyframes and transitions left in `index.css` (`.print-photo`, `.print-progress`, `.print-led`). Everything else has none: no screen transitions, no fades, no attract crossfade, zoom or pulse, no other keyframes or transitions and no `requestAnimationFrame`-driven motion. Every other state change is instant. `requestAnimationFrame` is reserved for rendering and input handling.
+The app has no animation: no screen transitions, no fades, no print animation (Print progress above), no attract crossfade, zoom or pulse, no CSS keyframes or transitions in `index.css` and no `requestAnimationFrame`-driven motion. Every other state change is instant. `requestAnimationFrame` is reserved for rendering and input handling.
 
-TV screens are decided in one place, `src/renderer/app/guest/GuestApp.tsx` (`guestScreen` in `app/guest/screens.ts`): the camera, and from `review` on the print screen over it. The print screen appears and leaves at once; the camera never unmounts, so the stream does not restart. Changes inside the print screen (`printing`, `printed`, a failure) do not move the screen; the print animation inside it is described in Print progress.
+TV screens are decided in one place, `src/renderer/app/guest/GuestApp.tsx` (`guestScreen` in `app/guest/screens.ts`): the camera, and from `review` on the print screen over it. The print screen appears and leaves at once; the camera never unmounts, so the stream does not restart. Changes inside the print screen (`printing`, `printed`, a failure) do not move the screen; the status line inside it is described in Print progress.
 
 ## 15. Logo
 
