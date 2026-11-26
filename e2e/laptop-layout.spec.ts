@@ -48,9 +48,14 @@ async function longNameTemplate(): Promise<string> {
 }
 
 test.describe('laptop layout fits the window', () => {
-  test('at 1280×800 the home and the positions editor have no vertical scroll, and the version is in the header', async ({ app, operatorWindow }) => {
+  test('at 1280×800 the home and the positions editor have no vertical scroll, and the version sits in the top-right corner', async ({ app, operatorWindow }) => {
     await resizeLaptop(app, operatorWindow, 1280, 800)
-    await expect(operatorWindow.locator('header').getByTestId('app-version')).toBeVisible()
+    // No branded header: the version alone in the top-right corner (DESIGN §14, Laptop).
+    await expect(operatorWindow.locator('header')).toHaveCount(0)
+    const version = (await operatorWindow.getByTestId('app-version').boundingBox())!
+    const viewport = operatorWindow.viewportSize() ?? (await operatorWindow.evaluate(() => ({ width: innerWidth, height: innerHeight })))
+    expect(version.y).toBeLessThan(40)
+    expect(version.x + version.width).toBeGreaterThan(viewport.width - 80)
     await expectNoVerticalScroll(operatorWindow)
 
     await operatorWindow.getByTestId('template-input').setInputFiles(await validTemplate())
