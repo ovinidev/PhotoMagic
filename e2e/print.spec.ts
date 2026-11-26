@@ -192,7 +192,7 @@ test.describe('print', () => {
       // The JPG is written before sending and stays; trying again resends that same file.
       const files = readdirSync(join(dirs.desktop, 'Festa'))
       expect(files).toHaveLength(1)
-      await expect(tv.getByText(`A montagem ${files[0]} ficou salva na pasta do evento.`)).toBeVisible()
+      await expect(tv.getByTestId('tv-print-alert')).toContainText('Sua foto está guardada.')
       await tv.getByRole('button', { name: 'Tentar novamente' }).click()
       await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'print-failed', { timeout: PRINT_TIMEOUT })
       await expect(tv.getByText('Impressora sem papel')).toBeVisible()

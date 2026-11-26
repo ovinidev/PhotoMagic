@@ -34,9 +34,12 @@ describe('PrintScreen (RF10, RF13)', () => {
     expect(screen.getByRole('button', { name: 'Menos' })).toBeEnabled()
   })
 
-  it('offers Imprimir novamente and Nova rodada after a print', async () => {
+  it('leads with Nova rodada after a print and keeps Imprimir novamente as the secondary action', async () => {
     const { api } = stubBridge()
     render(<PrintScreen session={eventState({ taken: 3, phase: { kind: 'printed', fileName: '21-45-08.jpg' } })} />)
+    const actions = screen.getByTestId('print-actions')
+    const labels = [...actions.querySelectorAll('button')].map((button) => button.lastChild?.textContent)
+    expect(labels).toEqual(['Menos', 'Mais', 'Nova rodada', 'Imprimir novamente'])
     await userEvent.click(screen.getByRole('button', { name: 'Imprimir novamente' }))
     expect(api.session.reprint).toHaveBeenCalled()
     await userEvent.click(screen.getByRole('button', { name: 'Nova rodada' }))
@@ -47,7 +50,8 @@ describe('PrintScreen (RF10, RF13)', () => {
     stubBridge()
     render(<PrintScreen session={eventState({ taken: 3, phase: { kind: 'print-failed', reason: 'no-paper', detail: '', fileName: '21-45-08.jpg' } })} />)
     expect(screen.getByText('Impressora sem papel')).toBeInTheDocument()
-    expect(screen.getByText('A montagem 21-45-08.jpg ficou salva na pasta do evento.')).toBeInTheDocument()
+    expect(screen.getByTestId('tv-print-alert')).toHaveTextContent('Sua foto está guardada.')
+    expect(screen.queryByText(/21-45-08/)).toBeNull()
     expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeEnabled()
   })
 

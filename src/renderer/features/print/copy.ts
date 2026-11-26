@@ -45,7 +45,8 @@ export const PRINT_COPY = {
   } satisfies Record<PrinterStatus['kind'] | 'checking', string>,
   /** The spooler's or driver's own words, for whoever supports the operator. Laptop only. */
   technicalDetail: (detail: string) => `Detalhe técnico: ${detail}`,
-  savedKept: (fileName: string) => `A montagem ${fileName} ficou salva na pasta do evento.`,
+  /** Under a print failure on the TV: the montage is safe; the file name stays on the laptop. */
+  savedKept: 'Sua foto está guardada.',
 } as const
 
 /** `1 Cópia`, `2 Cópias` (RF10). */
