@@ -4,7 +4,7 @@ import { cn } from '@renderer/shared/utils/cn'
 import { GLASS } from '@renderer/shared/utils/glass'
 import { GALLERY_COPY } from '../copy'
 import { useGallery } from '../hooks/useGallery'
-import { GalleryImage } from './GalleryImage'
+import { GalleryImage, GalleryThumbnail } from './GalleryImage'
 import { GalleryViewer } from './GalleryViewer'
 import { montageTime } from '../utils/montageTime'
 
@@ -62,7 +62,7 @@ export function TvGallery() {
                   onClick={() => setViewing(fileName)}
                   className="flex w-full cursor-pointer flex-col gap-3 text-2xl text-white focus-visible:outline-4 focus-visible:outline-white"
                 >
-                  <GalleryImage fileName={fileName} size="thumb" dark className="aspect-[1844/1240] w-full rounded-[24px] bg-white/10" />
+                  <GalleryThumbnail fileName={fileName} dark className="rounded-[24px] bg-white/10" />
                   <span className="tabular-nums">{montageTime(fileName)}</span>
                 </button>
               </li>

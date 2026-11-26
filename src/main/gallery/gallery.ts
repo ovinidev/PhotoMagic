@@ -12,6 +12,33 @@ import { isMontageFileName } from '@shared/files'
 /** Width of a gallery thumbnail JPEG. */
 export const THUMBNAIL_WIDTH = 480
 
+const MAX_CACHED_THUMBNAILS = 128
+const thumbnails = new Map<string, { version: string; jpeg: Promise<Buffer> }>()
+
+async function readThumbnail(path: string): Promise<Buffer> {
+  const { ctimeMs, mtimeMs, size, ino } = await stat(path)
+  const version = [ctimeMs, mtimeMs, size, ino].join(':')
+  const cached = thumbnails.get(path)
+  const entry = cached?.version === version
+    ? cached
+    : { version, jpeg: readFile(path).then((bytes) => sharp(bytes).resize({ width: THUMBNAIL_WIDTH }).jpeg({ quality: 80 }).toBuffer()) }
+
+  // Refresh recently used entries and share in-flight work across the two windows.
+  thumbnails.delete(path)
+  thumbnails.set(path, entry)
+  if (thumbnails.size > MAX_CACHED_THUMBNAILS) {
+    const oldest = thumbnails.keys().next()
+    if (!oldest.done) thumbnails.delete(oldest.value)
+  }
+
+  try {
+    return await entry.jpeg
+  } catch (error) {
+    if (thumbnails.get(path) === entry) thumbnails.delete(path)
+    throw error
+  }
+}
+
 /** The app's montages in `folder`, newest first. Any other file is left out. */
 export async function listMontages(folder: string): Promise<string[]> {
   const names = (await readdir(folder).catch(() => [] as string[])).filter(isMontageFileName)
@@ -31,9 +58,7 @@ export async function readMontage(folder: string, fileName: string, size: 'thumb
   const path = montagePath(folder, fileName)
   if (!path) return null
   try {
-    const bytes = await readFile(path)
-    if (size === 'full') return bytes
-    return await sharp(bytes).resize({ width: THUMBNAIL_WIDTH }).jpeg({ quality: 80 }).toBuffer()
+    return await (size === 'full' ? readFile(path) : readThumbnail(path))
   } catch {
     return null
   }

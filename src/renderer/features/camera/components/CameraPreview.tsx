@@ -3,7 +3,7 @@ import { CAMERA_ROTATION_DEG } from '@shared/constants'
 import { drawCameraFrame } from '../utils/drawFrame'
 
 /**
- * The live image on the TV: each animation frame draws the video through `drawCameraFrame`
+ * The live image on the TV: each new video frame is drawn through `drawCameraFrame`
  * (rotated and mirrored, the same call as the still), covering the canvas edge to edge.
  * The `<video>` only decodes; it is never shown. `videoRef` lets the shutter and the laptop preview
  * read the same element.
@@ -31,7 +31,7 @@ export function CameraPreview({
 
     let frame = 0
     const draw = () => {
-      frame = requestAnimationFrame(draw)
+      frame = video.requestVideoFrameCallback(draw)
       if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || video.videoWidth === 0) return
       const ratio = window.devicePixelRatio || 1
       const width = Math.round(canvas.clientWidth * ratio)
@@ -41,10 +41,10 @@ export function CameraPreview({
       if (canvas.height !== height) canvas.height = height
       drawCameraFrame(context, video, { width: video.videoWidth, height: video.videoHeight }, rotationDeg, { width, height })
     }
-    frame = requestAnimationFrame(draw)
+    frame = video.requestVideoFrameCallback(draw)
 
     return () => {
-      cancelAnimationFrame(frame)
+      video.cancelVideoFrameCallback(frame)
       video.pause()
       video.srcObject = null
     }

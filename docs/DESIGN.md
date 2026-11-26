@@ -191,7 +191,7 @@ Camera states on the TV, floating on glass over the black surface, reported to t
 
 The error states offer `Tentar novamente` (64 px target). A device plugged in while in error reopens the camera on its own. Under E2E, Chromium's fake device replaces the webcam: its moving pattern by default, a `.y4m` file with `FOTOMAGICA_FAKE_CAMERA=<path>`, or no camera at all with `FOTOMAGICA_FAKE_CAMERA=none`.
 
-The camera opens once, in the TV window. The TV draws the live preview on a canvas using `requestAnimationFrame`. The laptop receives camera status and shows the round montage. The full-resolution JPEG goes to main at the shutter.
+The camera opens once, in the TV window. The TV draws the live preview when the video supplies a new frame via `requestVideoFrameCallback`. The laptop receives camera status and shows the round montage. The full-resolution JPEG goes to main at the shutter.
 
 At the shutter the TV waits (up to 3 s) for a decoded video frame, so a tap right after the camera opens still takes the photo, then exports a quality-95 JPEG of the already transformed frame (portrait, mirrored) and sends the bytes. Main keeps the three captures in the round. It does not write those three to disk.
 
@@ -617,6 +617,8 @@ The look follows the iPhone camera app (reference: dark translucent bars, a larg
 - The capture error and the webcam panel open under the top bar
 - The bars are `rgba(0, 0, 0, 0.45)` with `backdrop-filter: blur(24px)`; without blur they fall back to `rgba(0, 0, 0, 0.7)`. Messages and the webcam panel keep the frosted glass (`rgba(28, 28, 30, 0.62)`, fallback `0.72`), opaque enough for the label to stay legible
 
+The TV and laptop grids request thumbnails near the visible area and release the decoded images when they scroll away. Main keeps up to 128 recent thumbnails in memory, checks the original file metadata on each request, and shares any in-flight thumbnail generation between windows.
+
 The webcam panel opens from the adjustments icon as a strong-glass sheet under the top bar, with the same controls as the laptop card. The gallery grid and the fullscreen view are rendered into `document.body`, because the bottom bar's `backdrop-filter` would make `position: fixed` relative to the bar.
 
 The print screen keeps the image of the last preview in the background, darkened. On top, an amber banner (`--warning`, dark ink) when the printer is not ready or the print failed; then the sheet preview (or the print animation) and the download QR codes. All the controls sit in one bottom bar, the same translucent bar as the shutter's, and never move between phases: `Menos`, the quantity and `Mais` on the first row; the main action (white circle) and the secondary one below (`Imprimir`/`Cancelar`, then `Nova rodada`/`Imprimir novamente`, or `Tentar novamente`/`Cancelar` after a failure). Each target is at least 64 px; the drawn circle may be larger. Label under the icon, in white. The operator runs the TV; the guests only watch.
@@ -651,7 +653,7 @@ When a fresh round (nothing taken yet) sits on the camera screen for 45 s with n
 
 The shutter flashes white for 80 ms (an instant overlay, hidden under `prefers-reduced-motion`). The countdown swaps numbers without bounce. The editor does not animate the slot during the drag: it sticks to the pointer, with snap already applied, and the panel shows that value in the same frame.
 
-The only animation in the app is the TV print animation (Print progress above), the sole CSS keyframes and transitions left in `index.css` (`.print-photo`, `.print-progress`, `.print-led`). Everything else has none: no screen transitions, no fades, no attract crossfade, zoom or pulse, no other keyframes or transitions and no `requestAnimationFrame`-driven motion. Every other state change is instant. `requestAnimationFrame` is only used to draw camera frames and to sample the close-hold timer, not for decoration.
+The only animation in the app is the TV print animation (Print progress above), the sole CSS keyframes and transitions left in `index.css` (`.print-photo`, `.print-progress`, `.print-led`). Everything else has none: no screen transitions, no fades, no attract crossfade, zoom or pulse, no other keyframes or transitions and no `requestAnimationFrame`-driven motion. Every other state change is instant. `requestAnimationFrame` is reserved for rendering and input handling.
 
 TV screens are decided in one place, `src/renderer/app/guest/GuestApp.tsx` (`guestScreen` in `app/guest/screens.ts`): the camera, and from `review` on the print screen over it. The print screen appears and leaves at once; the camera never unmounts, so the stream does not restart. Changes inside the print screen (`printing`, `printed`, a failure) do not move the screen; the print animation inside it is described in Print progress.
 

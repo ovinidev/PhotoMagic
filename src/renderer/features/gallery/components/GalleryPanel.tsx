@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { GALLERY_COPY } from '../copy'
 import { useGallery } from '../hooks/useGallery'
-import { GalleryImage } from './GalleryImage'
+import { GalleryThumbnail } from './GalleryImage'
 import { GalleryViewer } from './GalleryViewer'
 import { montageTime } from '../utils/montageTime'
 
@@ -26,7 +26,7 @@ export function GalleryPanel() {
                 onClick={() => setViewing(fileName)}
                 className="flex min-h-11 w-full cursor-pointer flex-col gap-2 text-xs text-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               >
-                <GalleryImage fileName={fileName} size="thumb" className="aspect-[1844/1240] w-full rounded-[var(--radius-field)] border border-line bg-bg" />
+                <GalleryThumbnail fileName={fileName} className="rounded-[var(--radius-field)] border border-line bg-bg" />
                 <span className="tabular-nums">{montageTime(fileName)}</span>
               </button>
             </li>
