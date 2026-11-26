@@ -64,7 +64,7 @@ export function OperatorApp() {
   const [share] = useShareState()
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col bg-bg text-ink">
+    <div className="flex h-full min-h-0 flex-col bg-bg text-ink">
       {/*
         No branded header: the create-event card already carries the logo and the name. The version and
         update status sit alone in the top-right corner; during an event the same top row adds the event
@@ -87,7 +87,7 @@ export function OperatorApp() {
           </div>
         </div>
       ) : (
-        <div className="pointer-events-none absolute top-3 right-6 z-10 flex items-center gap-4 text-[13px] text-ink-soft">
+        <div className="flex h-9 shrink-0 items-center justify-end gap-4 px-6 text-[13px] text-ink-soft">
           <UpdateLabel status={update} />
           <span data-testid="app-version">
             <VersionLabel state={version} />
