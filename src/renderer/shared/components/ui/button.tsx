@@ -16,12 +16,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-primary text-primary-ink hover:bg-primary/90',
+        primary: 'bg-primary text-primary-ink hover:bg-primary/85',
         ghost: 'border border-line bg-transparent text-ink hover:bg-bg-raised',
         danger: 'bg-danger text-primary-ink hover:bg-danger/90',
       },
       size: {
-        default: 'min-h-11 min-w-11 px-5 text-sm',
+        // Editorial label: small, semibold, widely spaced capitals (DESIGN §14, laptop).
+        default: 'min-h-11 min-w-11 px-5 text-[12px] font-semibold tracking-[0.12em] uppercase',
         sm: 'h-8 min-w-8 px-3 text-[13px]',
       },
     },

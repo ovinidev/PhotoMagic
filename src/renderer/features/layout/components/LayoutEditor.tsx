@@ -71,7 +71,7 @@ function EditorBody({ layouts, initialMode, titleId }: { layouts: Layouts; initi
     <>
       <header className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-2">
         <div className="mr-auto">
-          <h1 id={titleId} className="text-base font-semibold text-ink">
+          <h1 id={titleId} className="font-display text-2xl text-ink">
             {LAYOUT_COPY.title}
           </h1>
           <p className="text-xs text-ink-soft">{LAYOUT_COPY.subtitle}</p>

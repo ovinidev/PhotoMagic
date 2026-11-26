@@ -101,7 +101,7 @@ export function ShareSettingsCard() {
   return (
     <section aria-labelledby="share-settings-title" data-testid="share-settings" className="flex min-w-0 items-center justify-between gap-3 border-t border-line pt-4">
       <div className="min-w-0">
-        <h2 id="share-settings-title" className="text-base font-medium text-ink">
+        <h2 id="share-settings-title" className="eyebrow">
           {C.title}
         </h2>
         {open ? null : status}
@@ -113,7 +113,7 @@ export function ShareSettingsCard() {
         ? createPortal(
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" onClick={(event) => event.target === event.currentTarget && setOpen(false)}>
               <div role="dialog" aria-modal="true" aria-labelledby={panelTitleId} data-testid="share-settings-panel" className="max-h-full w-full max-w-4xl overflow-y-auto rounded-[var(--radius-card)] border border-line bg-bg-raised px-8 py-6 text-ink">
-                <h2 id={panelTitleId} className="text-lg font-semibold">
+                <h2 id={panelTitleId} className="font-display text-3xl">
                   {C.title}
                 </h2>
                 <p className="mt-1 text-sm text-ink-soft">{C.description}</p>

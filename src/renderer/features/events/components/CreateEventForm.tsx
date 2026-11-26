@@ -57,12 +57,15 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
   }
 
   return (
-    <section aria-labelledby="create-event-title" data-testid="create-event-card" className="w-full min-w-0 rounded-[var(--radius-card)] border border-line bg-bg-raised px-8 py-6 text-base">
-      <div className="flex items-center gap-5">
+    <section aria-labelledby="create-event-title" data-testid="create-event-card" className="w-full min-w-0 rounded-[var(--radius-card)] border border-line bg-bg-raised px-8 py-5 text-base">
+      <div className="flex items-center gap-6">
         {logo}
-        <h1 id="create-event-title" className="text-2xl font-semibold text-ink">
-          {EVENTS_COPY.title}
-        </h1>
+        <div>
+          <p className="eyebrow">{EVENTS_COPY.studio}</p>
+          <h1 id="create-event-title" className="font-display mt-1 text-[36px] leading-none text-ink">
+            {EVENTS_COPY.title}
+          </h1>
+        </div>
       </div>
       <form
         className="mt-5 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10"
@@ -74,7 +77,7 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
         {/* Wide windows: the details on the left, the sheet preview large on the right (DESIGN §14). */}
         <div className="flex min-w-0 flex-col gap-5">
         <div className="flex flex-col gap-2">
-          <label htmlFor={nameId} className="text-base font-medium text-ink">
+          <label htmlFor={nameId} className="eyebrow">
             {EVENTS_COPY.name}
           </label>
           <input
@@ -87,9 +90,10 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
             aria-describedby={nameHintId}
             onChange={(event) => setName(event.target.value)}
             className={cn(
-              'min-h-12 rounded-[var(--radius-field)] border bg-bg-raised px-4 text-lg text-ink placeholder:text-ink-soft/60',
-              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink',
-              showNameError ? 'border-danger' : 'border-line',
+              // Editorial field: a single hairline under serif text, like a printed invitation.
+              'font-display min-h-12 border-0 border-b bg-transparent px-0 text-2xl text-ink placeholder:text-ink-soft/50',
+              'focus-visible:border-ink focus-visible:outline-none',
+              showNameError ? 'border-danger' : 'border-ink/30',
             )}
           />
           <p id={nameHintId} className={cn('text-sm', showNameError ? 'text-danger' : 'text-ink-soft')}>
@@ -98,7 +102,7 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
         </div>
 
         <fieldset>
-          <legend className="mb-2 text-base font-medium text-ink">{EVENTS_COPY.mode}</legend>
+          <legend className="eyebrow mb-3">{EVENTS_COPY.mode}</legend>
           <div className="grid grid-cols-2 gap-3">
             {PRINT_MODES.map((option) => (
               <label
@@ -106,7 +110,7 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
                 className={cn(
                   'flex min-h-11 cursor-pointer items-start gap-3 rounded-[var(--radius-field)] border p-4',
                   'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink',
-                  mode === option ? 'border-ink bg-bg' : 'border-line',
+                  mode === option ? 'border-ink bg-ink text-bg-raised' : 'border-line',
                 )}
               >
                 <input
@@ -115,11 +119,11 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
                   value={option}
                   checked={mode === option}
                   onChange={() => setMode(option)}
-                  className="mt-1 size-4 cursor-pointer accent-ink"
+                  className="mt-1 size-4 cursor-pointer accent-bg-raised"
                 />
                 <span>
-                  <span className="block font-medium text-ink">{EVENTS_COPY.modes[option].label}</span>
-                  <span className="block text-sm text-ink-soft">{EVENTS_COPY.modes[option].detail}</span>
+                  <span className={cn('block font-medium', mode === option ? 'text-bg-raised' : 'text-ink')}>{EVENTS_COPY.modes[option].label}</span>
+                  <span className={cn('block text-sm', mode === option ? 'text-bg-raised/70' : 'text-ink-soft')}>{EVENTS_COPY.modes[option].detail}</span>
                 </span>
               </label>
             ))}
@@ -127,7 +131,7 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
         </fieldset>
 
         <div className="flex flex-col gap-2 border-t border-line pt-4">
-          <h2 className="text-base font-medium text-ink">{EVENTS_COPY.tv}</h2>
+          <h2 className="eyebrow">{EVENTS_COPY.tv}</h2>
           <TvStatus view={display} />
         </div>
 
