@@ -6,6 +6,7 @@ import { GALLERY_COPY } from '../copy'
 import { useGallery } from '../hooks/useGallery'
 import { GalleryImage } from './GalleryImage'
 import { GalleryViewer } from './GalleryViewer'
+import { montageTime } from '../utils/montageTime'
 
 /**
  * The TV gallery (PRD §6.4, §6.6): the 128 px round thumbnail of the last montage, bottom left, and,
@@ -22,6 +23,8 @@ export function TvGallery() {
 
   return (
     <>
+      {/* No montage yet: no empty ring next to the shutter; the slot keeps its place in the bar. */}
+      {last ? (
       <button
         type="button"
         aria-label={GALLERY_COPY.open}
@@ -29,8 +32,11 @@ export function TvGallery() {
         onClick={() => setOpen(true)}
         className="flex size-32 cursor-pointer items-center justify-center overflow-hidden rounded-full border-4 border-white/80 bg-white/10 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white"
       >
-        {last ? <GalleryImage key={last} fileName={last} size="thumb" dark className="size-full object-cover" /> : null}
+        <GalleryImage key={last} fileName={last} size="thumb" dark className="size-full object-cover" />
       </button>
+      ) : (
+        <span aria-hidden data-testid="tv-gallery-empty" className="size-32" />
+      )}
       {open
         ? createPortal(
         <div role="dialog" aria-modal="true" aria-label={GALLERY_COPY.title} data-testid="tv-gallery" className="fixed inset-0 z-40 flex flex-col gap-10 bg-black/90 p-12">
@@ -57,7 +63,7 @@ export function TvGallery() {
                   className="flex w-full cursor-pointer flex-col gap-3 text-2xl text-white focus-visible:outline-4 focus-visible:outline-white"
                 >
                   <GalleryImage fileName={fileName} size="thumb" dark className="aspect-[1844/1240] w-full rounded-[24px] bg-white/10" />
-                  <span className="tabular-nums">{fileName}</span>
+                  <span className="tabular-nums">{montageTime(fileName)}</span>
                 </button>
               </li>
             ))}

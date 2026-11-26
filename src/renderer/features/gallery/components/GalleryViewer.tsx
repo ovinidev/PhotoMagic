@@ -5,6 +5,7 @@ import { cn } from '@renderer/shared/utils/cn'
 import { GLASS } from '@renderer/shared/utils/glass'
 import { GALLERY_COPY } from '../copy'
 import { GalleryImage } from './GalleryImage'
+import { montageTime } from '../utils/montageTime'
 
 type Surface = 'tv' | 'laptop'
 type Sending = { status: 'idle' } | { status: 'sending' } | { status: 'done'; result: GalleryReprintResult }
@@ -49,7 +50,7 @@ export function GalleryViewer({ fileName, surface, onClose }: { fileName: string
         <button type="button" onClick={onClose} className={cn(button, tv && GLASS)}>
           {GALLERY_COPY.back}
         </button>
-        <p className={cn('font-semibold tabular-nums', tv ? 'text-4xl text-white' : 'text-ink')}>{fileName}</p>
+        <p className={cn('font-semibold tabular-nums', tv ? 'text-4xl text-white' : 'text-ink')}>{montageTime(fileName)}</p>
         <div className="relative">
           <button type="button" aria-label={GALLERY_COPY.menu} aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)} className={cn(button, tv && GLASS)}>
             <span aria-hidden>⋯</span>
