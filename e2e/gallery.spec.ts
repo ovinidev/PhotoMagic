@@ -1,4 +1,4 @@
-import { mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import sharp from 'sharp'
 import { expect, test, type AppDirs } from './fixtures'
@@ -42,6 +42,31 @@ test.describe('gallery', () => {
     await tv.getByRole('button', { name: 'Nova rodada' }).click()
     await tv.getByRole('button', { name: 'Abrir a galeria' }).click()
     await expect(tv.getByRole('dialog', { name: 'Galeria' }).getByRole('button', { name: /Abrir a montagem/ })).toHaveCount(3)
+  })
+
+  test('RF14 loads thumbnail images as gallery tiles scroll into view', async ({ app, operatorWindow, dirs }) => {
+    const folder = await seedFolder(dirs)
+    for (let index = 0; index < 24; index++) {
+      const name = '19-00-' + String(index).padStart(2, '0') + '.jpg'
+      copyFileSync(join(folder, '20-00-00.jpg'), join(folder, name))
+    }
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa' })
+
+    const laptopTiles = operatorWindow.getByTestId('laptop-gallery').getByRole('button', { name: /Abrir a montagem/ })
+    await expect(laptopTiles).toHaveCount(26)
+    await laptopTiles.first().scrollIntoViewIfNeeded()
+    await expect(laptopTiles.first().getByTestId('gallery-thumb')).toBeVisible()
+    await expect(laptopTiles.last().getByTestId('gallery-thumb')).toHaveCount(0)
+    await laptopTiles.last().scrollIntoViewIfNeeded()
+    await expect(laptopTiles.last().getByTestId('gallery-thumb')).toBeVisible()
+
+    await tv.getByRole('button', { name: 'Abrir a galeria' }).click()
+    const tvTiles = tv.getByTestId('tv-gallery').getByRole('button', { name: /Abrir a montagem/ })
+    await expect(tvTiles).toHaveCount(26)
+    await expect(tvTiles.first().getByTestId('gallery-thumb')).toBeVisible()
+    await expect(tvTiles.last().getByTestId('gallery-thumb')).toHaveCount(0)
+    await tvTiles.last().scrollIntoViewIfNeeded()
+    await expect(tvTiles.last().getByTestId('gallery-thumb')).toBeVisible()
   })
 
   test('RF14 opens a montage fullscreen', async ({ app, operatorWindow, dirs }) => {

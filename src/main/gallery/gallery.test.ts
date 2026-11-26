@@ -1,4 +1,4 @@
-import { mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import sharp from 'sharp'
@@ -23,6 +23,32 @@ describe('gallery (RF14)', () => {
     const folder = await folderWith({ '21-45-08.jpg': await jpeg(), 'foto.png': 'x', 'notes.txt': 'x', 'IMG_0001.jpg': 'x', '21-45-08-2.jpg': await jpeg() })
     expect(await listMontages(folder)).toEqual(['21-45-08-2.jpg', '21-45-08.jpg'])
     expect(await listMontages(join(folder, 'missing'))).toEqual([])
+  })
+
+  it('shares a generated thumbnail across requests and refreshes it when the file changes', async () => {
+    const name = '10-00-00.jpg'
+    const folder = await folderWith({ [name]: await jpeg() })
+    const path = join(folder, name)
+    try {
+      const [first, concurrent] = await Promise.all([
+        readMontage(folder, name, 'thumb'),
+        readMontage(folder, name, 'thumb'),
+      ])
+      expect(first).toBeInstanceOf(Uint8Array)
+      expect(concurrent).toBe(first)
+      expect(await readMontage(folder, name, 'thumb')).toBe(first)
+
+      const replacement = await sharp({ create: { width: 600, height: 300, channels: 3, background: '#ff8800' } }).jpeg().toBuffer()
+      writeFileSync(path, replacement)
+      const refreshed = await readMontage(folder, name, 'thumb')
+      expect(refreshed).not.toEqual(first)
+      expect((await sharp(refreshed!).metadata()).height).toBe(240)
+
+      rmSync(path)
+      expect(await readMontage(folder, name, 'thumb')).toBeNull()
+    } finally {
+      rmSync(folder, { recursive: true, force: true })
+    }
   })
 
   it('reads a montage or its thumbnail, and refuses any other name', async () => {
