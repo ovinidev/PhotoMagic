@@ -94,11 +94,11 @@ The module that reads `screen.getAllDisplays()` is thin and hands `DisplayInfo[]
 Monitors change at runtime (`display-added`, `display-removed`, `display-metrics-changed`). A second pure function, `placeGuestWindow`, decides what the open TV window does, and `src/main/windows/guestWindowController.ts` applies it:
 
 - The window stays on its current monitor while that monitor is still an eligible TV, so another screen plugged in mid-party does not steal it. A monitor event that leaves the TV unchanged does not touch the window
-- If the TV goes away (or turns landscape without confirmation), the window is hidden, never moved onto the laptop screen and never destroyed: the camera and the round stay in memory. The laptop shows that the TV was disconnected
+- If the TV goes away (or turns landscape), the window is hidden, never moved onto the laptop screen and never destroyed: the camera and the round stay in memory. The laptop shows that the TV was disconnected
 - When an eligible TV comes back, the window covers it again on its own
-- The landscape confirmation (RF04) lasts until the TV window is closed
+- A landscape TV is never eligible (RF04): the booth TV always stands upright, so there is no override
 
-`event:start` opens the TV window through this controller and `event:end` closes it; there is no separate IPC to open the TV, so the TV never shows without an event. The create-event form shows the TV state and, for a landscape TV, a checkbox the operator ticks to open anyway (RF04). The TV window closing for any reason ends the event.
+`event:start` opens the TV window through this controller and `event:end` closes it; there is no separate IPC to open the TV, so the TV never shows without an event. The create-event form shows the TV state; with a landscape TV it asks to rotate the screen and `Iniciar evento` stays disabled (RF04). The TV window closing for any reason ends the event.
 
 The operator window opens on the primary monitor, with a frame, at 1280×800 or the work area if smaller (minimum 1024×640, so it fits a 1366×768 laptop), and maximized when the screen is at least 1366 px wide. E2E keeps a fixed 1280×800.
 
@@ -120,7 +120,7 @@ The preload exposes `window.fotomagica`. Each method validates input and output 
 | --- | --- | --- |
 | invoke | `template:get-all` | Each mode's stored template (name, size and a small JPEG preview), or `null` |
 | invoke | `template:import` | Mode, file name and bytes. Stores a 1844×1240 PNG or JPEG for that mode only, or returns `format`, `size` (with the size read) or `unreadable` |
-| invoke | `event:start` | Name, mode (`two-strips` or `one-strip`) and the landscape confirmation. Checks the name, reads that mode's stored template (none means the plain white 1844×1240 sheet), opens the TV, then creates or reuses the Desktop folder. Returns the session or the reason (`invalid-name`, `missing`, `landscape`, `folder-failed`, `already-open`) |
+| invoke | `event:start` | Name and mode (`two-strips` or `one-strip`). Checks the name, reads that mode's stored template (none means the plain white 1844×1240 sheet), opens the TV, then creates or reuses the Desktop folder. Returns the session or the reason (`invalid-name`, `missing`, `landscape`, `folder-failed`, `already-open`) |
 | invoke | `event:end` | Closes the TV and forgets the unprinted round |
 | invoke | `session:get-state` | The event and its round (`idle`, or name, mode, timer, copies, photos taken, preview revision, slots and phase) |
 | invoke | `session:get-preview` | The current montage preview JPEG and its revision |

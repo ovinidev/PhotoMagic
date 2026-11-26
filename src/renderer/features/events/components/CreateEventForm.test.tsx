@@ -33,7 +33,7 @@ describe('CreateEventForm (RF01, RF04)', () => {
     expect(screen.getByText('As montagens ficam na Área de Trabalho, na pasta Aniversário AJ.')).toBeInTheDocument()
     await waitFor(() => expect(start()).toBeEnabled())
     await userEvent.click(start())
-    expect(api.event.start).toHaveBeenCalledWith({ name: 'Aniversário AJ', mode: 'two-strips', allowLandscape: false })
+    expect(api.event.start).toHaveBeenCalledWith({ name: 'Aniversário AJ', mode: 'two-strips' })
   })
 
   it('starts with no template on the plain white default sheet with the standard boxes (PRD §6.1)', async () => {
@@ -46,7 +46,7 @@ describe('CreateEventForm (RF01, RF04)', () => {
     await userEvent.type(screen.getByLabelText('Nome do evento'), 'Festa')
     await waitFor(() => expect(start()).toBeEnabled())
     await userEvent.click(start())
-    expect(api.event.start).toHaveBeenCalledWith({ name: 'Festa', mode: 'two-strips', allowLandscape: false })
+    expect(api.event.start).toHaveBeenCalledWith({ name: 'Festa', mode: 'two-strips' })
   })
 
   it.each([
@@ -129,15 +129,13 @@ describe('CreateEventForm (RF01, RF04)', () => {
     expect(start()).toBeDisabled()
   })
 
-  it('asks for confirmation before opening on a landscape TV', async () => {
-    const { api } = stubBridge({ display: { getState: () => Promise.resolve(LANDSCAPE) }, template: { getAll: () => Promise.resolve(WITH_TWO_STRIPS) } })
+  it('never starts on a landscape TV and offers no override', async () => {
+    stubBridge({ display: { getState: () => Promise.resolve(LANDSCAPE) }, template: { getAll: () => Promise.resolve(WITH_TWO_STRIPS) } })
     render(<CreateEventForm />)
     await userEvent.type(screen.getByLabelText('Nome do evento'), 'Festa')
     expect(await screen.findByText('A TV não está na vertical')).toBeInTheDocument()
     expect(start()).toBeDisabled()
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Abrir a câmera na TV mesmo na horizontal' }))
-    await userEvent.click(start())
-    expect(api.event.start).toHaveBeenCalledWith({ name: 'Festa', mode: 'two-strips', allowLandscape: true })
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
   })
 
   it('shows why main refused to start', async () => {

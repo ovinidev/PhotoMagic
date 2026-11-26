@@ -58,23 +58,20 @@ export type GuestPlacement =
  * Where the TV window goes after a monitor is added, removed or changed while it is open.
  * The window stays on its current monitor while that monitor is still an eligible TV, so a
  * second screen plugged in mid-party does not steal it. When no eligible monitor is left, the
- * window hides instead of falling back onto the laptop screen.
+ * window hides instead of falling back onto the laptop screen. Only a portrait TV is eligible: the
+ * booth TV always stands upright, so a landscape TV never opens the camera (RF04).
  */
-export function placeGuestWindow(input: {
-  displays: readonly DisplayInfo[]
-  currentDisplayId: number | null
-  allowLandscape: boolean
-}): GuestPlacement {
-  const { displays, currentDisplayId, allowLandscape } = input
+export function placeGuestWindow(input: { displays: readonly DisplayInfo[]; currentDisplayId: number | null }): GuestPlacement {
+  const { displays, currentDisplayId } = input
   const current = displays.find((display) => display.id === currentDisplayId && !display.primary)
-  if (current && (isPortrait(current) || allowLandscape)) return { kind: 'show', display: current }
+  if (current && isPortrait(current)) return { kind: 'show', display: current }
 
   const choice = chooseGuestDisplay(displays)
   switch (choice.kind) {
     case 'portrait':
       return { kind: 'show', display: choice.display }
     case 'landscape-external':
-      return allowLandscape ? { kind: 'show', display: choice.display } : { kind: 'hide', reason: 'landscape' }
+      return { kind: 'hide', reason: 'landscape' }
     case 'missing':
       return { kind: 'hide', reason: 'missing' }
   }

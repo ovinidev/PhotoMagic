@@ -85,7 +85,7 @@ export const guestChoiceSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('missing') }),
 ]) satisfies z.ZodType<GuestChoice>
 
-/** Why the TV window cannot be on screen: no TV, or a landscape TV the operator has not confirmed. */
+/** Why the TV window cannot be on screen: no TV, or a TV that is not in portrait (RF04). */
 export const tvUnavailableReasonSchema = z.enum(['missing', 'landscape'])
 
 /**
@@ -106,11 +106,6 @@ export const displayStateSchema = z.strictObject({
   tv: tvWindowStateSchema,
 })
 
-export const tvOpenInputSchema = z.strictObject({
-  /** The operator confirmed the warning that the TV is not in portrait (RF04). */
-  allowLandscape: z.boolean(),
-})
-
 export const tvOpenResultSchema = z.discriminatedUnion('ok', [
   z.strictObject({ ok: z.literal(true), state: displayStateSchema }),
   z.strictObject({ ok: z.literal(false), reason: tvUnavailableReasonSchema, state: displayStateSchema }),
@@ -119,7 +114,6 @@ export const tvOpenResultSchema = z.discriminatedUnion('ok', [
 export type TvUnavailableReason = z.infer<typeof tvUnavailableReasonSchema>
 export type TvWindowState = z.infer<typeof tvWindowStateSchema>
 export type DisplayState = z.infer<typeof displayStateSchema>
-export type TvOpenInput = z.infer<typeof tvOpenInputSchema>
 export type TvOpenResult = z.infer<typeof tvOpenResultSchema>
 
 // ── Camera (DESIGN §5) ───────────────────────────────────────────────────────
@@ -345,8 +339,6 @@ export const sessionStateSchema = z.discriminatedUnion('kind', [
 export const eventStartInputSchema = z.strictObject({
   name: z.string().max(200),
   mode: printModeSchema,
-  /** The operator confirmed the landscape-TV warning (RF04). */
-  allowLandscape: z.boolean(),
 })
 
 export const eventStartErrorSchema = z.enum(['invalid-name', 'missing', 'landscape', 'folder-failed', 'already-open'])

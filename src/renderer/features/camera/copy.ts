@@ -40,7 +40,7 @@ export const TV_COPY = {
   },
   landscape: {
     title: 'A TV não está na vertical',
-    detail: 'A câmera foi feita para a TV em pé. Gire a tela nas configurações de vídeo do Windows ou inicie assim mesmo.',
+    detail: 'A câmera só abre com a TV em pé. Gire a tela para retrato nas configurações de vídeo do Windows.',
   },
   hidden: {
     title: 'Tela da TV fechada',
