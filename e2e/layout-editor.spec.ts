@@ -96,7 +96,17 @@ test.describe('layout editor (RF03)', () => {
     const { scale } = await sheetScale(editor)
     const card = editor.getByTestId('slot-card-bottom-1')
     await card.click()
-    const middle = await center(card)
+    // The sheet fits the window after the editor opens; on a loaded run it can still be resizing here,
+    // so read the card only once two reads in a row agree.
+    let middle = await center(card)
+    await expect
+      .poll(async () => {
+        const next = await center(card)
+        const settled = Math.abs(next.x - middle.x) < 0.5 && Math.abs(next.y - middle.y) < 0.5
+        middle = next
+        return settled
+      })
+      .toBe(true)
 
     const knob = await center(editor.getByTestId('handle-rotate'))
     await operatorWindow.mouse.move(knob.x, knob.y)
