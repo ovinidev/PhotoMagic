@@ -5,6 +5,7 @@ import type { PrintMode } from '@shared/layout'
 /** pt-BR copy of the create-event screen (PRD §6.1). */
 export const EVENTS_COPY = {
   title: 'Novo evento',
+  studio: 'Foto Mágica',
   name: 'Nome do evento',
   namePlaceholder: 'Aniversário AJ',
   folderHint: (name: string) => `As montagens ficam na Área de Trabalho, na pasta ${name}.`,

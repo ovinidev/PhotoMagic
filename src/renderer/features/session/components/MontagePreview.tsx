@@ -10,7 +10,7 @@ export function MontagePreview({ revision, overlay, footer }: { revision: number
   const preview = useMontagePreview(revision)
   return (
     <figure className="flex flex-col gap-3">
-      <figcaption className="text-sm font-medium text-ink">{SESSION_COPY.montage}</figcaption>
+      <figcaption className="eyebrow">{SESSION_COPY.montage}</figcaption>
       <div className="relative flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[var(--radius-card)] border border-line bg-bg">
         {preview.status === 'ready' && preview.url ? (
           <img src={preview.url} alt={SESSION_COPY.montageAlt} data-testid="montage-preview" className="h-full w-full object-contain" draggable={false} />

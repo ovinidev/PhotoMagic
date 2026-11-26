@@ -45,7 +45,7 @@ export function LivePreview({ session }: { session: EventSession }) {
 
   return (
     <figure className="flex flex-col gap-3">
-      <figcaption className="text-sm font-medium text-ink">{SESSION_COPY.live}</figcaption>
+      <figcaption className="eyebrow">{SESSION_COPY.live}</figcaption>
       <div className="relative aspect-[9/16] h-[560px] overflow-hidden rounded-[var(--radius-card)] bg-ink" data-testid="live-preview" data-receiving={receiving}>
         <canvas ref={canvasRef} width={LAPTOP_PREVIEW.width} height={LAPTOP_PREVIEW.height} aria-label={SESSION_COPY.liveAlt} className="absolute inset-0 h-full w-full" />
         {guide && session.phase.kind === 'capturing' ? (

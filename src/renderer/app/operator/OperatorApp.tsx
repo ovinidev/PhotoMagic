@@ -66,13 +66,13 @@ export function OperatorApp() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg text-ink">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-6">
+      <header className="flex h-14 shrink-0 items-center gap-4 border-b border-line bg-bg-raised px-8">
         <img src={markUrl} alt="" aria-hidden className="size-9 shrink-0" draggable={false} />
-        <span className="shrink-0 text-[15px] font-semibold text-ink">Foto Mágica</span>
+        <span className="font-display shrink-0 text-2xl text-ink">Foto Mágica</span>
         {session ? (
-          <p data-testid="event-title" className="min-w-0 truncate font-semibold text-ink">
-            {session.name}
-            <span className="ml-2 text-sm font-normal text-ink-soft">{SESSION_COPY.modes[session.mode]}</span>
+          <p data-testid="event-title" className="flex min-w-0 items-baseline gap-3 truncate border-l border-line pl-4">
+            <span className="font-display truncate text-xl text-ink">{session.name}</span>
+            <span className="eyebrow">{SESSION_COPY.modes[session.mode]}</span>
           </p>
         ) : null}
         {/* Version and update status live here so no page needs a footer (or a vertical scroll). */}

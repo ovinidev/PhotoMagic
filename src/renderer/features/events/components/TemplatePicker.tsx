@@ -40,7 +40,7 @@ export function TemplatePicker({
 
   return (
     <fieldset className="flex min-w-0 max-w-full flex-col gap-3">
-      <legend className="mb-2 text-base font-medium text-ink">{EVENTS_COPY.template(modeLabel)}</legend>
+      <legend className="eyebrow mb-3">{EVENTS_COPY.template(modeLabel)}</legend>
       <div className="flex aspect-[1844/1240] w-full max-w-full items-center justify-center overflow-hidden rounded-[var(--radius-field)] border border-line bg-bg">
         {templates.status === 'loading' ? (
           <p className="text-sm text-ink-soft">{EVENTS_COPY.templatesLoading}</p>
@@ -64,7 +64,7 @@ export function TemplatePicker({
           htmlFor={inputId}
           aria-disabled={loading}
           className={cn(
-            'inline-flex min-h-11 max-w-full cursor-pointer items-center rounded-[var(--radius-field)] border border-line px-5 text-sm font-medium text-ink hover:bg-bg',
+            'inline-flex min-h-11 max-w-full cursor-pointer items-center rounded-[var(--radius-field)] border border-line px-5 text-[12px] font-semibold tracking-[0.12em] text-ink uppercase hover:bg-bg',
             'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink',
             loading && 'pointer-events-none opacity-50',
           )}

@@ -563,7 +563,16 @@ Two surfaces. The laptop is light paper. The TV is the iPhone camera, dark and t
 
 ### Tokens
 
-They live in `src/renderer/index.css`, as variables, and Tailwind 4 reads them in `@theme`.
+They live in `src/renderer/index.css`, as variables, and Tailwind 4 reads them in `@theme`. The laptop ("editorial ivory") overrides the first block under `[data-surface='laptop']`, which `app/operator/main.tsx` sets on the operator window's `<body>`; the TV window never gets it, so the TV keeps the values below and its iPhone camera look does not change.
+
+| Laptop override | Value |
+| --- | --- |
+| `--bg` / `--bg-raised` | `#F7F4EF` / `#FFFDF9` (ivory paper) |
+| `--ink` / `--primary` | `#141414` |
+| `--ink-soft` | `#7A756D` |
+| `--line` | `#E4DED4` |
+| `--ok` | `#141414` (status dots are black; errors stay `--danger`) |
+| `--radius-card` / `--radius-field` | 14 px / 10 px |
 
 | Token | Value | Use |
 | --- | --- | --- |
@@ -583,11 +592,11 @@ They live in `src/renderer/index.css`, as variables, and Tailwind 4 reads them i
 
 No purple accent and no PilatePay burgundy. The brand color is the logo's black. The red exists so the editor remains recognizable to people who used the current app, and for errors.
 
-Inter, weights 400, 500 and 600, local files. The words FOTO MÁGICA in the interface are the logo, not text in another font. Count and clock numbers use tabular digits.
+Inter, weights 400, 500 and 600, local files. On the laptop only, titles use a thin serif (`font-display`: Georgia, which ships with Windows, so it works offline with no download): the header's `Foto Mágica`, the event name, `Novo evento` and the editor title. Section and field labels use `eyebrow`: 11 px, weight 600, 0.22 em letter spacing, uppercase, `--ink-soft`. Count and clock numbers use tabular digits. The TV keeps Inter only.
 
 ### Laptop
 
-Background `--bg`, cards `--bg-raised`, 1 px `--line` border, 12 px radius on cards and 8 px on fields. The primary button is black with light text. The secondary button is ghost, with a `--line` border. Visible focus: 2 px `--ink` ring, 2 px offset.
+Editorial ivory, for a photo studio that works weddings: no color, ivory paper and black ink. Background `--bg`, cards `--bg-raised`, 1 px `--line` border, 14 px radius on cards and 10 px on fields. Buttons use small spaced capitals (12 px, weight 600, 0.12 em); the primary is black with light text, the secondary is ghost with a `--line` border. The event name field is a single hairline under serif text. The selected mode card is black. The slot colors of the editor (green 1, blue 2, yellow 3) and the red selection stay, because they carry meaning. Visible focus: 2 px `--ink` ring, 2 px offset.
 
 At startup, until main says whether an event is open, the window shows the full logo centered. Header with the symbol, the event name when there is one, and on the right the update status, the app version and the zoom buttons; there is no footer, so at 1280×800 no page scrolls vertically. The form's grid columns and the template fieldset have `min-width: 0`, so a long template file name is cut with an ellipsis and the preview and its buttons stay inside the card. The home screen centers the full logo, the name, the mode (2 tiras or 1 tira) and the file for that mode. Maximum width 1280 px: on wide windows (Tailwind `lg`) the form is two columns, the details (name, mode, TV, `Iniciar evento`) on the left and the large sheet preview with the template file on the right; narrower, one column. Text, inputs and buttons are a step larger than the shadcn defaults (16 px labels, 48 px fields), and the app zoom (§3) grows everything with the window.
 

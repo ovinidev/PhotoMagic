@@ -43,6 +43,40 @@
   --radius-field: 8px;
 }
 
+/*
+ * Laptop "editorial ivory" (DESIGN §14): ivory paper, black ink, hairlines, thin serif titles and spaced
+ * small-caps labels, no color. Scoped to the operator window's <body>, so the TV (its own window, the
+ * iPhone camera look) never changes.
+ */
+[data-surface='laptop'] {
+  --bg: #f7f4ef;
+  --bg-raised: #fffdf9;
+  --ink: #141414;
+  --ink-soft: #7a756d;
+  --line: #e4ded4;
+  --primary: #141414;
+  --primary-ink: #fbf8f3;
+  --ok: #141414;
+  --radius-card: 14px;
+  --radius-field: 10px;
+}
+
+/* Windows ships Georgia, so the serif works offline with no font download. */
+@utility font-display {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* Spaced small label above a field or a section: `NOME DO EVENTO`. */
+@utility eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
 @layer base {
   html,
   body,

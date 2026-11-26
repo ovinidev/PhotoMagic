@@ -12,7 +12,7 @@ export function GalleryPanel() {
 
   return (
     <section aria-label={GALLERY_COPY.title} data-testid="laptop-gallery" className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-line bg-bg-raised p-6">
-      <h2 className="text-sm font-medium text-ink">{GALLERY_COPY.title}</h2>
+      <h2 className="eyebrow">{GALLERY_COPY.title}</h2>
       {gallery.status === 'loading' ? <p className="text-sm text-ink-soft">{GALLERY_COPY.loading}</p> : null}
       {gallery.status === 'error' ? <p className="text-sm text-danger">{GALLERY_COPY.error}</p> : null}
       {gallery.status === 'ready' && gallery.fileNames.length === 0 ? <p className="text-sm text-ink-soft">{GALLERY_COPY.empty}</p> : null}
