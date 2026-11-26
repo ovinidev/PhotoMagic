@@ -429,9 +429,9 @@ Builder icon: `assets/brand/icon.ico`, generated from `assets/brand/icon.png` (s
 
 ## 12. CI and tests
 
-Two workflows implement this contract. `.github/workflows/ci.yml` runs the checks on pull requests and on pushes to any branch except `main`; it is also a reusable workflow. `.github/workflows/release.yml` runs on push to `main`: it calls `ci.yml` and then the Windows job below.
+Two workflows implement this contract. `.github/workflows/ci.yml` runs the checks once per pull request, when it is opened or reopened (or by hand with `workflow_dispatch`), and skips PRs that touch only `*.md` or `docs/**`; this keeps GitHub Actions minutes low. Every later push to the PR is checked locally by the Husky `pre-push` hook, which runs the same contract. `.github/workflows/release.yml` runs on push to `main`: the Windows job below re-runs `pnpm typecheck` and `pnpm test` on the merged code, then packages it.
 
-**On every pull request and every push**
+**When a pull request is opened or reopened, and in the `pre-push` hook**
 
 - Node 22, pnpm with a frozen lockfile
 - `pnpm typecheck`
@@ -480,7 +480,7 @@ E2E, in `e2e/`, one spec per flow, on real Electron:
 
 A PRD scenario whose screen does not exist yet stays as `test.fixme`, with the requirement id in the title, and becomes a test in the PR that builds the screen. E2E does not point at the DS-RX1 or the MX Brio.
 
-The project uses Husky with a `pre-push` hook that runs oxlint, typecheck, unit tests (`pnpm test`) and Playwright (`pnpm test:e2e`). It lives in `.husky/pre-push`, in the same role as the hook in PilatePay; on Linux without `DISPLAY` or `WAYLAND_DISPLAY` it runs Playwright under `xvfb-run`. While iterating, run only the files or specs you touched, with summarized output (see CLAUDE.md); do not run the full suite yourself. Tail only failures; never paste long test or build logs.
+The project uses Husky with a `pre-push` hook that runs oxlint, typecheck, unit tests with coverage (`pnpm test:coverage`), the build (`pnpm build`) and Playwright (`pnpm test:e2e`, reusing that build). Because CI runs only when a PR is opened, this hook is what checks every later push. It lives in `.husky/pre-push`, in the same role as the hook in PilatePay; on Linux without `DISPLAY` or `WAYLAND_DISPLAY` it runs Playwright under `xvfb-run`. While iterating, run only the files or specs you touched, with summarized output (see CLAUDE.md); do not run the full suite yourself. Tail only failures; never paste long test or build logs.
 
 oxlint, minimal configuration: plugins `react`, `typescript` and `import`; category `correctness` as error; React hooks rule as error; ignore `dist`, `out`, `release`, `coverage`, `playwright-report`. `no-restricted-imports` enforces the folder rules of §13: no feature internals across features, no Electron or Node in the renderer, no React or Electron in `src/shared`, and `renderer/shared` never imports a feature or `app`. No ESLint file alongside.
 

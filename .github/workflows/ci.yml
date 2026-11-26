@@ -1,12 +1,16 @@
 # Checks contract (DESIGN §12): typecheck, oxlint, unit tests with coverage, Playwright on Electron.
-# Pushes to main run these same checks through release.yml, before packaging.
+# Runs once per PR, when it is opened or reopened, to save Actions minutes. Later pushes to the PR are
+# covered by the Husky pre-push hook (.husky/pre-push), which runs this same contract locally.
+# Docs-only PRs skip it. Reopen the PR (or run it manually) to check new commits on GitHub.
 name: CI
 
 on:
   pull_request:
-  push:
-    branches-ignore: [main]
-  workflow_call:
+    types: [opened, reopened]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+  workflow_dispatch:
 
 permissions:
   contents: read

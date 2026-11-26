@@ -62,8 +62,8 @@ Details in [docs/DESIGN.md §13](docs/DESIGN.md#13-folders).
 
 ## CI and releases
 
-- `.github/workflows/ci.yml`: typecheck, oxlint, unit tests with coverage and E2E on every pull request and branch push.
-- `.github/workflows/release.yml`: on push to `main`, the same checks, then `pnpm dist` on `windows-latest`. The installer is always uploaded as an artifact; a GitHub Release `v<version>` is published only when that `package.json` version has not been released yet.
+- `.github/workflows/ci.yml`: typecheck, oxlint, unit tests with coverage and E2E once per pull request, when it is opened or reopened; docs-only PRs skip it. Later pushes are checked by the Husky `pre-push` hook.
+- `.github/workflows/release.yml`: on push to `main`, `pnpm typecheck` and `pnpm test` on the merged code, then `pnpm dist` on `windows-latest`. The installer is always uploaded as an artifact; a GitHub Release `v<version>` is published only when that `package.json` version has not been released yet.
 - Code signing is optional: set the `CSC_LINK` (base64 `.pfx`) and `CSC_KEY_PASSWORD` repository secrets to sign. Without them the installer is unsigned and the job stays green.
 
 The latest installer: <https://github.com/ovinidev/PhotoMagic/releases/latest/download/FotoMagica-Setup.exe>
