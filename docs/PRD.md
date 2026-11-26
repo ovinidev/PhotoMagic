@@ -206,7 +206,7 @@ Opens fullscreen on the TV monitor as soon as the event starts. The look follows
 
 - Live image mirrored. The person sees themselves as in a mirror, and the saved JPG shows exactly that
 - White button, bottom center. Each tap takes a photo. Three taps per round. A counter shows 1/3, 2/3 and 3/3
-- Timer: `Sem` (off, the default: the photo is taken at once), 5 s or 10 s. The countdown sits right under the webcam with `Olhe para a câmera ↑`, so the guests look at the lens, not down at the number
+- Timer: `Off` (the default: the photo is taken at once; the owner keeps the word `Off`, as on the iPhone camera), 5 s or 10 s. The countdown sits right under the webcam with `Olhe para a câmera ↑`, so the guests look at the lens, not down at the number
 - Thumbnail of the last montage in the bottom-left corner. Tapping it opens the gallery. With no montage yet, no empty ring is drawn
 - In place of the flash, the webcam adjustments icon
 - No grid toggle. The look is the iPhone camera's: a big white ring shutter centered at the bottom and dark translucent bars

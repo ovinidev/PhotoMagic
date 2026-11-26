@@ -603,7 +603,7 @@ The look follows the iPhone camera app (reference: dark translucent bars, a larg
 
 - The image fills the core, edge to edge, already mirrored
 - Top bar: dark translucent strip, 160 px tall, with the adjustments icon (a white line sun, 96 px target) centered where the iPhone has the flash. No grid toggle and no flip-camera icon
-- Bottom bar: dark translucent; the white shutter in the center, a 240 px ring (10 px white border) around a 192 px filled white circle. Pressed, the circle shrinks to 86% and dims; during a countdown or a capture it is disabled at half opacity. The 128 px circular thumbnail of the last montage on the left; the timer (`Sem`, `5s`, `10s`; `Sem` is the default, an instant photo) as a dark pill of three targets on the right, each at least 64 px, the selected one in iPhone yellow (`#ffd60a`) on a light chip
+- Bottom bar: dark translucent; the white shutter in the center, a 240 px ring (10 px white border) around a 192 px filled white circle. Pressed, the circle shrinks to 86% and dims; during a countdown or a capture it is disabled at half opacity. The 128 px circular thumbnail of the last montage on the left; the timer (`Off`, `5s`, `10s`; `Off` is the default, an instant photo, and stays in English by the owner's choice) as a dark pill of three targets on the right, each at least 64 px, the selected one in iPhone yellow (`#ffd60a`) on a light chip
 - `1/3` counter in a dark pill above the shutter, in white, weight 600, 48 px
 - Countdown right under the top bar (and so under the webcam), about 300 px tall, with `Olhe para a câmera ↑` in a dark pill below it: the guests pose at a distance and look where the number is
 - The capture error and the webcam panel open under the top bar

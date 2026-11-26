@@ -66,7 +66,8 @@ export const CAPTURE_COPY = {
   shutter: 'Tirar foto',
   timer: 'Timer',
   timerOptions: { 0: 'Sem timer', 5: '5 s', 10: '10 s' },
-  timerShort: { 0: 'Sem', 5: '5s', 10: '10s' },
+  // `Off` is kept on purpose (owner's choice), as in the iPhone camera the TV look follows.
+  timerShort: { 0: 'Off', 5: '5s', 10: '10s' },
   counter: (current: number, total: number) => `${current}/${total}`,
   lookUp: 'Olhe para a câmera ↑',
   captureError: 'Não foi possível tirar a foto. Toque de novo.',
