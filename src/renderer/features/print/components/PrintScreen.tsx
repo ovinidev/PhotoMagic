@@ -58,7 +58,7 @@ export function PrintScreen({ session }: { session: EventSession }) {
       {/* The symbol only, outside the sheet preview, at most 48 px (DESIGN §14). */}
       <img src={markUrl} alt="" aria-hidden data-testid="print-mark" className="absolute top-12 right-12 size-12 invert" draggable={false} />
 
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-12 px-16 pt-28 pb-8">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 pt-28 pb-6">
         <div role="status" aria-live="polite" className="w-full empty:hidden">
           {phase.kind === 'print-failed' ? (
             <div data-testid="tv-print-alert" className="rounded-[32px] bg-warning px-10 py-8 text-center text-ink">
@@ -75,6 +75,8 @@ export function PrintScreen({ session }: { session: EventSession }) {
           ) : null}
         </div>
 
+        {/* The sheet stays narrower than the screen so preview, animation and QR codes fit above the action bar. */}
+        <div className="flex w-[78%] justify-center">
         {progress.kind === 'job' ? (
           <PrintJob key={job.count} progress={progress} previewUrl={preview.status === 'ready' ? preview.url : null} />
         ) : (
@@ -86,12 +88,13 @@ export function PrintScreen({ session }: { session: EventSession }) {
             )}
           </div>
         )}
+        </div>
 
         {/* Offline photo download (DESIGN §17): shown once the montage is saved and the local server is up. */}
         <ShareQrPanel state={share} />
       </div>
 
-      <div data-testid="print-actions" className={cn('flex flex-col items-center gap-10 px-12 pt-10 pb-16', BAR)}>
+      <div data-testid="print-actions" className={cn('flex flex-col items-center gap-6 px-12 pt-8 pb-12', BAR)}>
         <div className="flex items-center gap-12">
           <TvAction label={PRINT_COPY.less} icon="−" disabled={busy || copies <= COPIES.min} onClick={() => setCopies(-1)} />
           <p data-testid="copies" className="min-w-72 text-center text-5xl font-semibold whitespace-nowrap text-white tabular-nums">
