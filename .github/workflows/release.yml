@@ -1,4 +1,6 @@
-# Every push to main: the CI checks, then the Windows installer and a new GitHub Release (DESIGN §11, §12).
+# Every push to main: the Windows installer and a new GitHub Release (DESIGN §11, §12). The full CI contract
+# already ran on the PR and in the Husky pre-push hook; this job only re-runs typecheck and the unit tests on
+# the merged code, so a broken merge never reaches the auto-update of the event laptops.
 # The version comes from the latest v<x.y.z> tag plus one patch, or from package.json when a PR bumped it
 # higher (scripts/release/next-version.mjs). It is stamped into package.json inside the job only; nothing is
 # committed back to main, so this workflow never triggers itself. An existing tag or release is never touched.
@@ -17,14 +19,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  checks:
-    uses: ./.github/workflows/ci.yml
-    permissions:
-      contents: read
-
   windows:
     name: Windows installer
-    needs: checks
     runs-on: windows-latest
     timeout-minutes: 30
     permissions:
@@ -45,6 +41,11 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # Cheap guard on the merged code (the PR may have been checked before main moved).
+      - run: pnpm typecheck
+
+      - run: pnpm test
 
       - name: Compute the release version
         id: version

@@ -1,9 +1,14 @@
-# Same contract as CI (DESIGN §12): oxlint, typecheck, unit tests, Playwright on Electron.
+# Same contract as CI (DESIGN §12): oxlint, typecheck, unit tests with coverage, build, Playwright on Electron.
+# CI runs only when a PR is opened, so this hook is what checks every later push.
 set -e
 
 pnpm lint
 pnpm typecheck
-pnpm test
+pnpm test:coverage
+pnpm build
+
+# `pnpm build` just produced out/, so the E2E global setup does not build it again.
+export FOTOMAGICA_E2E_SKIP_BUILD=1
 
 # Electron needs a display. Only a headless Linux shell (no X11, no Wayland) gets a virtual one.
 if [ "$(uname -s)" = "Linux" ] && [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then

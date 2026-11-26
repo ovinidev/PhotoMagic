@@ -214,7 +214,13 @@ describe('renderSheet over the client 2 tiras artwork', () => {
   })
 })
 
-describe('renderSheet keeps each photo inside its slot (RF09, DESIGN §8)', () => {
+/**
+ * The pixel sweeps below compare whole 1844×1240 sheets. Under coverage, with the rest of the suite
+ * running in parallel (the pre-push hook), one test can pass the default 5 s on a laptop.
+ */
+const PIXEL_SWEEP = { timeout: 30_000 }
+
+describe('renderSheet keeps each photo inside its slot (RF09, DESIGN §8)', PIXEL_SWEEP, () => {
   const GRADIENT = { width: 360, height: 640 }
 
   /** A portrait whose color says where each pixel came from: red grows left to right, green top to bottom. */
@@ -315,7 +321,7 @@ describe('renderSheet keeps each photo inside its slot (RF09, DESIGN §8)', () =
   })
 })
 
-describe('renderSheet clips every photo to its fixed gray box (DESIGN §6)', () => {
+describe('renderSheet clips every photo to its fixed gray box (DESIGN §6)', PIXEL_SWEEP, () => {
   /** A portrait gradient whose blue is always 128: no template pixel below has that blue. */
   async function gradient(): Promise<Buffer> {
     const { width, height } = PHOTO

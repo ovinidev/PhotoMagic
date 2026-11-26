@@ -30,7 +30,7 @@ The foundation scaffold (shell windows, typed IPC, tooling, CI) is in place, plu
 - oxlint. No ESLint, no `eslint.config.js`, no `eslint` dependency
 - pnpm. No npm, yarn, or `package-lock.json`
 - Node `>=22`, `packageManager` field in `package.json`
-- Husky with a `pre-push` hook (oxlint, typecheck, unit tests and Playwright), in `.husky/pre-push`
+- Husky with a `pre-push` hook (oxlint, typecheck, unit tests with coverage, build and Playwright), in `.husky/pre-push`
 
 ## Language details
 
@@ -61,7 +61,7 @@ pnpm vitest run <files> --reporter=dot
 pnpm playwright test <specs> --reporter=dot
 ```
 
-Do not run the full lint, build, unit or Playwright suite yourself. The Husky `pre-push` hook runs oxlint, typecheck, unit tests and Playwright; GitHub Actions runs the same contract (DESIGN §12). On Linux without a display the hook wraps Playwright in `xvfb-run`. Tail only failures; never paste long test or build logs.
+Do not run the full lint, build, unit or Playwright suite yourself. The Husky `pre-push` hook runs oxlint, typecheck, unit tests with coverage, build and Playwright; GitHub Actions runs the same contract once, when the PR is opened (DESIGN §12). On Linux without a display the hook wraps Playwright in `xvfb-run`. Tail only failures; never paste long test or build logs.
 
 E2E does not use the webcam or the DS-RX1. It starts with `FOTOMAGICA_E2E=1` and `FOTOMAGICA_PRINTER=simulated`. The camera is Chromium's fake device (`FOTOMAGICA_FAKE_CAMERA`: unset for its pattern, a `.y4m` path, or `none`) the monitors are a fixture (`FOTOMAGICA_DISPLAYS`: `portrait-tv`, `landscape-tv`, `laptop-only`), and each test gets its own `FOTOMAGICA_USER_DATA` and `FOTOMAGICA_DESKTOP` folders. `FOTOMAGICA_PRINTER_STATUS` (`offline`, `no-paper`, `no-ribbon`) and `FOTOMAGICA_PRINTER_CUT=unsupported` drive simulated print failures. See DESIGN §3, §5, §10 and §12.
 
@@ -69,7 +69,7 @@ E2E does not use the webcam or the DS-RX1. It starts with `FOTOMAGICA_E2E=1` and
 
 Every merge to `main` is a release (DESIGN §12). Nothing is published by hand and nothing is committed back to `main`.
 
-1. Merge a PR to `main`. `release.yml` runs the checks again, then on `windows-latest` computes the version with `scripts/release/next-version.mjs`:
+1. Merge a PR to `main`. `release.yml` runs typecheck and the unit tests on the merged code, then on `windows-latest` computes the version with `scripts/release/next-version.mjs`:
    - the latest published `v<x.y.z>` tag plus one patch (`v0.2.0` → `0.2.1`), by default;
    - the `package.json` version as is, when a PR bumped it above the latest tag (a manual minor or major).
 2. The job writes that version into its own copy of `package.json` (not committed), builds `FotoMagica-Setup.exe`, uploads it as an artifact and publishes the GitHub Release `v<version>` with `FotoMagica-Setup.exe`, its `.blockmap` and `latest.yml`.
