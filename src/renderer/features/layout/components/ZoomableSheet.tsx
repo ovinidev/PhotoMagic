@@ -21,6 +21,8 @@ export function ZoomableSheet({ children }: { children: ReactNode }) {
   const zoomRef = useRef(zoom)
   const pendingScroll = useRef<{ left: number; top: number } | null>(null)
   const pan = useRef<Pan | null>(null)
+  // The viewport reserves the scrollbar's width (`scrollbar-gutter: stable`): otherwise a scrollbar that
+  // appears while the fit is re-measured narrows the sheet mid-gesture and shifts every card.
 
   // Fit = the widest 1844×1240 sheet the viewport holds, re-measured when the window or app zoom changes.
   useLayoutEffect(() => {
@@ -101,7 +103,7 @@ export function ZoomableSheet({ children }: { children: ReactNode }) {
         data-testid="layout-viewport"
         data-zoom={zoom}
         aria-label={LAYOUT_COPY.canvasZoom}
-        className={`relative min-h-0 flex-1 overflow-auto rounded-[var(--radius-field)] border border-line bg-bg ${zoom > CANVAS_ZOOM.min ? 'cursor-grab' : ''}`}
+        className={`relative min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable] rounded-[var(--radius-field)] border border-line bg-bg ${zoom > CANVAS_ZOOM.min ? 'cursor-grab' : ''}`}
         onPointerDown={startPan}
         onPointerMove={movePan}
         onPointerUp={endPan}
