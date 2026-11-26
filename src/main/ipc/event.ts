@@ -1,9 +1,9 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { MessageChannelMain, type WebContents } from 'electron'
+import type { WebContents } from 'electron'
 import { checkEventName } from '@shared/files'
 import type { Layouts } from '@shared/layout'
-import { IPC_CHANNELS, PORT_CHANNELS, type EventStartResult, type SessionState } from '@shared/ipc'
+import { IPC_CHANNELS, type EventStartResult, type SessionState } from '@shared/ipc'
 import { detectTemplateBoxes } from '../compose/detectBoxes'
 import { importTemplate, listTemplates, readConfig, readTemplate, saveLayout } from '../persist'
 import type { Session } from '../session'
@@ -19,7 +19,6 @@ export type EventDeps = {
   desktop: string
   isGuestWindow: (contents: WebContents) => boolean
   guestContents: () => WebContents | null
-  operatorContents: () => WebContents | null
 }
 
 /** `template:*`, `event:*` and `session:*` (DESIGN §4): main owns the event and the round. */
@@ -100,16 +99,6 @@ export function registerEventHandlers(deps: EventDeps): void {
     if (deps.isGuestWindow(event.sender) || !session.isOpen()) return
     const guest = deps.guestContents()
     if (guest) sendTo(guest, IPC_CHANNELS.sessionShutter, {})
-  })
-
-  // A fresh live-preview channel whenever either side (re)mounts; frames never cross main (RNF04).
-  handleSend(IPC_CHANNELS.cameraRequestPreviewPort, () => {
-    const guest = deps.guestContents()
-    const operator = deps.operatorContents()
-    if (!guest || !operator || guest.isDestroyed() || operator.isDestroyed()) return
-    const { port1, port2 } = new MessageChannelMain()
-    guest.postMessage(PORT_CHANNELS.cameraPreviewPort, null, [port1])
-    operator.postMessage(PORT_CHANNELS.cameraPreviewPort, null, [port2])
   })
 }
 

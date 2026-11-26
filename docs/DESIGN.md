@@ -60,7 +60,7 @@ flowchart LR
 
 - `nodeIntegration` off, `contextIsolation` on, `sandbox` on in both windows
 - The renderer imports neither `electron` nor `fs`. Everything goes through the single object exposed by the preload
-- The live preview does not cross the main process: the laptop frame travels over a `MessageChannel` between the two windows. Only the photo, at the shutter, goes to main as a JPEG `Uint8Array`
+- The live preview stays in the TV window. At the shutter, the TV sends the captured photo to main as a JPEG `Uint8Array`
 - Main is the source of truth for the round. Both renderers receive the same state
 
 ## 3. Windows and the TV monitor
@@ -156,10 +156,9 @@ The preload exposes `window.fotomagica`. Each method validates input and output 
 | send | `camera:report` | TV → main, the state of its `MediaStream`. Main ignores it from any other window |
 | invoke | `camera:get-status` | Last camera state reported by the TV (`idle` while the TV window is closed) |
 | event | `camera:status` | Main → both windows, on every camera state change |
-| send | `camera:request-preview-port` | Either window, on mount: main creates a `MessageChannelMain` and posts one end to each window on `camera:preview-port` |
 | event | `session:shutter` | Main → TV only, when the laptop asked for a photo |
 
-`camera:preview-port` carries no payload, only the transferred port, so it is not in the Zod contract. `contextBridge` cannot pass a `MessagePort`: the preload re-posts it to the page with `window.postMessage` and the page recognizes the fixed message `PREVIEW_PORT_MESSAGE`. Binary payloads (captures, previews, templates) are checked as `Uint8Array` by tag, not `instanceof`, because the preload's isolated world has its own globals, and each has a size ceiling.
+Binary payloads (captures, previews, templates) are checked as `Uint8Array` by tag, not `instanceof`, because the preload's isolated world has its own globals, and each has a size ceiling.
 
 Every `send` and `event` payload has a Zod schema too: the preload validates before sending and before calling a listener, main validates on arrival and before broadcasting.
 
@@ -192,7 +191,7 @@ Camera states on the TV, floating on glass over the black surface, reported to t
 
 The error states offer `Tentar novamente` (64 px target). A device plugged in while in error reopens the camera on its own. Under E2E, Chromium's fake device replaces the webcam: its moving pattern by default, a `.y4m` file with `FOTOMAGICA_FAKE_CAMERA=<path>`, or no camera at all with `FOTOMAGICA_FAKE_CAMERA=none`.
 
-The TV preview draws this frame on a canvas, with `requestAnimationFrame`. The camera opens once, on the TV. At the start of the event main hands a `MessageChannel` to both windows. At most 30 times per second the TV transfers an `ImageBitmap`, already rotated and mirrored through the same `drawCameraFrame`, at `LAPTOP_PREVIEW` (360×640), and drops the frame until the laptop answers `ack` for the previous one. Either window asks for a fresh channel when it mounts, so a reload on either side reconnects. This does not go through `invoke` and does not write to disk. The full-resolution JPEG remains a single send, at the shutter.
+The camera opens once, in the TV window. The TV draws the live preview on a canvas using `requestAnimationFrame`. The laptop receives camera status and shows the round montage. The full-resolution JPEG goes to main at the shutter.
 
 At the shutter the TV waits (up to 3 s) for a decoded video frame, so a tap right after the camera opens still takes the photo, then exports a quality-95 JPEG of the already transformed frame (portrait, mirrored) and sends the bytes. Main keeps the three captures in the round. It does not write those three to disk.
 
@@ -293,8 +292,6 @@ The editor is a full-window dialog over the home page (the form underneath keeps
 ## 8. Round framing
 
 This is not the slot editor. With the party open, the slot stays still. The gesture on the laptop preview moves the photo inside it: dragging moves, the wheel zooms, a small handle (ink color, not the editor's red) rotates the photo. Each slot of the round has its own pan, zoom and rotation, including when two slots use the same capture.
-
-Next to it, the laptop shows the camera without the iPhone chrome, in the full portrait. The guide is the part of the frame that every slot of the next photo keeps at default framing (`guideCrop`): for photos 1 and 2 of 2 tiras, the horizontal band of the bottom strip; for photo 3 of 2 tiras, its vertical slot; in 1 tira mode, the portrait slot of the next photo.
 
 Framing is `{ zoom 1..3, panX -1..1, panY -1..1, rotation -180..180 }` per slot id, kept in the round (`framings` in `session:state`, absent means the default) and sent with `session:set-framing`. Main accepts it only for a slot whose photo is taken and only until the montage is written (capturing, review, or a failed save); `Nova rodada` and `Cancelar` reset it. The gesture math is pure, in `src/shared/layout/framing.ts`: a drag is read in the photo's own axes (slot angle plus framing rotation) and turned into pan using the 1920×1080 capture stood upright as the assumed photo size, so the photo follows the pointer; the wheel zooms by `exp(-deltaY / 500)`; the handle turns by the angle swept around the slot center and snaps to 0° within 3° (Alt turns that off). The laptop also offers `Aproximar`, `Afastar`, `Girar para a esquerda`, `Girar para a direita` (5° steps) and `Restaurar enquadramento`.
 
@@ -522,15 +519,15 @@ src/
     features/
       events/            create event, name, mode template, 2 tiras or 1 tira
       layout/            editor and handles
-      session/           laptop event screen: live preview and guide, montage preview, round controls
-      camera/            TV: live view, shutter, timer, laptop preview sender; laptop TV and camera status
+      session/           laptop event screen: montage preview, framing and round controls
+      camera/            TV: live view, shutter, timer. Laptop: TV and camera status
       print/             TV print screen, printer status line and hook
       gallery/           TV thumbnail and grid, laptop panel, fullscreen view and reprint menu
       webcam/            constraints panel (TV and laptop), applying the saved values on the TV track
     shared/
       components/ui/     shadcn, used by the laptop
       hooks/             session state, montage preview, object URL
-      utils/             cn, TV glass, preview-port hand-off
+      utils/             cn, TV glass
     test/                Vitest setup for renderer tests
 e2e/
 docs/
@@ -599,6 +596,8 @@ Inter, weights 400, 500 and 600, local files. On the laptop only, titles use a t
 Editorial ivory, for a photo studio that works weddings: no color, ivory paper and black ink. Background `--bg`, cards `--bg-raised`, 1 px `--line` border, 14 px radius on cards and 10 px on fields. Buttons use small spaced capitals (12 px, weight 600, 0.12 em); the primary is black with light text, the secondary is ghost with a `--line` border. The event name field is a single hairline under serif text. The selected mode card is black. The slot colors of the editor (green 1, blue 2, yellow 3) and the red selection stay, because they carry meaning. Visible focus: 2 px `--ink` ring, 2 px offset.
 
 At startup, until main says whether an event is open, the window shows the full logo centered. No branded header, so the logo is not shown twice: on the home screen the update status and the app version sit alone in the top-right corner; during an event a plain top row (no logo, no bar) shows the event name in serif on the left and, on the right, the update status, the version, the camera and printer alerts and `Encerrar evento`; there is no footer, so at 1280×800 no page scrolls vertically. The form's grid columns and the template fieldset have `min-width: 0`, so a long template file name is cut with an ellipsis and the preview and its buttons stay inside the card. The home screen centers the full logo, the name, the mode (2 tiras or 1 tira) and the file for that mode. Maximum width 1280 px: on wide windows (Tailwind `lg`) the form is two columns, the details (name, mode, TV, `Iniciar evento`) on the left and the large sheet preview with the template file on the right; narrower, one column. Text, inputs and buttons are a step larger than the shadcn defaults (16 px labels, 48 px fields), and the app zoom (§3) grows everything with the window.
+
+During an event, wide laptop windows show the montage on the left and the round controls, equipment status, webcam settings and gallery on the right. Narrow windows stack them in the same order.
 
 The editor is the exception to width: the 1844×1240 sheet scales to fit the window, with the numbers panel in a fixed 640 px column on the left (16 px text, 48 px fields): a table with one row per slot, in the same order as the current app (Image, Left, Top, Width, Height, Angle), so all the slots of the layout are visible at once, as in the current app's dialog.
 

@@ -79,7 +79,6 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
       getStatus: vi.fn(o.camera?.getStatus ?? (() => Promise.resolve<CameraStatus>({ kind: 'idle' }))),
       onStatus: vi.fn(o.camera?.onStatus ?? camera.add),
       report: vi.fn(o.camera?.report ?? (() => {})),
-      requestPreviewPort: vi.fn(o.camera?.requestPreviewPort ?? (() => {})),
     },
     template: {
       getAll: vi.fn(o.template?.getAll ?? (() => Promise.resolve(NO_TEMPLATES))),

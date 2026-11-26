@@ -191,7 +191,6 @@ While the party runs, the laptop shows:
 
 - The round's montage preview, filled in as photos come in
 - The framing of each slot: move, rotate and zoom of the photo inside the slot, without moving the slot
-- The live camera, without the iPhone frame, in the portrait the TV shows. In 2 tiras mode, a mask shows the horizontal crop of the bottom strip. In 1 tira mode the mask follows the portrait slot of the next photo
 - A take-photo button, equivalent to the white button on the TV
 - The gallery of montages in the event folder
 - The printer status
@@ -393,7 +392,7 @@ The operator window is the laptop's. The TV's is fullscreen in portrait, designe
 
 ### RNF04 — Performance
 
-The live preview asks the camera for 30 fps. The frame does not pass through the main process: the TV sends an ImageBitmap to the laptop over a MessageChannel and drops the frame if the previous one has not been consumed yet. A 60-move gesture in the editor applies the last one without a disk write and without a call to the main process. Assembling a fixture round is ready in under 2 s on the owner's reference laptop; the automated test uses a loose 5 s ceiling in CI so that the criterion is not coupled to runner load.
+The live preview runs only in the TV window and asks the camera for 30 fps. A 60-move gesture in the editor applies the last one without a disk write and without a call to the main process. Assembling a fixture round is ready in under 2 s on the owner's reference laptop; the automated test uses a loose 5 s ceiling in CI so that the criterion is not coupled to runner load.
 
 ### RNF05 — Quality
 

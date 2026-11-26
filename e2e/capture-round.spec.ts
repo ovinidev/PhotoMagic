@@ -194,10 +194,13 @@ test.describe('capture round', () => {
     await expect(tv.getByTestId('guest-screen')).toHaveCount(0)
   })
 
-  test('RNF04 the laptop shows the live camera sent by the TV over the MessageChannel', async ({ app, operatorWindow }) => {
-    await startEvent(app, operatorWindow, { name: 'Festa', mode: 'one-strip' })
-    await expect(operatorWindow.getByTestId('live-preview')).toHaveAttribute('data-receiving', 'true')
-    await expect(operatorWindow.getByTestId('live-guide')).toBeVisible()
+  test('RNF04 only the TV shows the live camera', async ({ app, operatorWindow }) => {
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa', mode: 'one-strip' })
+    await expect(tv.getByTestId('camera-preview')).toBeVisible()
+    await expect(operatorWindow.getByText('Câmera ao vivo', { exact: true })).toBeVisible()
+    await expect(operatorWindow.locator('video, canvas')).toHaveCount(0)
+    await takePhotos(tv, 1)
+    await expect(operatorWindow.getByTestId('montage-preview')).toBeVisible()
   })
 })
 

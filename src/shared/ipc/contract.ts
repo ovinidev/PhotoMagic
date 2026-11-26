@@ -85,7 +85,6 @@ export const INVOKE_CONTRACT = {
 /** Renderer → main, fire and forget. The preload validates before sending, main again on arrival. */
 export const SEND_CONTRACT = {
   [IPC_CHANNELS.cameraReport]: cameraStatusSchema,
-  [IPC_CHANNELS.cameraRequestPreviewPort]: noInputSchema,
   [IPC_CHANNELS.sessionRequestShutter]: noInputSchema,
   [IPC_CHANNELS.sessionPhoto]: sessionPhotoSchema,
   [IPC_CHANNELS.webcamReport]: webcamReportSchema,

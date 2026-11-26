@@ -52,11 +52,6 @@ export type FotomagicaApi = {
     onStatus: (listener: (status: CameraStatus) => void) => Unsubscribe
     /** TV window only: reports its camera state. Main ignores it from any other window. */
     report: (status: CameraStatus) => void
-    /**
-     * Asks main for a fresh live-preview `MessageChannel` between the TV and the laptop. Each window
-     * receives its end as a `window` message whose data is `PREVIEW_PORT_MESSAGE` (DESIGN §5).
-     */
-    requestPreviewPort: () => void
   }
   template: {
     /** Each mode's stored template, or `null` (PRD §6.1). */

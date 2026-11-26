@@ -1,4 +1,4 @@
-export { IPC_CHANNELS, PORT_CHANNELS, PREVIEW_PORT_MESSAGE, type IpcChannel } from './channels'
+export { IPC_CHANNELS, type IpcChannel } from './channels'
 export {
   EVENT_CONTRACT,
   INVOKE_CONTRACT,
