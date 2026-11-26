@@ -1,6 +1,7 @@
 export { CameraView } from './components/CameraView'
 export { CloseHoldLayer } from './components/CloseHoldLayer'
 export { CameraStatusLine } from './components/CameraStatusLine'
+export { CameraAlert } from './components/CameraAlert'
 export { TvStatus } from './components/TvStatus'
 export { useDisplayState, type DisplayStateView } from './hooks/useDisplayState'
 export { captureStill, type VideoFrameSource } from './utils/captureStill'

@@ -38,6 +38,8 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
   // still blocks the start until a valid one is imported (RF01).
   const canStart = nameCheck.ok && templates.status === 'ready' && imports[mode].status === 'idle' && tvReady && !pending
   const modeLabel = EVENTS_COPY.modes[mode].label
+  // Why `Iniciar evento` is disabled, so the operator never faces a grey button without a reason.
+  const blocked = pending || templates.status !== 'ready' || imports[mode].status === 'loading' ? null : !nameCheck.ok ? 'name' : imports[mode].status === 'rejected' ? 'template' : !tvReady ? 'tv' : null
 
   const start = async () => {
     if (!canStart) return
@@ -135,10 +137,15 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
           </p>
         ) : null}
 
-        <div className="flex justify-end">
-          <Button type="submit" disabled={!canStart} className="min-h-12 px-8 text-base">
+        <div className="flex flex-col items-end gap-2">
+          <Button type="submit" disabled={!canStart} aria-describedby={blocked ? `${nameHintId}-blocked` : undefined} className="min-h-12 px-8 text-base">
             {pending ? EVENTS_COPY.starting : EVENTS_COPY.start}
           </Button>
+          {blocked ? (
+            <p id={`${nameHintId}-blocked`} data-testid="start-blocked" className="text-sm text-ink-soft">
+              {EVENTS_COPY.blocked[blocked]}
+            </p>
+          ) : null}
         </div>
         {footer}
         </div>

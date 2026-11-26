@@ -8,7 +8,7 @@
 
 ## 1. Product
 
-Foto Mágica is a party photobooth. A TV stands upright, with touch and a webcam on top. Guests take 3 photos. The app fits those photos into the event template and sends the sheet to the DNP DS-RX1. In the default mode the printer cuts the sheet into two strips. In the other mode the 6×4 sheet comes out whole, uncut, with the three photos filling the sheet.
+Foto Mágica is a party photobooth. A TV stands upright, with touch and a webcam on top. Guests pose for 3 photos, taken by the operator on the TV. The app fits those photos into the event template and sends the sheet to the DNP DS-RX1. In the default mode the printer cuts the sheet into two strips. In the other mode the 6×4 sheet comes out whole, uncut, with the three photos filling the sheet.
 
 Today this runs on Webcam Photobooth. The new app keeps the rhythm of the queue (arrive, pose, three taps, print) and replaces what freezes, what needs configuration in the middle of the party, and what the operator has to switch on by hand in the printer.
 
@@ -20,15 +20,15 @@ Today this runs on Webcam Photobooth. The new app keeps the rhythm of the queue 
 
 ### Operator
 
-The person who runs the party, on the laptop. Imports the template, adjusts the slots once, positions people, and triggers or fixes the framing when a group was cropped. Not a developer. In the middle of the queue they do not open printer properties, do not hunt for files and do not wait for a Windows dialog.
+The booth owner, who runs the party on **both** the laptop and the touch TV. Imports the template, adjusts the slots once, positions people, taps the white button (or the laptop's), and triggers or fixes the framing when a group was cropped. Every control on the TV (shutter, timer, copies, `Imprimir`, `Nova rodada`, webcam adjustments, gallery) is for the operator, who may do anything there; nothing on the TV needs to be hidden or locked from guests. Not a developer. In the middle of the queue they do not open printer properties, do not hunt for files and do not wait for a Windows dialog.
 
-Their success is: creating the event in a few fields, watching the montage grow with each photo, fixing a framing without redoing the round, and reprinting a montage that already came out.
+Their success is: creating the event in a few fields, shooting a round in three taps, watching the montage grow with each photo, fixing a framing without redoing the round, seeing a printer or camera problem at once, and reprinting a montage that already came out.
 
 ### Guests
 
-The group in front of the TV. They use a finger, often several at once, in a hurry and with little familiarity. They need to see themselves as in a mirror, understand that there are 3 photos, and hit one big button. They do not choose a template, do not move slots and do not see the file system.
+The group posing in front of the TV, at a distance. They do not touch the TV or the laptop. They need to see themselves as in a mirror, know when each photo is about to be taken and where to look (the webcam on top of the TV), and wait for the print. They do not choose a template, do not move slots and do not see the file system.
 
-Their success is: finding the white button, waiting for the countdown when there is one, and recognizing the strip in the preview before printing.
+Their success is: looking at the camera when the photo is taken and recognizing the strip in the preview before it prints.
 
 ## 3. Hardware and environment
 
@@ -195,6 +195,7 @@ While the party runs, the laptop shows:
 - A take-photo button, equivalent to the white button on the TV
 - The gallery of montages in the event folder
 - The printer status
+- A red alert next to `Encerrar evento`, in the header, while the printer or the camera has a problem, so the operator sees it without scrolling
 - `Encerrar evento`, which closes the TV and returns to the home screen
 
 The slot editor does not open while an event is in progress. To change Left/Top/Angle the operator ends the party.
@@ -205,8 +206,8 @@ Opens fullscreen on the TV monitor as soon as the event starts. The look follows
 
 - Live image mirrored. The person sees themselves as in a mirror, and the saved JPG shows exactly that
 - White button, bottom center. Each tap takes a photo. Three taps per round. A counter shows 1/3, 2/3 and 3/3
-- Timer: off, 5 s or 10 s, with a large countdown
-- Thumbnail of the last montage in the bottom-left corner. Tapping it opens the gallery
+- Timer: `Off` (the default: the photo is taken at once; the owner keeps the word `Off`, as on the iPhone camera), 5 s or 10 s. The countdown sits right under the webcam with `Olhe para a câmera ↑`, so the guests look at the lens, not down at the number
+- Thumbnail of the last montage in the bottom-left corner. Tapping it opens the gallery. With no montage yet, no empty ring is drawn
 - In place of the flash, the webcam adjustments icon
 - No grid toggle. The look is the iPhone camera's: a big white ring shutter centered at the bottom and dark translucent bars
 - No zoom on the TV. Two fingers held still for about 2 s close the TV window; the operator reopens it from the laptop with `Abrir TV`
@@ -218,15 +219,17 @@ Opens fullscreen on the TV monitor as soon as the event starts. The look follows
 
 ### 6.5 Printing (TV)
 
-After the third photo the TV shows the sheet preview, `Imprimir`, `Cancelar`, `Mais` and `Menos`. Copies start at 1 and stop at 10. One copy is always one 6×4 sheet. In 2 tiras mode the blade cuts that sheet in two. In 1 tira mode the sheet comes out whole, uncut, with the three photos in that mode's layout.
+After the third photo the TV shows the sheet preview, `Imprimir`, `Cancelar`, `Mais` and `Menos`. All the actions sit in one bottom bar, where the shutter was, and keep their place in every phase (preview, printing, printed, failure): `Menos`, the copies and `Mais` on one row, the main action and the secondary one below. Copies start at 1 and stop at 10. One copy is always one 6×4 sheet. In 2 tiras mode the blade cuts that sheet in two. In 1 tira mode the sheet comes out whole, uncut, with the three photos in that mode's layout.
 
-`Cancelar` discards the round and returns to the camera, with no file. `Imprimir` writes the JPG and sends it to the DS-RX1. Then the TV offers `Imprimir novamente` and `Nova rodada`.
+`Cancelar` discards the round and returns to the camera, with no file. `Imprimir` writes the JPG and sends it to the DS-RX1. Then the TV offers `Nova rodada` as the main action and `Imprimir novamente` as the secondary one.
+
+A printer problem (before or after `Imprimir`) shows on top of the screen in an amber banner, readable from a distance. After a failed print it reads the state and `Sua foto está guardada.`; the file name stays on the laptop.
 
 ![Figure 9 — Imprimir, Cancelar, Mais, Menos and the preview in the current app](assets/briefing/image3.png)
 
 ### 6.6 Gallery
 
-Lists the montages in the event folder. Opens from the thumbnail on the TV and from the laptop. Tapping or clicking opens fullscreen. The three-dot menu has `Imprimir novamente`.
+Lists the montages in the event folder, each labeled with its print time (`21:45:08`, from `21-45-08.jpg`). Opens from the thumbnail on the TV and from the laptop. Tapping or clicking opens fullscreen. The three-dot menu has `Imprimir novamente`.
 
 Assumption, until the owner says otherwise: `Imprimir novamente` from the gallery sends one copy, in the mode of the event that is open (the round's `Mais`/`Menos` belong to the round on screen, not to an older montage).
 
@@ -322,7 +325,7 @@ The TV updates the print preview with that framing.
 
 ### RF10 — Print screen
 
-After the third photo the TV shows the preview, `Imprimir`, `Cancelar`, `Mais` and `Menos`, with the text `1 Cópia`. `Mais` goes to 2, 3, up to 10. At 10, `Mais` is disabled. At 1, `Menos` is disabled.
+After the third photo the TV shows the preview, `Imprimir`, `Cancelar`, and `Menos`, `1 Cópia`, `Mais` in that order. `Mais` goes to 2, 3, up to 10. At 10, `Mais` is disabled. At 1, `Menos` is disabled.
 
 `Cancelar` returns to the camera with the counter at 1/3 and creates no file in the event folder.
 

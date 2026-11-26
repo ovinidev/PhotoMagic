@@ -6,7 +6,7 @@ import { stepCopies } from '@shared/round'
 import { ShareQrPanel, useShareState } from '@renderer/features/share'
 import { useMontagePreview } from '@renderer/shared/hooks/useMontagePreview'
 import { cn } from '@renderer/shared/utils/cn'
-import { GLASS } from '@renderer/shared/utils/glass'
+import { BAR, GLASS } from '@renderer/shared/utils/glass'
 import { PRINT_COPY, copiesLabel } from '../copy'
 import { usePrinterStatus } from '../hooks/usePrinterStatus'
 import { printProgress } from '../utils/printProgress'
@@ -29,13 +29,14 @@ function TvAction({ label, icon, onClick, disabled, primary }: { label: string; 
 }
 
 /**
- * The TV print screen (PRD §6.5, DESIGN §14, figure 9): over the darkened camera, `Imprimir` and
- * `Cancelar` on one side, `Mais` and `Menos` on the other, the copies in the middle and the sheet
- * preview below. After a print, `Imprimir novamente` and `Nova rodada`; a failure keeps the round
- * and offers to try again. A printer that is not ready shows its state before anyone taps
- * `Imprimir`. While a job runs and once it is printed, the sheet preview becomes the print
- * animation (`PrintJob`), driven only by the steps main reports. Every action is an invoke; main
- * owns the round.
+ * The TV print screen (PRD §6.5, DESIGN §14, figure 9). The operator runs the TV; the guests watch
+ * from a distance. Over the darkened camera: a printer warning on top when there is one, the sheet
+ * preview (or the print animation, `PrintJob`, driven only by the steps main reports) and the
+ * download QR codes. Every action sits in one bottom bar that never moves between phases, where the
+ * shutter was: `Menos`, the copies and `Mais`, then the main action and the secondary one. Before a
+ * print `Imprimir` leads; after it `Nova rodada` leads and `Imprimir novamente` is secondary; a
+ * failure keeps the round and leads with `Tentar novamente`. Every action is an invoke; main owns the
+ * round.
  */
 export function PrintScreen({ session }: { session: EventSession }) {
   const preview = useMontagePreview(session.previewRevision)
@@ -50,17 +51,62 @@ export function PrintScreen({ session }: { session: EventSession }) {
   // Each job (Imprimir, Imprimir novamente) starts the sheet back inside the printer.
   const [job, setJob] = useState({ count: 0, busy })
   if (job.busy !== busy) setJob({ count: job.count + (busy ? 1 : 0), busy })
+  const printerWarning = printer && printer.kind !== 'ready' && (phase.kind === 'review' || phase.kind === 'printed') ? PRINT_COPY.status[printer.kind] : null
 
   return (
-    <div data-testid="print-screen" data-phase={phase.kind} className="absolute inset-0 flex flex-col items-center justify-center gap-16 bg-black/65 px-16">
+    <div data-testid="print-screen" data-phase={phase.kind} className="absolute inset-0 flex flex-col bg-black/65">
       {/* The symbol only, outside the sheet preview, at most 48 px (DESIGN §14). */}
       <img src={markUrl} alt="" aria-hidden data-testid="print-mark" className="absolute top-12 right-12 size-12 invert" draggable={false} />
-      <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-10">
-        <div className="flex justify-start gap-10">
+
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 pt-28 pb-6">
+        <div role="status" aria-live="polite" className="w-full empty:hidden">
+          {phase.kind === 'print-failed' ? (
+            <div data-testid="tv-print-alert" className="rounded-[32px] bg-warning px-10 py-8 text-center text-ink">
+              <p className="flex items-center justify-center gap-4 text-5xl font-semibold">
+                <span aria-hidden>⚠</span>
+                <span>{PRINT_COPY.failures[phase.reason]}</span>
+              </p>
+              {phase.fileName ? <p className="mt-4 text-3xl">{PRINT_COPY.savedKept}</p> : null}
+            </div>
+          ) : printerWarning ? (
+            <p data-testid="tv-printer-status" className="rounded-[32px] bg-warning px-10 py-6 text-center text-4xl font-semibold text-ink">
+              {printerWarning}
+            </p>
+          ) : null}
+        </div>
+
+        {/* The sheet stays narrower than the screen so preview, animation and QR codes fit above the action bar. */}
+        <div className="flex w-[78%] justify-center">
+        {progress.kind === 'job' ? (
+          <PrintJob key={job.count} progress={progress} previewUrl={preview.status === 'ready' ? preview.url : null} />
+        ) : (
+          <div className="relative flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[24px] bg-white/10 shadow-2xl">
+            {preview.status === 'ready' && preview.url ? (
+              <img src={preview.url} alt={PRINT_COPY.previewAlt} data-testid="print-preview" className="h-full w-full object-contain" draggable={false} />
+            ) : (
+              <p className="text-3xl text-white/80">{preview.status === 'error' ? PRINT_COPY.previewError : PRINT_COPY.previewLoading}</p>
+            )}
+          </div>
+        )}
+        </div>
+
+        {/* Offline photo download (DESIGN §17): shown once the montage is saved and the local server is up. */}
+        <ShareQrPanel state={share} />
+      </div>
+
+      <div data-testid="print-actions" className={cn('flex flex-col items-center gap-6 px-12 pt-8 pb-12', BAR)}>
+        <div className="flex items-center gap-12">
+          <TvAction label={PRINT_COPY.less} icon="−" disabled={busy || copies <= COPIES.min} onClick={() => setCopies(-1)} />
+          <p data-testid="copies" className="min-w-72 text-center text-5xl font-semibold whitespace-nowrap text-white tabular-nums">
+            {copiesLabel(copies)}
+          </p>
+          <TvAction label={PRINT_COPY.more} icon="+" disabled={busy || copies >= COPIES.max} onClick={() => setCopies(1)} />
+        </div>
+        <div className="flex items-start justify-center gap-24">
           {phase.kind === 'printed' ? (
             <>
-              <TvAction label={PRINT_COPY.again} icon="⎙" primary onClick={() => run(api.reprint)} />
-              <TvAction label={PRINT_COPY.newRound} icon="↺" onClick={() => run(api.newRound)} />
+              <TvAction label={PRINT_COPY.newRound} icon="↺" primary onClick={() => run(api.newRound)} />
+              <TvAction label={PRINT_COPY.again} icon="⎙" onClick={() => run(api.reprint)} />
             </>
           ) : (
             <>
@@ -69,42 +115,6 @@ export function PrintScreen({ session }: { session: EventSession }) {
             </>
           )}
         </div>
-        <p data-testid="copies" className="text-center text-5xl font-semibold whitespace-nowrap text-white tabular-nums">
-          {copiesLabel(copies)}
-        </p>
-        <div className="flex justify-end gap-10">
-          <TvAction label={PRINT_COPY.more} icon="+" disabled={busy || copies >= COPIES.max} onClick={() => setCopies(1)} />
-          <TvAction label={PRINT_COPY.less} icon="−" disabled={busy || copies <= COPIES.min} onClick={() => setCopies(-1)} />
-        </div>
-      </div>
-
-      {progress.kind === 'job' ? (
-        <PrintJob key={job.count} progress={progress} previewUrl={preview.status === 'ready' ? preview.url : null} />
-      ) : (
-        <div className="relative flex aspect-[1844/1240] w-full items-center justify-center overflow-hidden rounded-[24px] bg-white/10 shadow-2xl">
-          {preview.status === 'ready' && preview.url ? (
-            <img src={preview.url} alt={PRINT_COPY.previewAlt} data-testid="print-preview" className="h-full w-full object-contain" draggable={false} />
-          ) : (
-            <p className="text-3xl text-white/80">{preview.status === 'error' ? PRINT_COPY.previewError : PRINT_COPY.previewLoading}</p>
-          )}
-        </div>
-      )}
-
-      {/* Offline photo download (DESIGN §17): shown once the montage is saved and the local server is up. */}
-      <ShareQrPanel state={share} />
-
-      <div role="status" aria-live="polite" className="min-h-24 text-center text-white">
-        {printer && printer.kind !== 'ready' && (phase.kind === 'review' || phase.kind === 'printed') ? (
-          <p data-testid="tv-printer-status" className="text-3xl font-semibold text-white/90">
-            {PRINT_COPY.status[printer.kind]}
-          </p>
-        ) : null}
-        {phase.kind === 'print-failed' ? (
-          <>
-            <p className="text-4xl font-semibold">{PRINT_COPY.failures[phase.reason]}</p>
-            {phase.fileName ? <p className="mt-3 text-2xl text-white/80">{PRINT_COPY.savedKept(phase.fileName)}</p> : null}
-          </>
-        ) : null}
       </div>
     </div>
   )

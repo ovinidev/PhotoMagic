@@ -397,7 +397,7 @@ Status, from the spooler, polled every 5 s (every 250 ms for the simulation) and
 | could not read / spooler unknown | `SERVER_UNKNOWN`, helper failure | O driver não informou papel nem ribbon |
 | no flag | | Impressora pronta |
 
-A failed send with no flag reads `Não foi possível imprimir. O driver não informou papel nem ribbon`. The laptop shows the printer line during the event. The TV print screen shows the state above its buttons when the printer is not ready, before anyone taps `Imprimir`.
+A failed send with no flag reads `Não foi possível imprimir. O driver não informou papel nem ribbon`. The laptop shows the printer line during the event. The TV print screen shows the state in the amber banner on top when the printer is not ready, before anyone taps `Imprimir`. The laptop header also shows a red alert while the printer or the camera has a problem.
 
 Other options visible in the driver (border, glossy overcoat, print re-try, page layout) are not changed by this app.
 
@@ -603,17 +603,17 @@ The look follows the iPhone camera app (reference: dark translucent bars, a larg
 
 - The image fills the core, edge to edge, already mirrored
 - Top bar: dark translucent strip, 160 px tall, with the adjustments icon (a white line sun, 96 px target) centered where the iPhone has the flash. No grid toggle and no flip-camera icon
-- Bottom bar: dark translucent; the white shutter in the center, a 240 px ring (10 px white border) around a 192 px filled white circle. Pressed, the circle shrinks to 86% and dims; during a countdown or a capture it is disabled at half opacity. The 128 px circular thumbnail of the last montage on the left; the timer (off, 5 s, 10 s) as a dark pill of three targets on the right, each at least 64 px, the selected one in iPhone yellow (`#ffd60a`) on a light chip
+- Bottom bar: dark translucent; the white shutter in the center, a 240 px ring (10 px white border) around a 192 px filled white circle. Pressed, the circle shrinks to 86% and dims; during a countdown or a capture it is disabled at half opacity. The 128 px circular thumbnail of the last montage on the left; the timer (`Off`, `5s`, `10s`; `Off` is the default, an instant photo, and stays in English by the owner's choice) as a dark pill of three targets on the right, each at least 64 px, the selected one in iPhone yellow (`#ffd60a`) on a light chip
 - `1/3` counter in a dark pill above the shutter, in white, weight 600, 48 px
-- Countdown in the center of the image, about 18% of the logical height
+- Countdown right under the top bar (and so under the webcam), about 300 px tall, with `Olhe para a câmera ↑` in a dark pill below it: the guests pose at a distance and look where the number is
 - The capture error and the webcam panel open under the top bar
 - The bars are `rgba(0, 0, 0, 0.45)` with `backdrop-filter: blur(24px)`; without blur they fall back to `rgba(0, 0, 0, 0.7)`. Messages and the webcam panel keep the frosted glass (`rgba(28, 28, 30, 0.62)`, fallback `0.72`), opaque enough for the label to stay legible
 
 The webcam panel opens from the adjustments icon as a strong-glass sheet under the top bar, with the same controls as the laptop card. The gallery grid and the fullscreen view are rendered into `document.body`, because the bottom bar's `backdrop-filter` would make `position: fixed` relative to the bar.
 
-The print screen keeps the image of the last preview in the background, darkened, and floats the controls as in figure 9: `Imprimir` and `Cancelar` on one side, `Mais` and `Menos` on the other, the quantity in the center, the sheet preview below. Each target is at least 64 px; the drawn circle may be larger. Label under the icon, in white: `Imprimir`, `Cancelar`, `Mais`, `Menos`.
+The print screen keeps the image of the last preview in the background, darkened. On top, an amber banner (`--warning`, dark ink) when the printer is not ready or the print failed; then the sheet preview (or the print animation) and the download QR codes. All the controls sit in one bottom bar, the same translucent bar as the shutter's, and never move between phases: `Menos`, the quantity and `Mais` on the first row; the main action (white circle) and the secondary one below (`Imprimir`/`Cancelar`, then `Nova rodada`/`Imprimir novamente`, or `Tentar novamente`/`Cancelar` after a failure). Each target is at least 64 px; the drawn circle may be larger. Label under the icon, in white. The operator runs the TV; the guests only watch.
 
-![Figure 9 — Layout the print screen keeps](assets/briefing/image3.png)
+![Figure 9 — Reference: the current app's print screen; the controls now sit in the bottom bar](assets/briefing/image3.png)
 
 ### Print progress
 

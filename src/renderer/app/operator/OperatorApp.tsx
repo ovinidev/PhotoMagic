@@ -1,5 +1,7 @@
 import logoUrl from '@brand/logo.png'
 import markUrl from '@brand/mark-header.png'
+import { CameraAlert } from '@renderer/features/camera'
+import { PrinterAlert } from '@renderer/features/print'
 import { EndEventButton, RoundScreen, SESSION_COPY } from '@renderer/features/session'
 import { EventGalleryQr, useShareState } from '@renderer/features/share'
 import { useSessionState } from '@renderer/shared/hooks/useSessionState'
@@ -79,7 +81,13 @@ export function OperatorApp() {
           <span data-testid="app-version">
             <VersionLabel state={version} />
           </span>
-          {session ? <EndEventButton /> : null}
+          {session ? (
+            <>
+              <CameraAlert />
+              <PrinterAlert />
+              <EndEventButton />
+            </>
+          ) : null}
         </div>
       </header>
       <main className="flex min-h-0 flex-1 justify-center overflow-auto">

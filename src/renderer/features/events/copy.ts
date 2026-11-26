@@ -49,4 +49,10 @@ export const EVENTS_COPY = {
     'already-open': 'Já existe um evento aberto.',
   } satisfies Record<EventStartError, string>,
   startFailed: 'Não foi possível iniciar o evento. Tente de novo.',
+  /** Under a disabled `Iniciar evento`: the first thing still missing. */
+  blocked: {
+    name: 'Digite o nome do evento para começar.',
+    template: 'Importe um template de 1844 × 1240 px para começar.',
+    tv: 'Conecte a TV na vertical para começar.',
+  },
 } as const

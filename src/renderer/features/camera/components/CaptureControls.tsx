@@ -8,8 +8,8 @@ import type { ShutterState } from '../hooks/useShutter'
 import { BAR, GLASS } from '@renderer/shared/utils/glass'
 
 /**
- * TV capture chrome over the live image (DESIGN §14), in the iPhone camera look: the countdown in the
- * middle, and a dark translucent bottom bar with the `1/3` counter pill above a 240 px white shutter
+ * TV capture chrome over the live image (DESIGN §14), in the iPhone camera look: the countdown right
+ * under the webcam, so the guests posing at a distance look at the lens and not down at the number, and a dark translucent bottom bar with the `1/3` counter pill above a 240 px white shutter
  * in a ring, the gallery thumbnail to its left and the timer (off, 5 s, 10 s) to its right. The
  * shutter shrinks and dims while pressed. Every target is at least 64 px.
  */
@@ -20,10 +20,11 @@ export function CaptureControls({ session, shutter, disabled }: { session: Event
   return (
     <>
       {shutter.countdown !== null ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span data-testid="countdown" aria-live="assertive" className="text-[345px] leading-none font-semibold text-white tabular-nums drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
+        <div className="pointer-events-none absolute inset-x-0 top-40 flex flex-col items-center gap-4">
+          <span data-testid="countdown" aria-live="assertive" className="text-[300px] leading-none font-semibold text-white tabular-nums drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
             {shutter.countdown}
           </span>
+          <span className="rounded-full bg-black/40 px-8 py-3 text-4xl font-semibold text-white">{CAPTURE_COPY.lookUp}</span>
         </div>
       ) : null}
       {shutter.flashing ? <div aria-hidden className="pointer-events-none absolute inset-0 bg-white motion-reduce:hidden" /> : null}
