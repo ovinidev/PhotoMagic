@@ -1,9 +1,5 @@
 /** pt-BR copy of the laptop event screen (PRD §6.3). */
 export const SESSION_COPY = {
-  live: 'Câmera ao vivo',
-  liveWaiting: 'Aguardando a imagem da TV…',
-  liveAlt: 'Imagem da câmera, como a TV mostra',
-  guide: (photo: number) => `Área da foto ${photo} na montagem`,
   montage: 'Montagem da rodada',
   montageAlt: 'Prévia da montagem da rodada',
   montageLoading: 'Montando a prévia…',

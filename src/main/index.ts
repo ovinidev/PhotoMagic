@@ -150,7 +150,6 @@ if (!app.requestSingleInstanceLock()) {
       desktop,
       isGuestWindow,
       guestContents: () => (guestContents && !guestContents.isDestroyed() ? guestContents : null),
-      operatorContents: () => (operatorWindow && !operatorWindow.isDestroyed() ? operatorWindow.webContents : null),
     })
 
     operatorWindow = createOperatorWindow({ fitToScreen: !flags.e2e })

@@ -1,8 +1,7 @@
 import type { CameraFixture } from '@shared/runtime'
 
 /**
- * Chromium permission policy (pure). Only the TV window may open the camera, video only:
- * the laptop gets frames from the TV, never from a second `getUserMedia`. Everything else is denied.
+ * Only the TV window may open the camera, with video only. All other permissions are denied.
  */
 export function allowPermission(request: {
   permission: string
