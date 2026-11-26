@@ -11,7 +11,6 @@ import {
   displayStateSchema,
   printerStatusSchema,
   roundPhaseSchema,
-  tvOpenInputSchema,
   tvOpenResultSchema,
   sessionPhotoSchema,
   sessionStateSchema,
@@ -58,9 +57,7 @@ describe('IPC contract', () => {
     expect(displayStateSchema.safeParse({ guest: { kind: 'missing' }, tv: { kind: 'detached', reason: 'gone' } }).success).toBe(false)
   })
 
-  it('tv:open takes the landscape confirmation and says why it could not open', () => {
-    expect(tvOpenInputSchema.safeParse({ allowLandscape: true }).success).toBe(true)
-    expect(tvOpenInputSchema.safeParse({}).success).toBe(false)
+  it('tv:open says why it could not open', () => {
     const state = { guest: { kind: 'missing' }, tv: { kind: 'closed' } }
     expect(tvOpenResultSchema.safeParse({ ok: false, reason: 'missing', state }).success).toBe(true)
     expect(tvOpenResultSchema.safeParse({ ok: true, reason: 'missing', state }).success).toBe(false)

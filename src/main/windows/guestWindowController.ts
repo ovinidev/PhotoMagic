@@ -1,5 +1,5 @@
 import { chooseGuestDisplay, placeGuestWindow, type DisplayInfo } from '@shared/displays'
-import type { DisplayState, TvOpenInput, TvOpenResult, TvWindowState } from '@shared/ipc'
+import type { DisplayState, TvOpenResult, TvWindowState } from '@shared/ipc'
 import type { DisplaySource } from './displaySource'
 
 /** What the controller needs from the TV `BrowserWindow`. Injected so the logic is tested without Electron. */
@@ -16,7 +16,7 @@ export type GuestWindowHandle = {
 
 export type GuestWindowController = {
   state: () => DisplayState
-  open: (input: TvOpenInput) => TvOpenResult
+  open: () => TvOpenResult
   close: () => DisplayState
   /** The two-finger hold on the TV: hides an open TV window without closing it or ending the event. */
   dismiss: () => DisplayState
@@ -37,7 +37,6 @@ export function createGuestWindowController(deps: {
 }): GuestWindowController {
   let handle: GuestWindowHandle | null = null
   let tv: TvWindowState = { kind: 'closed' }
-  let allowLandscape = false
   const listeners: Array<(state: DisplayState) => void> = []
 
   const state = (): DisplayState => ({ guest: chooseGuestDisplay(deps.displays.list()), tv })
@@ -51,7 +50,6 @@ export function createGuestWindowController(deps: {
     const placement = placeGuestWindow({
       displays: deps.displays.list(),
       currentDisplayId: tv.kind === 'open' ? tv.display.id : null,
-      allowLandscape,
     })
     if (placement.kind === 'show') {
       // `display-metrics-changed` also fires for work-area or scale changes elsewhere: re-placing
@@ -73,23 +71,19 @@ export function createGuestWindowController(deps: {
   return {
     state,
 
-    open: (input) => {
-      const allow = allowLandscape || input.allowLandscape
+    open: () => {
       if (!handle) {
-        const placement = placeGuestWindow({ displays: deps.displays.list(), currentDisplayId: null, allowLandscape: allow })
+        const placement = placeGuestWindow({ displays: deps.displays.list(), currentDisplayId: null })
         if (placement.kind === 'hide') return { ok: false, reason: placement.reason, state: state() }
-        allowLandscape = allow
         const window = deps.createWindow()
         handle = window
         window.onClosed(() => {
           if (handle !== window) return
           handle = null
           tv = { kind: 'closed' }
-          allowLandscape = false
           notify()
         })
       }
-      allowLandscape = allow
       reconcile(handle)
       notify()
       return tv.kind === 'detached' ? { ok: false, reason: tv.reason, state: state() } : { ok: true, state: state() }
@@ -99,7 +93,6 @@ export function createGuestWindowController(deps: {
       const window = handle
       handle = null
       tv = { kind: 'closed' }
-      allowLandscape = false
       window?.destroy()
       notify()
       return state()

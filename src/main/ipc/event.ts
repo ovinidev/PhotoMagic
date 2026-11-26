@@ -40,7 +40,7 @@ export function registerEventHandlers(deps: EventDeps): void {
     }
   })
 
-  handleInvoke(IPC_CHANNELS.eventStart, async ({ name, mode, allowLandscape }): Promise<EventStartResult> => {
+  handleInvoke(IPC_CHANNELS.eventStart, async ({ name, mode }): Promise<EventStartResult> => {
     if (session.isOpen()) return { ok: false, reason: 'already-open' }
     const checked = checkEventName(name)
     if (!checked.ok) return { ok: false, reason: 'invalid-name' }
@@ -49,7 +49,7 @@ export function registerEventHandlers(deps: EventDeps): void {
     const template = await readTemplate(deps.userData, mode)
 
     // The TV first: with no TV the event does not start and no folder appears (RF04).
-    const opened = tv.open({ allowLandscape })
+    const opened = tv.open()
     if (!opened.ok) {
       // A TV that went away right after opening leaves a hidden window; do not keep it around.
       if (opened.state.tv.kind !== 'closed') tv.close()

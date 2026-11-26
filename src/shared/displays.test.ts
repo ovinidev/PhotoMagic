@@ -38,14 +38,14 @@ describe('chooseGuestDisplay', () => {
 
 describe('placeGuestWindow', () => {
   it('shows the window on the chosen portrait TV', () => {
-    expect(placeGuestWindow({ displays: [laptop, tv], currentDisplayId: null, allowLandscape: false })).toEqual({
+    expect(placeGuestWindow({ displays: [laptop, tv], currentDisplayId: null })).toEqual({
       kind: 'show',
       display: tv,
     })
   })
 
   it('hides the window when the TV is unplugged instead of moving it to the laptop', () => {
-    expect(placeGuestWindow({ displays: [laptop], currentDisplayId: tv.id, allowLandscape: false })).toEqual({
+    expect(placeGuestWindow({ displays: [laptop], currentDisplayId: tv.id })).toEqual({
       kind: 'hide',
       reason: 'missing',
     })
@@ -53,32 +53,26 @@ describe('placeGuestWindow', () => {
 
   it('stays on the current TV when another portrait monitor appears', () => {
     expect(
-      placeGuestWindow({ displays: [laptop, tv, tallMonitor], currentDisplayId: tallMonitor.id, allowLandscape: false }),
+      placeGuestWindow({ displays: [laptop, tv, tallMonitor], currentDisplayId: tallMonitor.id }),
     ).toEqual({ kind: 'show', display: tallMonitor })
   })
 
   it('follows the current TV when its bounds change', () => {
     const moved = { ...tv, x: -1080 }
-    expect(placeGuestWindow({ displays: [laptop, moved], currentDisplayId: tv.id, allowLandscape: false })).toEqual({
+    expect(placeGuestWindow({ displays: [laptop, moved], currentDisplayId: tv.id })).toEqual({
       kind: 'show',
       display: moved,
     })
   })
 
-  it('hides on a landscape TV unless the operator confirmed it', () => {
-    expect(placeGuestWindow({ displays: [laptop, tvLandscape], currentDisplayId: null, allowLandscape: false })).toEqual({
-      kind: 'hide',
-      reason: 'landscape',
-    })
-    expect(placeGuestWindow({ displays: [laptop, tvLandscape], currentDisplayId: null, allowLandscape: true })).toEqual({
-      kind: 'show',
-      display: tvLandscape,
-    })
+  it('always hides on a landscape TV', () => {
+    expect(placeGuestWindow({ displays: [laptop, tvLandscape], currentDisplayId: null })).toEqual({ kind: 'hide', reason: 'landscape' })
+    expect(placeGuestWindow({ displays: [laptop, tvLandscape], currentDisplayId: tvLandscape.id })).toEqual({ kind: 'hide', reason: 'landscape' })
   })
 
   it('leaves a TV that was rotated to landscape unless landscape was confirmed', () => {
     const rotated = { ...tv, width: 1920, height: 1080 }
-    expect(placeGuestWindow({ displays: [laptop, rotated], currentDisplayId: tv.id, allowLandscape: false })).toEqual({
+    expect(placeGuestWindow({ displays: [laptop, rotated], currentDisplayId: tv.id })).toEqual({
       kind: 'hide',
       reason: 'landscape',
     })

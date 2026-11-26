@@ -87,18 +87,12 @@ test.describe('create event: TV window (RF04)', () => {
   test.describe('with a landscape TV', () => {
     test.use({ appEnv: { FOTOMAGICA_DISPLAYS: 'landscape-tv' } })
 
-    test('RF04 warns about a landscape TV and opens after confirmation', async ({ app, operatorWindow }) => {
+    test('RF04 never opens the camera on a landscape TV', async ({ app, operatorWindow }) => {
       await fillEvent(operatorWindow, { name: 'Festa' })
       await expect(operatorWindow.getByTestId('tv-status')).toContainText('A TV não está na vertical')
       await expect(operatorWindow.getByRole('button', { name: 'Iniciar evento' })).toBeDisabled()
+      await expect(operatorWindow.getByRole('checkbox')).toHaveCount(0)
       expect(app.windows()).toHaveLength(1)
-
-      await operatorWindow.getByRole('checkbox', { name: 'Abrir a câmera na TV mesmo na horizontal' }).check()
-      const opened = app.waitForEvent('window')
-      await operatorWindow.getByRole('button', { name: 'Iniciar evento' }).click()
-      await opened
-      await expect(operatorWindow.getByTestId('tv-status')).toContainText('Câmera aberta na TV')
-      expect(await tvPlacement(operatorWindow)).toEqual({ kind: 'open', bounds: { x: 1920, y: 0, width: 1920, height: 1080 } })
     })
   })
 })

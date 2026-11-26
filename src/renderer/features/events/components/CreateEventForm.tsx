@@ -23,7 +23,6 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
   const nameHintId = useId()
   const [name, setName] = useState('')
   const [mode, setMode] = useState<PrintMode>(DEFAULT_PRINT_MODE)
-  const [allowLandscape, setAllowLandscape] = useState(false)
   const [pending, setPending] = useState(false)
   const [startError, setStartError] = useState<EventStartError | 'failed' | null>(null)
   const [display] = useDisplayState()
@@ -33,8 +32,8 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
   const showNameError = !nameCheck.ok && name.length > 0
   const template = templates.status === 'ready' ? templates.value[mode] : null
   const guest = display.status === 'ready' ? display.value.guest.kind : null
-  const landscape = guest === 'landscape-external'
-  const tvReady = guest === 'portrait' || (landscape && allowLandscape)
+  // The booth TV always stands upright: only a portrait TV opens the camera (RF04).
+  const tvReady = guest === 'portrait'
   // No template is fine: the sheet is plain white with the standard boxes (PRD §6.1). A rejected file
   // still blocks the start until a valid one is imported (RF01).
   const canStart = nameCheck.ok && templates.status === 'ready' && imports[mode].status === 'idle' && tvReady && !pending
@@ -45,7 +44,7 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
     setPending(true)
     setStartError(null)
     try {
-      const result = await window.fotomagica.event.start({ name, mode, allowLandscape })
+      const result = await window.fotomagica.event.start({ name, mode })
       // On success main pushes `session:state` and the app moves to the event screen.
       if (!result.ok) setStartError(result.reason)
     } catch {
@@ -128,17 +127,6 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
         <div className="flex flex-col gap-2 border-t border-line pt-4">
           <h2 className="text-base font-medium text-ink">{EVENTS_COPY.tv}</h2>
           <TvStatus view={display} />
-          {landscape ? (
-            <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-ink">
-              <input
-                type="checkbox"
-                checked={allowLandscape}
-                onChange={(event) => setAllowLandscape(event.target.checked)}
-                className="size-5 cursor-pointer accent-ink"
-              />
-              {EVENTS_COPY.landscapeConfirm}
-            </label>
-          ) : null}
         </div>
 
         {startError ? (

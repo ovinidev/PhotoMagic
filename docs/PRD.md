@@ -280,7 +280,7 @@ Given a second monitor in portrait, starting the event opens a frameless window 
 
 Given only the laptop, the event does not open the camera and the screen explains that the TV was not found.
 
-Given a second monitor in landscape, the screen warns that the TV is not in portrait. The operator can confirm and open anyway.
+Given a second monitor in landscape, the screen warns that the TV is not in portrait and `Iniciar evento` stays disabled. There is no override: the booth TV always stands upright, so the camera never opens on a landscape TV.
 
 ### RF05 — Mirrored live view, identical file
 
