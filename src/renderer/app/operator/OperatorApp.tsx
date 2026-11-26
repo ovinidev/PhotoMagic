@@ -1,5 +1,4 @@
 import logoUrl from '@brand/logo.png'
-import markUrl from '@brand/mark-header.png'
 import { CameraAlert } from '@renderer/features/camera'
 import { PrinterAlert } from '@renderer/features/print'
 import { EndEventButton, RoundScreen, SESSION_COPY } from '@renderer/features/session'
@@ -65,31 +64,36 @@ export function OperatorApp() {
   const [share] = useShareState()
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-bg text-ink">
-      <header className="flex h-14 shrink-0 items-center gap-4 border-b border-line bg-bg-raised px-8">
-        <img src={markUrl} alt="" aria-hidden className="size-9 shrink-0" draggable={false} />
-        <span className="font-display shrink-0 text-2xl text-ink">Foto Mágica</span>
-        {session ? (
-          <p data-testid="event-title" className="flex min-w-0 items-baseline gap-3 truncate border-l border-line pl-4">
-            <span className="font-display truncate text-xl text-ink">{session.name}</span>
+    <div className="relative flex h-full min-h-0 flex-col bg-bg text-ink">
+      {/*
+        No branded header: the create-event card already carries the logo and the name. The version and
+        update status sit alone in the top-right corner; during an event the same top row adds the event
+        name and the controls the operator needs (alerts, `Encerrar evento`), still without a logo.
+      */}
+      {session ? (
+        <div className="flex h-14 shrink-0 items-center gap-4 px-8">
+          <p data-testid="event-title" className="flex min-w-0 items-baseline gap-3 truncate">
+            <span className="font-display truncate text-2xl text-ink">{session.name}</span>
             <span className="eyebrow">{SESSION_COPY.modes[session.mode]}</span>
           </p>
-        ) : null}
-        {/* Version and update status live here so no page needs a footer (or a vertical scroll). */}
-        <div className="ml-auto flex shrink-0 items-center gap-4 text-[13px] text-ink-soft">
+          <div className="ml-auto flex shrink-0 items-center gap-4 text-[13px] text-ink-soft">
+            <UpdateLabel status={update} />
+            <span data-testid="app-version">
+              <VersionLabel state={version} />
+            </span>
+            <CameraAlert />
+            <PrinterAlert />
+            <EndEventButton />
+          </div>
+        </div>
+      ) : (
+        <div className="pointer-events-none absolute top-3 right-6 z-10 flex items-center gap-4 text-[13px] text-ink-soft">
           <UpdateLabel status={update} />
           <span data-testid="app-version">
             <VersionLabel state={version} />
           </span>
-          {session ? (
-            <>
-              <CameraAlert />
-              <PrinterAlert />
-              <EndEventButton />
-            </>
-          ) : null}
         </div>
-      </header>
+      )}
       <main className="flex min-h-0 flex-1 justify-center overflow-auto">
         {sessionView.status === 'loading' ? <Splash /> : session ? <RoundScreen session={session} /> : <HomePage />}
       </main>
