@@ -13,7 +13,8 @@ export const RESPONSE_PREFIX = 'FMJ '
 export type HelperRequest =
   | { action: 'list' }
   | { action: 'capabilities'; printer: string }
-  | { action: 'print'; printer: string; jpegPath: string; copies: number; documentName: string; settings: TicketSetting[] }
+  | { action: 'print'; printer: string; jpegPath: string; copies: number; documentName: string; settings: TicketSetting[]; restore: boolean }
+  | { action: 'preferences'; printer: string }
 
 const asciiJson = (value: unknown) => JSON.stringify(value).replace(/[\u007f-\uffff]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`)
 
@@ -71,6 +72,12 @@ export const printResponseSchema = z.discriminatedUnion('ok', [
     ok: z.literal(true),
     page: z.object({ width: z.number(), height: z.number() }),
   }),
+  helperErrorSchema,
+])
+
+/** The options the queue's saved printing preferences select, feature by feature. */
+export const preferencesResponseSchema = z.discriminatedUnion('ok', [
+  z.object({ ok: z.literal(true), selections: z.array(z.object({ feature: qnameSchema, option: qnameSchema })) }),
   helperErrorSchema,
 ])
 

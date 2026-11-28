@@ -12,7 +12,7 @@ function setup(results: PrintResult[] = [{ ok: true }]) {
   const print = vi.fn<Printer['print']>(async () => results.shift() ?? { ok: true })
   const saveMontage = vi.fn(async () => ({ fileName: '21-45-08.jpg', path: '/Desktop/Aniversário AJ/21-45-08.jpg' }))
   const render = vi.fn(async (_input: unknown, output: { kind: string }) => new Uint8Array([output.kind === 'montage' ? 9 : 7]))
-  const session = createSession({ render, saveMontage, printer: { status: async () => ({ kind: 'ready' }), print }, onChange: (state) => states.push(state) })
+  const session = createSession({ render, saveMontage, printer: { status: async () => ({ kind: 'ready' }), print, inspect: async () => ({ queue: null, preferences: null, detail: null }) }, onChange: (state) => states.push(state) })
   return { session, states, print, saveMontage, render }
 }
 

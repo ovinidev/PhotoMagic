@@ -16,12 +16,15 @@ export function createSimulatedPrinter({ dir, flags: initial }: { dir: string; f
 } {
   let flags = { ...initial }
   const status = (): PrinterStatus => ({ kind: flags.status })
+  // The queue's saved Windows preferences, as the DS-RX1 helper leaves them after a print.
+  let savedCut = 'Disable'
 
   return {
     setFlags: (next) => {
       flags = { ...flags, ...next }
     },
     status: async () => status(),
+    inspect: async () => ({ queue: 'DS-RX1 (simulada)', preferences: { paper: '(6x4)', orientation: 'Retrato', cut: savedCut }, detail: null }),
     print: async (ticket) => {
       if (flags.status !== 'ready') return { ok: false, reason: flags.status, detail: 'simulated' }
       if (flags.cut === 'unsupported') {
@@ -34,6 +37,7 @@ export function createSimulatedPrinter({ dir, flags: initial }: { dir: string; f
         const stem = `${String(count + 1).padStart(3, '0')}-${basename(ticket.jpegPath, '.jpg')}`
         await copyFile(ticket.jpegPath, join(dir, `${stem}.jpg`))
         await writeFile(join(dir, `${stem}.json`), JSON.stringify(ticket, null, 2))
+        if (!ticket.restorePreferences) savedCut = ticket.cut ? 'Enable (Printer V.1.10 or later)' : 'Disable'
         return { ok: true }
       } catch (error) {
         return { ok: false, reason: 'failed', detail: error instanceof Error ? error.message : String(error) }

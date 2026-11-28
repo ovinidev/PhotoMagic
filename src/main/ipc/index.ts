@@ -9,7 +9,7 @@ import { registerCameraHandlers } from './camera'
 import { registerDisplayHandlers } from './display'
 import { registerEventHandlers, type EventDeps } from './event'
 import { registerGalleryHandlers } from './gallery'
-import { registerPrinterHandlers } from './printer'
+import { registerPrinterHandlers, type PrinterSettingsStore } from './printer'
 import { registerShareHandlers } from './share'
 import { registerUpdateHandlers } from './update'
 import { registerWebcamHandlers } from './webcam'
@@ -30,6 +30,7 @@ export function registerIpcHandlers(
     isGuestWindow: (contents: WebContents) => boolean
     printerMonitor: PrinterMonitor
     printer: Printer
+    printerSettings: PrinterSettingsStore
     updateStatus: () => UpdateStatus
     zoom: OperatorZoom
     share: ShareService

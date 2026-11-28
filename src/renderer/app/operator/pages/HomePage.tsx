@@ -3,6 +3,7 @@ import logoUrl from '@brand/logo.png'
 import type { PrintMode } from '@shared/layout'
 import { CreateEventForm } from '@renderer/features/events'
 import { LayoutEditor } from '@renderer/features/layout'
+import { PrinterSettingsCard } from '@renderer/features/print'
 import { ShareSettingsCard } from '@renderer/features/share'
 
 /**
@@ -18,7 +19,12 @@ export function HomePage() {
     <div className="mx-auto flex w-full min-w-0 max-w-[1280px] flex-col items-center px-6 pt-1 pb-5">
       {/* RNF12: the full logo on the create-event screen, beside the title so the form fits the window. */}
       {/* The photo-download row sits in the form's left column so 1280×800 keeps no vertical scroll. */}
-      <CreateEventForm onEditLayout={setEditing} layoutRevision={layoutRevision} logo={<img src={logoUrl} alt="Foto Mágica" className="h-14 w-auto" draggable={false} />} footer={<ShareSettingsCard />} />
+      <CreateEventForm onEditLayout={setEditing} layoutRevision={layoutRevision} logo={<img src={logoUrl} alt="Foto Mágica" className="h-14 w-auto" draggable={false} />} footer={
+          <>
+            <PrinterSettingsCard />
+            <ShareSettingsCard />
+          </>
+        } />
       {editing ? <LayoutEditor
           initialMode={editing}
           onClose={() => {

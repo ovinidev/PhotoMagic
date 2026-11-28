@@ -101,6 +101,9 @@ const api: FotomagicaApi = {
   printer: {
     getStatus: () => invoke(IPC_CHANNELS.printerStatus, undefined),
     onStatus: (listener) => subscribe(IPC_CHANNELS.printerStatusChanged, listener),
+    getSettings: () => invoke(IPC_CHANNELS.printerGetSettings, undefined),
+    saveSettings: (settings) => invoke(IPC_CHANNELS.printerSaveSettings, settings),
+    inspect: () => invoke(IPC_CHANNELS.printerInspect, undefined),
   },
   update: {
     getStatus: () => invoke(IPC_CHANNELS.updateGetStatus, undefined),

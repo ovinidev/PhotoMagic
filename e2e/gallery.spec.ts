@@ -40,6 +40,8 @@ test.describe('gallery', () => {
     await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
     await expect(laptop.getByRole('button', { name: /Abrir a montagem/ })).toHaveCount(3)
     await tv.getByRole('button', { name: 'Nova rodada' }).click()
+    // Back at the camera first: a click while the print screen is leaving can miss the gallery button.
+    await expect(tv.getByTestId('photo-counter')).toHaveText('1/3')
     await tv.getByRole('button', { name: 'Abrir a galeria' }).click()
     await expect(tv.getByRole('dialog', { name: 'Galeria' }).getByRole('button', { name: /Abrir a montagem/ })).toHaveCount(3)
   })
@@ -94,7 +96,7 @@ test.describe('gallery', () => {
     await viewer.getByRole('button', { name: 'Mais opções' }).click()
     await viewer.getByRole('menuitem', { name: 'Imprimir novamente' }).click()
     await expect(viewer.getByTestId('gallery-reprint-status')).toHaveText('Montagem enviada para a impressora')
-    expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(folder, '20-00-00.jpg'), copies: 1, mode: 'two-strips', cut: true }])
+    expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(folder, '20-00-00.jpg'), copies: 1, mode: 'two-strips', cut: true, restorePreferences: true }])
     // No new file: the folder still has what it had.
     expect(readdirSync(folder).sort()).toEqual(['20-00-00.jpg', '20-05-00.jpg', 'IMG_0001.jpg', 'foto.png'])
   })

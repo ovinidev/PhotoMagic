@@ -10,6 +10,7 @@ describe('helper protocol', () => {
       copies: 2,
       documentName: 'Foto Mágica 21-45-08.jpg',
       settings: [],
+      restore: false,
     })
     expect(line.endsWith('\n')).toBe(true)
     expect(line.trimEnd()).not.toMatch(/[^\x20-\x7e]/)

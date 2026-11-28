@@ -3,8 +3,8 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, win32 } from 'node:path'
 import helperScript from './dnp/dnp-helper.ps1?raw'
 import { createHelperBridge, type HelperBridge } from './dnp/bridge'
-import { planTicket, type Capabilities } from './dnp/capabilities'
-import { capabilitiesResponseSchema, helperCommand, listResponseSchema, printResponseSchema, type HelperRequest } from './dnp/protocol'
+import { describePreferences, planTicket, type Capabilities } from './dnp/capabilities'
+import { capabilitiesResponseSchema, helperCommand, listResponseSchema, preferencesResponseSchema, printResponseSchema, type HelperRequest } from './dnp/protocol'
 import { dnpStatus } from './dnp/spooler'
 import type { PrintFailure, Printer, PrinterStatus, PrintResult } from './types'
 
@@ -21,6 +21,7 @@ const TIMEOUTS: Record<HelperRequest['action'], number> = {
   list: 20_000,
   capabilities: 30_000,
   print: 120_000,
+  preferences: 30_000,
 }
 
 /** States in which nothing is spooled: the sheet would sit in the Windows queue instead of coming out. */
@@ -102,6 +103,7 @@ export function createDnpPrinter({ bridge, log = () => {} }: { bridge: Pick<Help
         copies: ticket.copies,
         documentName: `Foto Mágica ${win32.basename(ticket.jpegPath)}`,
         settings: plan.settings,
+        restore: ticket.restorePreferences ?? false,
       }),
     )
     if (response.ok) {
@@ -122,7 +124,22 @@ export function createDnpPrinter({ bridge, log = () => {} }: { bridge: Pick<Help
     }
   }
 
+  const inspect: Printer['inspect'] = async () => {
+    try {
+      const { queue } = await readStatus()
+      if (!queue) return { queue: null, preferences: null, detail: 'Nenhuma impressora com DS-RX1 no nome.' }
+      const capabilities = await readCapabilities(queue)
+      if ('error' in capabilities) return { queue, preferences: null, detail: capabilities.error.ok ? null : capabilities.error.detail }
+      const response = preferencesResponseSchema.parse(await bridge.request({ action: 'preferences', printer: queue }))
+      if (!response.ok) return { queue, preferences: null, detail: `${response.stage}: ${response.message}` }
+      return { queue, preferences: describePreferences(capabilities, response.selections), detail: null }
+    } catch (error) {
+      return { queue: null, preferences: null, detail: message(error) }
+    }
+  }
+
   return {
+    inspect,
     status: async () => {
       try {
         return (await readStatus()).status

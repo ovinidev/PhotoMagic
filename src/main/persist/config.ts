@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { guideBoxListSchema, slotListSchema, webcamCapabilitiesSchema, webcamValuesSchema } from '@shared/ipc'
 import { SEED_LAYOUTS, migrateTwoStrips, type GuideBox, type Layouts, type PrintMode, type Slot } from '@shared/layout'
 import { NO_WEBCAM_VALUES, type WebcamCapabilities, type WebcamValues } from '@shared/webcam'
+import { defaultPrinterSettings, printerSettingsSchema, type PrinterSettings } from '@shared/printerSettings'
 import { defaultShareSettings, shareSettingsSchema, type ShareSettings } from '@shared/share'
 import { DEFAULT_USER_ZOOM, sanitizeUserZoom } from '@shared/zoom'
 
@@ -37,6 +38,8 @@ export type Config = {
   zoom: number
   /** Offline photo download over the event Wi-Fi (DESIGN §17). */
   share: ShareSettings
+  /** The 2" cut per mode and whether the Windows printing preferences go back after a print (DESIGN §10). */
+  printer: PrinterSettings
 }
 
 const noWebcam = (): Config['webcam'] => ({ values: { controls: {} }, capabilities: null })
@@ -68,13 +71,14 @@ const configSchema = z.object({
     .catch(noWebcam),
   zoom: z.number().optional().catch(undefined),
   share: shareSettingsSchema.catch(defaultShareSettings),
+  printer: printerSettingsSchema.catch(defaultPrinterSettings),
 })
 
 export const CONFIG_FILE = 'config.json'
 export const TEMPLATES_DIR = 'templates'
 
 export function defaultConfig(): Config {
-  return { layouts: { ...SEED_LAYOUTS }, templates: {}, boxes: {}, webcam: noWebcam(), zoom: DEFAULT_USER_ZOOM, share: defaultShareSettings() }
+  return { layouts: { ...SEED_LAYOUTS }, templates: {}, boxes: {}, webcam: noWebcam(), zoom: DEFAULT_USER_ZOOM, share: defaultShareSettings(), printer: defaultPrinterSettings() }
 }
 
 /** Parses whatever is on disk; never throws. */
@@ -92,7 +96,7 @@ export function parseConfig(raw: unknown): Config {
     if (saved && saved.length === SEED_LAYOUTS[mode].length) boxes[mode] = saved
   }
   const layouts: Layouts = { ...parsed.data.layouts, 'two-strips': migrateTwoStrips(parsed.data.layouts['two-strips']) }
-  return { layouts, templates, boxes, webcam: parsed.data.webcam as Config['webcam'], zoom: sanitizeUserZoom(parsed.data.zoom), share: parsed.data.share }
+  return { layouts, templates, boxes, webcam: parsed.data.webcam as Config['webcam'], zoom: sanitizeUserZoom(parsed.data.zoom), share: parsed.data.share, printer: parsed.data.printer }
 }
 
 export async function readConfig(userData: string): Promise<Config> {
@@ -147,3 +151,9 @@ export function saveBoxes(userData: string, mode: PrintMode, boxes: readonly Gui
 export function saveShare(userData: string, share: ShareSettings): Promise<Config> {
   return updateConfig(userData, (config) => ({ ...config, share }))
 }
+
+/** Writes the printer settings and leaves everything else as it is (DESIGN §10). */
+export function savePrinterSettings(userData: string, printer: PrinterSettings): Promise<Config> {
+  return updateConfig(userData, (config) => ({ ...config, printer }))
+}
+

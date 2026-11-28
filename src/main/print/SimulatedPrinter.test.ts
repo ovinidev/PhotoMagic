@@ -47,4 +47,15 @@ describe('SimulatedPrinter', () => {
     printer.setFlags({ cut: 'supported', delayMs: 0 })
     expect(await printer.print(ticketFor(jpegPath, 1, 'two-strips'))).toEqual({ ok: true })
   })
+
+  it('keeps the last cut in its saved preferences unless the ticket asks to restore them (printer screen)', async () => {
+    const { jpegPath, dir } = await setup()
+    const printer = createSimulatedPrinter({ dir, flags: { status: 'ready', cut: 'supported', delayMs: 0 } })
+    expect((await printer.inspect()).preferences?.cut).toBe('Disable')
+    await printer.print({ ...ticketFor(jpegPath, 1, 'two-strips'), restorePreferences: true })
+    expect((await printer.inspect()).preferences?.cut).toBe('Disable')
+    await printer.print({ ...ticketFor(jpegPath, 1, 'two-strips'), restorePreferences: false })
+    expect((await printer.inspect()).preferences).toEqual({ paper: '(6x4)', orientation: 'Retrato', cut: 'Enable (Printer V.1.10 or later)' })
+  })
 })
+

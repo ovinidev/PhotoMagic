@@ -10,7 +10,9 @@
 #   print         merge the requested options into the queue's ticket, check the driver kept the
 #                 required ones (the 2inch cut first), save that ticket as the queue's printing
 #                 preferences and print the JPEG with System.Drawing on those preferences: no dialog,
-#                 one page per copy, the whole page covered.
+#                 one page per copy, the whole page covered. With restore, the preferences that were
+#                 there before go back once the job is spooled (the job keeps its own copy).
+#   preferences   the options the queue's saved printing preferences select (read only)
 #
 # Choosing the options is not done here: main decides from the capabilities, in tested TypeScript.
 
@@ -250,9 +252,13 @@ function Invoke-Print($request) {
     # Save the ticket as this user's printing preferences for the queue; the job then prints on them.
     # If Windows refuses (rights), fall back to a DEVMODE converted from the same ticket.
     $devmode = $null
+    $previous = $null
+    $saved = $false
     try {
+      $previous = $queue.UserPrintTicket
       $queue.UserPrintTicket = $ticket
       $queue.Commit()
+      $saved = $true
     } catch {
       [Console]::Error.WriteLine("preferences not saved, using a DEVMODE: $($_.Exception.Message)")
       $converter = New-Object System.Printing.Interop.PrintTicketConverter -ArgumentList $queue.FullName, ([System.Printing.Interop.PrintTicketConverter]::MaxPrintSchemaVersion)
@@ -262,7 +268,45 @@ function Invoke-Print($request) {
         $converter.Dispose()
       }
     }
-    return (Send-Job $queue.FullName $devmode $request)
+    try {
+      return (Send-Job $queue.FullName $devmode $request)
+    } finally {
+      # The spooled job carries its own settings, so the operator's earlier preferences can go back.
+      if ($request.restore -and $saved -and $previous) {
+        try {
+          $queue.UserPrintTicket = $previous
+          $queue.Commit()
+        } catch {
+          [Console]::Error.WriteLine("preferences not restored: $($_.Exception.Message)")
+        }
+      }
+    }
+  } finally {
+    $queue.Dispose()
+  }
+}
+
+function Invoke-Preferences([string]$name) {
+  $queue = Get-Queue $name
+  if (-not $queue) { return (Fail 'not-found' "queue not found: $name") }
+  try {
+    $ticket = $queue.UserPrintTicket
+    if (-not $ticket) { $ticket = $queue.DefaultPrintTicket }
+    $document = New-Object System.Xml.XmlDocument
+    $document.Load($ticket.GetXmlStream())
+    $namespaces = New-PsfNamespaces $document
+    $selections = New-Object System.Collections.ArrayList
+    foreach ($feature in $document.SelectNodes('//psf:Feature', $namespaces)) {
+      $q = Resolve-QName $feature $feature.GetAttribute('name')
+      if (-not $q) { continue }
+      foreach ($option in $feature.ChildNodes) {
+        if (-not (Test-PsfChild $option 'Option')) { continue }
+        $oq = Resolve-QName $option $option.GetAttribute('name')
+        if ($oq) { [void]$selections.Add(@{ feature = $q; option = $oq }) }
+        break
+      }
+    }
+    return @{ ok = $true; selections = $selections }
   } finally {
     $queue.Dispose()
   }
@@ -280,6 +324,7 @@ while ($true) {
       'list' { $response = Invoke-List }
       'capabilities' { $response = Invoke-Capabilities $request.printer }
       'print' { $response = Invoke-Print $request }
+      'preferences' { $response = Invoke-Preferences $request.printer }
       default { $response = Fail 'exception' "unknown action: $($request.action)" }
     }
   } catch {

@@ -1,4 +1,5 @@
 import type { z } from 'zod'
+import { printerReportSchema, printerSettingsSchema } from '../printerSettings'
 import { IPC_CHANNELS } from './channels'
 import {
   getPhotoInputSchema,
@@ -74,6 +75,9 @@ export const INVOKE_CONTRACT = {
   [IPC_CHANNELS.boxesGet]: { input: noInputSchema, output: fixedBoxesSchema },
   [IPC_CHANNELS.boxesSave]: { input: boxesSaveInputSchema, output: boxesSaveResultSchema },
   [IPC_CHANNELS.printerStatus]: { input: noInputSchema, output: printerStatusSchema },
+  [IPC_CHANNELS.printerGetSettings]: { input: noInputSchema, output: printerSettingsSchema },
+  [IPC_CHANNELS.printerSaveSettings]: { input: printerSettingsSchema, output: printerSettingsSchema },
+  [IPC_CHANNELS.printerInspect]: { input: noInputSchema, output: printerReportSchema },
   [IPC_CHANNELS.galleryList]: { input: noInputSchema, output: galleryListSchema },
   [IPC_CHANNELS.galleryGet]: { input: galleryGetInputSchema, output: galleryImageSchema },
   [IPC_CHANNELS.webcamGet]: { input: noInputSchema, output: webcamStateSchema },

@@ -52,7 +52,7 @@ test.describe('print', () => {
     // The status line reaches its end only on the printer's answer (DESIGN §14, Print progress).
     await expect(tv.getByTestId('print-message')).toHaveText('Sua foto está pronta!')
     const [file] = readdirSync(join(dirs.desktop, 'Festa'))
-    expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(dirs.desktop, 'Festa', file!), copies: 2, mode: 'two-strips', cut: true }])
+    expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(dirs.desktop, 'Festa', file!), copies: 2, mode: 'two-strips', cut: true, restorePreferences: true }])
   })
 
   test('the print status follows the job: Imprimindo… while the printer holds it, ready only on its answer, no animation', async ({ app, operatorWindow }) => {
@@ -145,7 +145,7 @@ test.describe('print', () => {
       await setSimulatedPrinter(app, { cut: 'supported' })
       await tv.getByRole('button', { name: 'Tentar novamente' }).click()
       await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
-      expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(dirs.desktop, 'Festa', files[0]!), copies: 1, mode: 'two-strips', cut: true }])
+      expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(dirs.desktop, 'Festa', files[0]!), copies: 1, mode: 'two-strips', cut: true, restorePreferences: true }])
       expect(readdirSync(join(dirs.desktop, 'Festa'))).toEqual(files)
     })
   })
@@ -171,7 +171,7 @@ test.describe('print', () => {
       await tv.getByRole('button', { name: 'Tentar novamente' }).click()
       await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
       await expect(operatorWindow.getByTestId('round-status')).toHaveText(`Impresso: ${files[0]}`)
-      expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(dirs.desktop, 'Festa', files[0]!), copies: 1, mode: 'one-strip', cut: false }])
+      expect(await simulatedTickets(dirs.userData)).toEqual([{ jpegPath: join(dirs.desktop, 'Festa', files[0]!), copies: 1, mode: 'one-strip', cut: false, restorePreferences: true }])
       expect(readdirSync(join(dirs.desktop, 'Festa'))).toEqual(files)
     })
   })
