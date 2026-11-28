@@ -65,17 +65,31 @@ export function chooseCutOption(feature: CapabilityFeature, cut: boolean): { ok:
   return { ok: false, detail: `${describe(feature)}: no single ${wanted} option (offered: ${offered})` }
 }
 
-/** The PageMediaSize option closest to 6×4, either way round, within the tolerance. */
+/**
+ * The PageMediaSize option closest to 6×4, either way round, within the tolerance. The DS-RX1 lists
+ * the same paper twice, `PR (4x6)` (tall) and `PC (6x4)` (wide), plus `x 2` variants that split the
+ * sheet: the wide one comes first, because the montage is 1844×1240 and the helper never rotates it
+ * (a tall page fails with "driver page is 413x615"), and an `x 2` variant comes last.
+ */
+/** Lexicographic order of two ranks: the first differing entry decides. */
+function before(a: readonly number[], b: readonly number[]): boolean {
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i]! < b[i]!
+  return false
+}
+
 export function chooseMedia(capabilities: Capabilities): CapabilityOption | null {
   const feature = capabilities.features.find((candidate) => isPsk(candidate, 'PageMediaSize'))
   if (!feature) return null
-  let best: { option: CapabilityOption; distance: number } | null = null
+  let best: { option: CapabilityOption; rank: [number, number, number] } | null = null
   for (const option of feature.options) {
     const width = option.scored['MediaSizeWidth']
     const height = option.scored['MediaSizeHeight']
     if (width === undefined || height === undefined) continue
     const distance = Math.max(Math.abs(Math.max(width, height) - SIX_BY_FOUR.long), Math.abs(Math.min(width, height) - SIX_BY_FOUR.short))
-    if (distance <= MEDIA_TOLERANCE && (!best || distance < best.distance)) best = { option, distance }
+    if (distance > MEDIA_TOLERANCE) continue
+    const split = /x\s*2\b/i.test(`${option.name} ${option.displayName ?? ''}`) ? 1 : 0
+    const rank: [number, number, number] = [split, width >= height ? 0 : 1, distance]
+    if (!best || before(rank, best.rank)) best = { option, rank }
   }
   return best?.option ?? null
 }

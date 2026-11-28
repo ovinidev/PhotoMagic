@@ -72,6 +72,8 @@ test.describe('capture round', () => {
       await operatorWindow.waitForTimeout(300)
     }
     const shot = async () => {
+      // The pointer off the sheet: a hover outline on a neighbouring slot is not a framing change.
+      await operatorWindow.mouse.move(1, 1)
       const { data, info } = await sharp(await overlay.screenshot()).raw().toBuffer({ resolveWithObject: true })
       return { data, info }
     }
