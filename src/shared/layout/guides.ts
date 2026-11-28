@@ -17,6 +17,25 @@ export function guideBoxes(mode: PrintMode): readonly GuideBox[] {
 }
 
 /**
+ * A template's fixed boxes before the operator moves any (DESIGN §6): the dark boxes found on it when
+ * there is one per seed slot, otherwise the seed's gray boxes.
+ */
+export function defaultFixedBoxes(mode: PrintMode, detected?: readonly GuideBox[] | null): GuideBox[] {
+  const seed = guideBoxes(mode)
+  return detected && detected.length === seed.length ? detected.map((box, index) => ({ ...box, id: seed[index]!.id })) : [...seed]
+}
+
+/** A fixed box as an unrotated, photo-less slot, so the editor moves and resizes it like a card. */
+export function boxToSlot(box: GuideBox, id = box.id): Slot {
+  return { id, photo: null, ...box.rect, angle: 0, radius: box.radius }
+}
+
+/** The editor's slot back to a fixed box (angle ignored: fixed boxes never turn). */
+export function slotToBox(slot: Slot, id = slot.id): GuideBox {
+  return { id, rect: { left: slot.left, top: slot.top, width: slot.width, height: slot.height }, radius: slot.radius ?? 0 }
+}
+
+/**
  * The fixed box a slot belongs to (DESIGN §6, fixed masks): the gray guide box with the slot's id
  * (Cima 1/2/3, Baixo 1/2, Foto 1/2/3), or, for an unknown id, the box at the slot's index. Together
  * with `seedSlot`, the slot that sits exactly on that box. `null` when the slot has no box: it shows

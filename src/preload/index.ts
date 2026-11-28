@@ -63,6 +63,8 @@ const api: FotomagicaApi = {
   layout: {
     get: () => invoke(IPC_CHANNELS.layoutGet, undefined),
     save: (input) => invoke(IPC_CHANNELS.layoutSave, input),
+    getBoxes: () => invoke(IPC_CHANNELS.boxesGet, undefined),
+    saveBoxes: (input) => invoke(IPC_CHANNELS.boxesSave, input),
   },
   event: {
     start: (input) => invoke(IPC_CHANNELS.eventStart, input),

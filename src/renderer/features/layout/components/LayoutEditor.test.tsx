@@ -164,6 +164,60 @@ describe('LayoutEditor (RF03)', () => {
     expect(await screen.findByText('Não foi possível ler as posições salvas.')).toBeInTheDocument()
   })
 
+  it('keeps every card number upright, whatever the card angle (client, 2026-11-28)', async () => {
+    await open()
+    expect(screen.getByTestId('slot-number-top-1').style.transform).toBe('rotate(-270deg)')
+    expect(screen.getByTestId('slot-number-bottom-1').style.transform).toBe('rotate(0deg)')
+    await userEvent.click(screen.getByTestId('slot-card-bottom-1'))
+    const sheet = screen.getByTestId('layout-sheet')
+    pointer('pointerDown', screen.getByTestId('handle-rotate'), 363, 1180)
+    pointer('pointerMove', sheet, 100, 939)
+    // Live, during the gesture: the card turns by 90°, its number turns back.
+    expect(screen.getByTestId('slot-number-bottom-1').style.transform).toBe('rotate(-90deg)')
+    pointer('pointerUp', sheet, 100, 939)
+  })
+
+  it('lists the fixed gray boxes in their own table and saves a moved box with boxes:save only (DESIGN §6)', async () => {
+    const { api } = await open()
+    expect(within(screen.getByTestId('box-table')).getAllByRole('row')).toHaveLength(6)
+    const left = field('Left de Quadro cinza Baixo 2')
+    expect(left.value).toBe('708')
+    await userEvent.clear(left)
+    await userEvent.type(left, '750{Enter}')
+    expect(percent(screen.getByTestId('fixed-box-bottom-2').style.left)).toBeCloseTo((750 / 1844) * 100, 3)
+    await waitFor(() => expect(api.layout.saveBoxes).toHaveBeenCalledTimes(1))
+    const saved = api.layout.saveBoxes.mock.calls[0]![0]
+    expect(saved.mode).toBe('two-strips')
+    expect(saved.boxes).toHaveLength(5)
+    expect(saved.boxes.find((box) => box.id === 'bottom-2')?.rect).toEqual({ left: 750, top: 733, width: 602, height: 402 })
+    expect(api.layout.save).not.toHaveBeenCalled()
+  })
+
+  it('drags a gray box on the sheet once Quadros cinza is picked, the cards letting the pointer through', async () => {
+    const { api } = await open()
+    await userEvent.click(screen.getByRole('radio', { name: 'Quadros cinza' }))
+    expect(screen.getByTestId('slot-card-bottom-1').className).toContain('pointer-events-none')
+    const sheet = screen.getByTestId('layout-sheet')
+    pointer('pointerDown', screen.getByTestId('fixed-box-bottom-1'), 300, 800)
+    pointer('pointerMove', sheet, 330, 760)
+    pointer('pointerUp', sheet, 330, 760)
+    await waitFor(() => expect(api.layout.saveBoxes).toHaveBeenCalledTimes(1))
+    expect(api.layout.saveBoxes.mock.calls[0]![0].boxes.find((box) => box.id === 'bottom-1')?.rect).toMatchObject({ left: 92, top: 693 })
+  })
+
+  it('undoes a box move and Restaurar padrão puts the boxes back on the defaults', async () => {
+    const { api } = await open()
+    const top = field('Top de Quadro cinza Cima 1')
+    await userEvent.clear(top)
+    await userEvent.type(top, '80{Enter}')
+    await userEvent.click(screen.getByRole('button', { name: 'Desfazer' }))
+    expect(field('Top de Quadro cinza Cima 1').value).toBe('44')
+    await userEvent.click(screen.getByRole('button', { name: 'Refazer' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Restaurar padrão' }))
+    expect(field('Top de Quadro cinza Cima 1').value).toBe('44')
+    await waitFor(() => expect(api.layout.saveBoxes).toHaveBeenCalledTimes(4))
+  })
+
   it('closes on Concluir and on Escape', async () => {
     stubBridge()
     const onClose = vi.fn()

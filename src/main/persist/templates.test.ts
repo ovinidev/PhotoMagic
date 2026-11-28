@@ -3,6 +3,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
+import { guideBoxes } from '@shared/layout'
+import { readConfig, saveBoxes } from './config'
 import { importTemplate, listTemplates, readTemplate } from './templates'
 
 const image = (width: number, height: number, format: 'png' | 'jpeg' | 'webp' = 'png') =>
@@ -25,6 +27,14 @@ describe('templates (RF01)', () => {
     await importTemplate(dir, 'one-strip', 'B.jpg', await image(1844, 1240, 'jpeg'))
     expect((await readTemplate(dir, 'two-strips'))?.fileName).toBe('A.png')
     expect((await readTemplate(dir, 'one-strip'))?.fileName).toBe('B.jpg')
+  })
+
+  it('a new template drops that mode fixed boxes only: each template keeps its own (DESIGN §6)', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'fotomagica-tpl-'))
+    await saveBoxes(dir, 'two-strips', guideBoxes('two-strips'))
+    await saveBoxes(dir, 'one-strip', guideBoxes('one-strip'))
+    await importTemplate(dir, 'two-strips', 'A.png', await image(1844, 1240))
+    expect((await readConfig(dir)).boxes).toEqual({ 'one-strip': guideBoxes('one-strip') })
   })
 
   it('rejects another size with the size read, and keeps the previous template', async () => {

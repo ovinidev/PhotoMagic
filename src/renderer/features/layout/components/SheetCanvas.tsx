@@ -18,7 +18,7 @@ import { cn } from '@renderer/shared/utils/cn'
 import { LAYOUT_COPY } from '../copy'
 import { paintSlot, slotStyle, type LiveRegistry } from '../utils/livePaint'
 import { photoColor } from '../utils/slotColors'
-import { SheetGuides } from './SheetGuides'
+import { boxSlotId, isBoxId } from '../utils/boxes'
 
 type Gesture =
   | { kind: 'move'; pointerId: number; origin: Slot; start: { x: number; y: number }; draft: Slot }
@@ -40,12 +40,15 @@ const HANDLE_POSITION: Record<ResizeHandle, { left: string; top: string; cursor:
 /**
  * The sheet at its real proportion (1844×1240) with the template behind and one numbered, colored
  * card per slot (DESIGN §6 editor model, §7). The selected card has a dashed red border, 8 resize
- * handles and a rotation handle below its bottom center. Gestures paint the DOM directly
- * (`paintSlot`) and call `onCommit` once, on release.
+ * handles and a rotation handle below its bottom center. Under the cards, the fixed gray boxes
+ * (`boxes`, ids `box:<slot id>`): the operator moves and resizes them like cards, never turns them.
+ * While a box is selected the boxes sit above the cards and the cards let the pointer through.
+ * Gestures paint the DOM directly (`paintSlot`) and call `onCommit` once, on release.
  */
 export function SheetCanvas({
   mode,
   slots,
+  boxes,
   selectedId,
   templateUrl,
   registry,
@@ -54,6 +57,7 @@ export function SheetCanvas({
 }: {
   mode: PrintMode
   slots: readonly Slot[]
+  boxes: readonly Slot[]
   selectedId: string | null
   templateUrl: string | null
   registry: LiveRegistry
@@ -88,7 +92,7 @@ export function SheetCanvas({
     if (!current || event.pointerId !== current.pointerId) return
     const point = toSheet(event)
     const delta = { x: point.x - current.start.x, y: point.y - current.start.y }
-    const others = slots.filter((slot) => slot.id !== current.origin.id)
+    const others = [...slots, ...boxes].filter((slot) => slot.id !== current.origin.id)
     const options = { mode, alt: event.altKey }
     let draft: Slot
     if (current.kind === 'move') draft = snapMove(moveSlot(current.origin, delta), others, options)
@@ -108,6 +112,22 @@ export function SheetCanvas({
   }
 
   const crossing = mode === 'two-strips'
+  const editingBoxes = selectedId !== null && isBoxId(selectedId)
+
+  /** The 8 resize handles of the selected card or box. */
+  const resizeHandles = (slot: Slot) =>
+    RESIZE_HANDLES.map((handle) => (
+      <span
+        key={handle}
+        data-testid={`handle-${handle}`}
+        aria-hidden
+        className="absolute flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+        style={{ left: HANDLE_POSITION[handle].left, top: HANDLE_POSITION[handle].top, cursor: HANDLE_POSITION[handle].cursor }}
+        onPointerDown={(event) => begin(event, slot, 'resize', handle)}
+      >
+        <span className="size-3 rounded-full border-2 border-selection bg-white" />
+      </span>
+    ))
 
   return (
     <div
@@ -128,8 +148,6 @@ export function SheetCanvas({
             <p className="text-sm text-ink-soft">{LAYOUT_COPY.noTemplate(LAYOUT_COPY.modes[mode])}</p>
           </div>
         )}
-        {/* The standard boxes, under the cards: visible even when the art has no boxes (PRD §6.2). */}
-        <SheetGuides mode={mode} />
         {/* Print margins: 22 and 20 px inside the extent (DESIGN §6). */}
         <div
           aria-hidden
@@ -154,6 +172,34 @@ export function SheetCanvas({
         ) : null}
       </div>
 
+      {/* The fixed gray boxes (DESIGN §6): every photo is clipped to its box, whatever its card does. */}
+      {boxes.map((box) => {
+        const selected = box.id === selectedId
+        return (
+          <div
+            key={box.id}
+            ref={(element) => {
+              if (element) registry.cards.set(box.id, element)
+              else registry.cards.delete(box.id)
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={LAYOUT_COPY.itemLabel(box.id)}
+            aria-pressed={selected}
+            data-testid={`fixed-box-${boxSlotId(box.id)}`}
+            className={cn(
+              'absolute cursor-move border-[3px] border-dashed outline-none select-none',
+              selected ? 'z-30 border-selection' : editingBoxes ? 'z-20 border-ink-soft/70' : 'z-0 border-ink-soft/55',
+            )}
+            style={{ ...slotStyle(box), backgroundColor: 'rgb(120 113 108 / 0.28)', borderRadius: `${((box.radius ?? 0) / SHEET.width) * 100}cqw` }}
+            onPointerDown={(event) => begin(event, box, 'move')}
+            onFocus={() => onSelect(box.id)}
+          >
+            {selected ? resizeHandles(box) : null}
+          </div>
+        )
+      })}
+
       {slots.map((slot) => {
         const selected = slot.id === selectedId
         const color = photoColor(slot.photo)
@@ -174,33 +220,26 @@ export function SheetCanvas({
             className={cn(
               'absolute cursor-move outline-none select-none',
               selected ? 'z-20 outline-2 outline-offset-0 outline-dashed outline-selection' : 'z-10 outline-1 outline-ink/30 outline-solid',
+              // Editing the gray boxes: the cards fade and let the pointer through to the boxes.
+              editingBoxes && 'pointer-events-none opacity-35',
             )}
             style={{ ...slotStyle(slot), backgroundColor: `color-mix(in srgb, ${color.fill} 82%, transparent)` }}
             onPointerDown={(event) => begin(event, slot, 'move')}
             onFocus={() => onSelect(slot.id)}
           >
-            {/* The number lives in the slot's own space and turns with it, as in the current app. */}
+            {/* The number always stands upright, whatever the card's angle (client, 2026-11-28): the camera is vertical, so the person is too. */}
             <span
               aria-hidden
+              data-testid={`slot-number-${slot.id}`}
+              data-slot-number
               className="pointer-events-none absolute inset-0 flex items-center justify-center font-semibold"
-              style={{ color: selected ? 'var(--selection)' : color.ink, fontSize: '7cqw', lineHeight: 1 }}
+              style={{ color: selected ? 'var(--selection)' : color.ink, fontSize: '7cqw', lineHeight: 1, transform: `rotate(${-slot.angle}deg)` }}
             >
               {slot.photo ?? '–'}
             </span>
             {selected ? (
               <>
-                {RESIZE_HANDLES.map((handle) => (
-                  <span
-                    key={handle}
-                    data-testid={`handle-${handle}`}
-                    aria-hidden
-                    className="absolute flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
-                    style={{ left: HANDLE_POSITION[handle].left, top: HANDLE_POSITION[handle].top, cursor: HANDLE_POSITION[handle].cursor }}
-                    onPointerDown={(event) => begin(event, slot, 'resize', handle)}
-                  >
-                    <span className="size-3 rounded-full border-2 border-selection bg-white" />
-                  </span>
-                ))}
+                {resizeHandles(slot)}
                 {/* Rotation handle: outside the bottom center, tied to the card by a dashed rod. */}
                 <span aria-hidden className="pointer-events-none absolute top-1/2 left-1/2 h-[calc(50%+28px)] -translate-x-1/2 border-l-2 border-dashed border-selection" />
                 <span

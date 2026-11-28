@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from 'react'
 import type { TemplateInfo } from '@shared/ipc'
 import type { PrintMode } from '@shared/layout'
-import { SheetGuides } from '@renderer/features/layout'
+import { SheetGuides, useFixedBoxes } from '@renderer/features/layout'
 import { useObjectUrl } from '@renderer/shared/hooks/useObjectUrl'
 import { cn } from '@renderer/shared/utils/cn'
 import { EVENTS_COPY } from '../copy'
@@ -23,6 +23,7 @@ export function TemplatePicker({
   importState,
   onFile,
   actions,
+  layoutRevision,
 }: {
   mode: PrintMode
   modeLabel: string
@@ -32,11 +33,16 @@ export function TemplatePicker({
   onFile: (file: File) => void
   /** Extra buttons on the import row, e.g. `Editar posições das fotos`. */
   actions?: ReactNode
+  /** Bumped by the home page when the slot editor closes, so the preview shows the boxes just saved. */
+  layoutRevision?: number | undefined
 }) {
   const inputId = useId()
   const url = useObjectUrl(template?.preview ?? null)
   const error = rejection(importState)
   const loading = importState.status === 'loading'
+  // Where the photos go on this template (the fixed gray boxes), drawn over the preview (DESIGN §6).
+  const fixed = useFixedBoxes(`${layoutRevision ?? 0}:${template?.fileName ?? ''}:${template?.preview.length ?? 0}`)
+  const boxes = fixed?.[mode].boxes ?? null
 
   return (
     <fieldset className="flex min-w-0 max-w-full flex-col gap-3">
@@ -47,11 +53,14 @@ export function TemplatePicker({
         ) : templates.status === 'error' ? (
           <p className="text-sm text-danger">{EVENTS_COPY.templatesError}</p>
         ) : url ? (
-          <img src={url} alt={EVENTS_COPY.templatePreviewAlt(modeLabel)} data-testid="template-preview" className="h-full w-full object-contain" draggable={false} />
+          <div className="relative h-full w-full">
+            <img src={url} alt={EVENTS_COPY.templatePreviewAlt(modeLabel)} data-testid="template-preview" className="h-full w-full object-contain" draggable={false} />
+            <SheetGuides mode={mode} boxes={boxes} />
+          </div>
         ) : (
           // No template: the plain white default sheet with the standard boxes (PRD §6.1).
           <div role="img" aria-label={EVENTS_COPY.templateDefaultAlt(modeLabel)} data-testid="template-default" className="relative h-full w-full bg-white">
-            <SheetGuides mode={mode} />
+            <SheetGuides mode={mode} boxes={boxes} />
           </div>
         )}
       </div>

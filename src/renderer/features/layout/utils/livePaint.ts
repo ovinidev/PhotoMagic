@@ -35,7 +35,12 @@ export function slotStyle(slot: Slot): Pick<CSSProperties, 'left' | 'top' | 'wid
 /** Writes the slot to its card and to its panel row. Skips the field being typed in. */
 export function paintSlot(registry: LiveRegistry, slot: Slot): void {
   const card = registry.cards.get(slot.id)
-  if (card) Object.assign(card.style, slotStyle(slot))
+  if (card) {
+    Object.assign(card.style, slotStyle(slot))
+    // The number turns back by the card's angle, so it stays upright during a rotation too.
+    const number = card.querySelector<HTMLElement>('[data-slot-number]')
+    if (number) number.style.transform = `rotate(${-slot.angle}deg)`
+  }
   for (const field of NUMBER_FIELDS) {
     const input = registry.fields.get(fieldKey(slot.id, field))
     if (input && input !== document.activeElement) input.value = String(slot[field])

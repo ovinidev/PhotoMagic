@@ -45,7 +45,11 @@ export async function importTemplate(userData: string, mode: PrintMode, fileName
   const file = `${mode}.${meta.format === 'png' ? 'png' : 'jpg'}`
   await mkdir(join(userData, TEMPLATES_DIR), { recursive: true })
   await writeFile(join(userData, TEMPLATES_DIR, file), bytes)
-  await updateConfig(userData, (config) => ({ ...config, templates: { ...config.templates, [mode]: { file, fileName } } }))
+  // A new template brings its own boxes: the operator's boxes for the old one no longer apply.
+  await updateConfig(userData, (config) => {
+    const { [mode]: _dropped, ...boxes } = config.boxes
+    return { ...config, templates: { ...config.templates, [mode]: { file, fileName } }, boxes }
+  })
   return { ok: true, template: { mode, fileName, width: meta.width, height: meta.height, preview } }
 }
 

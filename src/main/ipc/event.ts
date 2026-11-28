@@ -2,10 +2,10 @@ import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { WebContents } from 'electron'
 import { checkEventName } from '@shared/files'
-import type { Layouts } from '@shared/layout'
-import { IPC_CHANNELS, type EventStartResult, type SessionState } from '@shared/ipc'
+import { defaultFixedBoxes, PRINT_MODES, type Layouts, type PrintMode } from '@shared/layout'
+import { IPC_CHANNELS, type EventStartResult, type FixedBoxes, type SessionState } from '@shared/ipc'
 import { detectTemplateBoxes } from '../compose/detectBoxes'
-import { importTemplate, listTemplates, readConfig, readTemplate, saveLayout } from '../persist'
+import { importTemplate, listTemplates, readConfig, readTemplate, saveBoxes, saveLayout } from '../persist'
 import type { Session } from '../session'
 import type { GuestWindowController } from '../windows'
 import { broadcast, handleInvoke, handleSend, sendTo } from './handle'
@@ -39,6 +39,33 @@ export function registerEventHandlers(deps: EventDeps): void {
     }
   })
 
+  /** A mode's default fixed boxes: its template's dark boxes, else the seed (DESIGN §6). */
+  const defaultsFor = async (mode: PrintMode) => {
+    const template = await readTemplate(deps.userData, mode)
+    const detected = template ? await detectTemplateBoxes(template.bytes, mode).catch(() => null) : null
+    return defaultFixedBoxes(mode, detected)
+  }
+
+  handleInvoke(IPC_CHANNELS.boxesGet, async () => {
+    const { boxes } = await readConfig(deps.userData)
+    const entries = await Promise.all(
+      PRINT_MODES.map(async (mode) => {
+        const defaults = await defaultsFor(mode)
+        return [mode, { boxes: boxes[mode] ?? defaults, defaults }] as const
+      }),
+    )
+    return Object.fromEntries(entries) as FixedBoxes
+  })
+  handleInvoke(IPC_CHANNELS.boxesSave, async ({ mode, boxes }) => {
+    if (session.isOpen()) return { ok: false, reason: 'event-open' }
+    try {
+      await saveBoxes(deps.userData, mode, boxes)
+      return { ok: true }
+    } catch {
+      return { ok: false, reason: 'failed' }
+    }
+  })
+
   handleInvoke(IPC_CHANNELS.eventStart, async ({ name, mode }): Promise<EventStartResult> => {
     if (session.isOpen()) return { ok: false, reason: 'already-open' }
     const checked = checkEventName(name)
@@ -62,9 +89,11 @@ export function registerEventHandlers(deps: EventDeps): void {
       tv.close()
       return { ok: false, reason: 'folder-failed' }
     }
-    const { layouts } = await readConfig(deps.userData)
-    // The template's own black boxes, when it has one per slot, are the fixed boxes (DESIGN §6).
-    const boxes = template ? await detectTemplateBoxes(template.bytes, mode).catch(() => null) : null
+    const config = await readConfig(deps.userData)
+    const { layouts } = config
+    // The fixed boxes (DESIGN §6): the operator's own for this template, else the template's dark
+    // boxes when it has one per slot, else the seed's (`null`).
+    const boxes = config.boxes[mode] ?? (template ? await detectTemplateBoxes(template.bytes, mode).catch(() => null) : null)
     return { ok: true, session: session.start({ name: checked.name, mode, folder, slots: layouts[mode], template: template?.bytes ?? null, boxes }) }
   })
 

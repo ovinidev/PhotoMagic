@@ -1,5 +1,5 @@
 import { vi, type Mock } from 'vitest'
-import { SEED_LAYOUTS } from '@shared/layout'
+import { SEED_LAYOUTS, guideBoxes } from '@shared/layout'
 import type { CameraStatus, DisplayState, FotomagicaApi, PrinterStatus, SessionState, Templates, ShareState, UpdateStatus, WebcamState, ZoomState } from '@shared/ipc'
 import { defaultShareSettings } from '@shared/share'
 
@@ -89,6 +89,15 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
       save: vi.fn<FotomagicaApi['layout']['save']>(
         o.layout?.save ?? ((input) => Promise.resolve({ ok: true, layouts: { 'two-strips': [...SEED_LAYOUTS['two-strips']], 'one-strip': [...SEED_LAYOUTS['one-strip']], [input.mode]: input.slots } })),
       ),
+      getBoxes: vi.fn(
+        o.layout?.getBoxes ??
+          (() =>
+            Promise.resolve({
+              'two-strips': { boxes: [...guideBoxes('two-strips')], defaults: [...guideBoxes('two-strips')] },
+              'one-strip': { boxes: [...guideBoxes('one-strip')], defaults: [...guideBoxes('one-strip')] },
+            })),
+      ),
+      saveBoxes: vi.fn<FotomagicaApi['layout']['saveBoxes']>(o.layout?.saveBoxes ?? (() => Promise.resolve({ ok: true as const }))),
     },
     event: {
       start: vi.fn(o.event?.start ?? (() => Promise.resolve({ ok: false as const, reason: 'missing' as const }))),

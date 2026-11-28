@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SHEET } from '../constants'
 import { slotBounds } from './geometry'
-import { fixedBox, guideBoxes } from './guides'
+import { boxToSlot, defaultFixedBoxes, fixedBox, guideBoxes, slotToBox } from './guides'
 import { CLIENT_BOX_BLEED, CLIENT_BOX_RADIUS, TWO_STRIPS_CLIENT_BOXES } from './seed'
 
 describe('guideBoxes', () => {
@@ -73,5 +73,21 @@ describe('fixedBox with the template boxes', () => {
     expect(fixedBox('two-strips', 'top-1', 0, detected.slice(0, 4))!.box).toEqual(fixedBox('two-strips', 'top-1', 0)!.box)
     expect(fixedBox('one-strip', 'photo-1', 0, detected)!.box).toEqual(fixedBox('one-strip', 'photo-1', 0)!.box)
     expect(fixedBox('two-strips', 'top-1', 0, null)!.box.rect.left).toBe(120)
+  })
+})
+
+describe('defaultFixedBoxes and the editor box slots (DESIGN §6)', () => {
+  it('uses the detected boxes when there is one per seed slot, renamed to the seed ids, else the seed boxes', () => {
+    const detected = guideBoxes('two-strips').map((box, i) => ({ ...box, id: `found-${i}`, rect: { ...box.rect, left: box.rect.left + 5 } }))
+    expect(defaultFixedBoxes('two-strips', detected).map((box) => [box.id, box.rect.left])).toEqual(guideBoxes('two-strips').map((box) => [box.id, box.rect.left + 5]))
+    expect(defaultFixedBoxes('two-strips', detected.slice(0, 3))).toEqual(guideBoxes('two-strips'))
+    expect(defaultFixedBoxes('one-strip', null)).toEqual(guideBoxes('one-strip'))
+  })
+
+  it('turns a box into an unrotated, photo-less slot and back', () => {
+    const box = guideBoxes('two-strips')[3]!
+    const slot = boxToSlot(box, 'box:bottom-1')
+    expect(slot).toMatchObject({ id: 'box:bottom-1', photo: null, angle: 0, ...box.rect })
+    expect(slotToBox(slot, 'bottom-1')).toEqual(box)
   })
 })

@@ -25,6 +25,8 @@ export const IPC_CHANNELS = {
   sessionNewRound: 'session:new-round',
   layoutGet: 'layout:get',
   layoutSave: 'layout:save',
+  boxesGet: 'boxes:get',
+  boxesSave: 'boxes:save',
   printerStatus: 'printer:status',
   galleryList: 'gallery:list',
   galleryGet: 'gallery:get',

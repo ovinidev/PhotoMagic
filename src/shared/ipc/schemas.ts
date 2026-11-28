@@ -202,6 +202,26 @@ export const layoutSaveResultSchema = z.discriminatedUnion('ok', [
 export type LayoutSaveInput = z.infer<typeof layoutSaveInputSchema>
 export type LayoutSaveResult = z.infer<typeof layoutSaveResultSchema>
 
+export const guideBoxListSchema = z.array(guideBoxSchema).min(1).max(12)
+
+/** One mode's fixed boxes: the ones in use (`boxes`) and what `Restaurar padrão` goes back to (`defaults`). */
+const modeBoxesSchema = z.strictObject({ boxes: guideBoxListSchema, defaults: guideBoxListSchema })
+
+/** `boxes:get` output: each mode's fixed boxes for its current template (DESIGN §6). */
+export const fixedBoxesSchema = z.strictObject({ 'two-strips': modeBoxesSchema, 'one-strip': modeBoxesSchema })
+
+/** `boxes:save` input: only the mode on screen. */
+export const boxesSaveInputSchema = z.strictObject({ mode: printModeSchema, boxes: guideBoxListSchema })
+
+/** `boxes:save` output. `event-open`: like `layout:save`, refused while an event runs. */
+export const boxesSaveResultSchema = z.discriminatedUnion('ok', [
+  z.strictObject({ ok: z.literal(true) }),
+  z.strictObject({ ok: z.literal(false), reason: z.enum(['event-open', 'failed']) }),
+])
+
+export type FixedBoxes = z.infer<typeof fixedBoxesSchema>
+export type BoxesSaveResult = z.infer<typeof boxesSaveResultSchema>
+
 /** A template stored for one mode. `preview` is a small JPEG of it for the create-event screen. */
 export const templateInfoSchema = z.strictObject({
   mode: printModeSchema,
