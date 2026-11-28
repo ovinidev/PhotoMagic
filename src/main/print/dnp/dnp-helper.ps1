@@ -8,8 +8,9 @@
 #   list          every local queue: name, PRINTER_STATUS bits, "use printer offline"
 #   capabilities  the queue's PrintCapabilities as features and options (qualified names)
 #   print         merge the requested options into the queue's ticket, check the driver kept the
-#                 required ones (the 2inch cut first), convert the ticket to a DEVMODE and print the
-#                 JPEG with System.Drawing: no dialog, one page per copy, the whole page covered.
+#                 required ones (the 2inch cut first), save that ticket as the queue's printing
+#                 preferences and print the JPEG with System.Drawing on those preferences: no dialog,
+#                 one page per copy, the whole page covered.
 #
 # Choosing the options is not done here: main decides from the capabilities, in tested TypeScript.
 
@@ -170,14 +171,19 @@ function Find-SelectedOption([System.Xml.XmlDocument]$document, $namespaces, $wa
 function Send-Job([string]$printer, [byte[]]$devmode, $request) {
   $image = [System.Drawing.Image]::FromFile($request.jpegPath)
   $document = New-Object System.Drawing.Printing.PrintDocument
-  $handle = [Runtime.InteropServices.Marshal]::AllocHGlobal($devmode.Length)
+  $handle = [IntPtr]::Zero
   try {
-    [Runtime.InteropServices.Marshal]::Copy($devmode, 0, $handle, $devmode.Length)
     $document.PrinterSettings.PrinterName = $printer
     if (-not $document.PrinterSettings.IsValid) { return (Fail 'not-found' "printer settings invalid for $printer") }
-    # The DEVMODE carries the driver's private part too, where the 2inch cut lives.
-    $document.PrinterSettings.SetHdevmode($handle)
-    $document.DefaultPageSettings.SetHdevmode($handle)
+    # With $devmode null the job runs on the queue's printing preferences, which Invoke-Print just set:
+    # that is how the 2inch cut reaches the DS-RX1 (as when the operator picks it in the driver dialog).
+    # A DEVMODE passed through System.Drawing reached the driver without it, and the sheet came out uncut.
+    if ($devmode) {
+      $handle = [Runtime.InteropServices.Marshal]::AllocHGlobal($devmode.Length)
+      [Runtime.InteropServices.Marshal]::Copy($devmode, 0, $handle, $devmode.Length)
+      $document.PrinterSettings.SetHdevmode($handle)
+      $document.DefaultPageSettings.SetHdevmode($handle)
+    }
     $document.PrinterSettings.Copies = 1
     $document.DocumentName = $request.documentName
     # StandardPrintController: no "Printing page 1" window either.
@@ -208,7 +214,7 @@ function Send-Job([string]$printer, [byte[]]$devmode, $request) {
     }
     return @{ ok = $true; page = @{ width = $bounds.Width; height = $bounds.Height } }
   } finally {
-    [Runtime.InteropServices.Marshal]::FreeHGlobal($handle)
+    if ($handle -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::FreeHGlobal($handle) }
     $global:fmJobImage = $null
     $document.Dispose()
     $image.Dispose()
@@ -241,11 +247,20 @@ function Invoke-Print($request) {
       }
     }
 
-    $converter = New-Object System.Printing.Interop.PrintTicketConverter -ArgumentList $queue.FullName, ([System.Printing.Interop.PrintTicketConverter]::MaxPrintSchemaVersion)
+    # Save the ticket as this user's printing preferences for the queue; the job then prints on them.
+    # If Windows refuses (rights), fall back to a DEVMODE converted from the same ticket.
+    $devmode = $null
     try {
-      $devmode = $converter.ConvertPrintTicketToDevMode($ticket, [System.Printing.Interop.BaseDevModeType]::UserDefault)
-    } finally {
-      $converter.Dispose()
+      $queue.UserPrintTicket = $ticket
+      $queue.Commit()
+    } catch {
+      [Console]::Error.WriteLine("preferences not saved, using a DEVMODE: $($_.Exception.Message)")
+      $converter = New-Object System.Printing.Interop.PrintTicketConverter -ArgumentList $queue.FullName, ([System.Printing.Interop.PrintTicketConverter]::MaxPrintSchemaVersion)
+      try {
+        $devmode = $converter.ConvertPrintTicketToDevMode($ticket, [System.Printing.Interop.BaseDevModeType]::UserDefault)
+      } finally {
+        $converter.Dispose()
+      }
     }
     return (Send-Job $queue.FullName $devmode $request)
   } finally {

@@ -76,6 +76,24 @@ describe('paper and resolution', () => {
     expect(chooseMedia(dsRx1)?.name).toBe('PC_6x4')
   })
 
+  it('prefers the wide 6x4 over the tall 4x6 of the same size, and never the x 2 split, as the real DS-RX1 lists them', () => {
+    const size = (width: number, height: number) => ({ MediaSizeWidth: width, MediaSizeHeight: height })
+    const features = [
+      {
+        ns: PSK,
+        name: 'PageMediaSize',
+        displayName: null,
+        options: [
+          option(PRIVATE, 'PR_4x6', 'PR (4x6)', size(104_987, 156_125)),
+          option(PRIVATE, 'PR_4x6x2', 'PR (4x6) x 2', size(104_987, 156_125)),
+          option(PRIVATE, '_6x4x2', '(6x4) x 2', size(156_125, 104_987)),
+          option(PRIVATE, 'PC', '(6x4)', size(156_125, 104_987)),
+        ],
+      },
+    ]
+    expect(chooseMedia({ features })?.name).toBe('PC')
+  })
+
   it('accepts 6x4 declared either way round', () => {
     const features = [{ ns: PSK, name: 'PageMediaSize', displayName: null, options: [option(PRIVATE, 'x', null, { MediaSizeWidth: 101_600, MediaSizeHeight: 152_400 })] }]
     expect(chooseMedia({ features })?.name).toBe('x')

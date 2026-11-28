@@ -43,8 +43,13 @@ test.describe('laptop zoom (DESIGN §3)', () => {
     const factors = await zoomFactors(app)
     expect(factors['Foto Mágica']).toBeCloseTo(1.25, 2)
     expect(factors[TV_TITLE]).toBe(1)
-    // The TV page lays out at its own 1:1 size.
-    expect(await tv.evaluate(() => window.devicePixelRatio)).toBe(1)
+    // The TV page lays out at its own 1:1 size: its pixel ratio is only the monitor's Windows scale
+    // (1 on the CI runner, 1.5 on a laptop at 150 %), never times the laptop zoom.
+    const monitorScale = await app.evaluate(({ BrowserWindow, screen }, title) => {
+      const window = BrowserWindow.getAllWindows().find((candidate) => candidate.getTitle() === title)!
+      return screen.getDisplayMatching(window.getBounds()).scaleFactor
+    }, TV_TITLE)
+    expect(await tv.evaluate(() => window.devicePixelRatio)).toBeCloseTo(monitorScale, 2)
     // A Ctrl + wheel over the TV changes nothing.
     await tv.mouse.move(100, 100)
     await tv.keyboard.down('Control')
