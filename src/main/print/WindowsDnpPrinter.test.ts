@@ -39,6 +39,15 @@ function fakeBridge(script: Script = {}) {
       case 'print':
         if (typeof script.print === 'function') return script.print()
         return script.print ?? { ok: true, page: { width: 615, height: 413 } }
+      case 'preferences':
+        return {
+          ok: true,
+          selections: [
+            { feature: { ns: PSK, name: 'PageMediaSize' }, option: { ns: DNP, name: 'PC_6x4' } },
+            { feature: { ns: PSK, name: 'PageOrientation' }, option: { ns: PSK, name: 'Portrait' } },
+            { feature: { ns: DNP, name: 'Cut' }, option: { ns: DNP, name: 'On' } },
+          ],
+        }
     }
   })
   return { bridge: { request }, requests }
@@ -63,8 +72,15 @@ describe('WindowsDnpPrinter print (RF11)', () => {
           { role: 'media', feature: { ns: PSK, name: 'PageMediaSize' }, option: { ns: DNP, name: 'PC_6x4' }, required: true },
           { role: 'orientation', feature: { ns: PSK, name: 'PageOrientation' }, option: { ns: PSK, name: 'Portrait' }, required: true },
         ],
+        restore: false,
       },
     ])
+  })
+
+  it('asks the helper to put the Windows preferences back when the ticket says so (printer screen)', async () => {
+    const { bridge, requests } = fakeBridge()
+    await createDnpPrinter({ bridge }).print({ ...ticketFor(JPEG, 1, 'two-strips'), restorePreferences: true })
+    expect(requests.filter((request) => request.action === 'print')).toEqual([expect.objectContaining({ restore: true })])
   })
 
   it('1 tira asks for the cut Disable', async () => {
@@ -160,3 +176,21 @@ describe('WindowsDnpPrinter status (RNF10)', () => {
     expect(await createDnpPrinter({ bridge }).status()).toEqual({ kind: 'unknown', detail: 'ENOENT powershell.exe' })
   })
 })
+
+describe('WindowsDnpPrinter inspect (printer screen)', () => {
+  it('reads the queue and its saved preferences in the driver words, and prints nothing', async () => {
+    const { bridge, requests } = fakeBridge()
+    expect(await createDnpPrinter({ bridge }).inspect()).toEqual({
+      queue: QUEUE,
+      preferences: { paper: '(6x4)', orientation: 'Portrait', cut: 'Enable (Printer V.1.10 or later)' },
+      detail: null,
+    })
+    expect(requests.map((request) => request.action)).toEqual(['list', 'capabilities', 'preferences'])
+  })
+
+  it('says there is no DS-RX1 when no queue has the name', async () => {
+    const { bridge } = fakeBridge({ queues: ['Microsoft Print to PDF'] })
+    expect(await createDnpPrinter({ bridge }).inspect()).toMatchObject({ queue: null, preferences: null })
+  })
+})
+

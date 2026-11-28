@@ -5,6 +5,7 @@ import { createSimulatedPrinter } from './SimulatedPrinter'
 import { createWindowsDnpPrinter } from './WindowsDnpPrinter'
 import type { Printer } from './types'
 
+export { withPrinterSettings } from './configured'
 export { createPrinterMonitor, type PrinterMonitor } from './monitor'
 export { ticketFor, type Printer, type PrinterStatus, type PrintResult, type PrintTicket } from './types'
 

@@ -1,3 +1,4 @@
+import { defaultPrinterSettings } from '@shared/printerSettings'
 import { vi, type Mock } from 'vitest'
 import { SEED_LAYOUTS, guideBoxes } from '@shared/layout'
 import type { CameraStatus, DisplayState, FotomagicaApi, PrinterStatus, SessionState, Templates, ShareState, UpdateStatus, WebcamState, ZoomState } from '@shared/ipc'
@@ -134,6 +135,12 @@ export function stubBridge(overrides: Overrides = {}): BridgeStub {
     printer: {
       getStatus: vi.fn(o.printer?.getStatus ?? (() => Promise.resolve<PrinterStatus>({ kind: 'ready' }))),
       onStatus: vi.fn(o.printer?.onStatus ?? printer.add),
+      getSettings: vi.fn(o.printer?.getSettings ?? (() => Promise.resolve(defaultPrinterSettings()))),
+      saveSettings: vi.fn<FotomagicaApi['printer']['saveSettings']>(o.printer?.saveSettings ?? ((settings) => Promise.resolve(settings))),
+      inspect: vi.fn(
+        o.printer?.inspect ??
+          (() => Promise.resolve({ queue: 'DS-RX1', preferences: { paper: '(6x4)', orientation: 'Retrato', cut: 'Disable' }, detail: null })),
+      ),
     },
     update: {
       getStatus: vi.fn(o.update?.getStatus ?? (() => Promise.resolve<UpdateStatus>({ kind: 'idle' }))),

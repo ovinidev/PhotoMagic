@@ -1,4 +1,5 @@
 import type { GuideBox, Layouts, PhotoIndex, PrintMode } from '../layout'
+import type { PrinterReport, PrinterSettings } from '../printerSettings'
 import type { ShareSettings } from '../share/settings'
 import type { WebcamValues } from '../webcam'
 import type {
@@ -129,6 +130,12 @@ export type FotomagicaApi = {
     getStatus: () => Promise<PrinterStatus>
     /** Pushed to both windows whenever the reported state changes. */
     onStatus: (listener: (status: PrinterStatus) => void) => Unsubscribe
+    /** The cut per mode and whether the Windows preferences go back after each print. */
+    getSettings: () => Promise<PrinterSettings>
+    /** Laptop only: saves them; the next print uses them. */
+    saveSettings: (settings: PrinterSettings) => Promise<PrinterSettings>
+    /** Reads the queue and its saved Windows printing preferences; changes nothing. */
+    inspect: () => Promise<PrinterReport>
   }
   update: {
     /** Background auto-update (DESIGN §11): a download in progress or one that installs on quit. */

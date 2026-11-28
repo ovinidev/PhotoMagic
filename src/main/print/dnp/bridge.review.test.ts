@@ -29,7 +29,7 @@ describe('createHelperBridge with a sequential helper', () => {
     vi.useFakeTimers()
     const helper = sequentialHelper()
     const bridge = createHelperBridge({ spawn: () => helper.process, timeoutMs: (r) => (r.action === 'print' ? 120_000 : 20_000) })
-    const print = bridge.request({ action: 'print', printer: 'DS-RX1', jpegPath: 'C:\\a.jpg', copies: 10, documentName: 'x', settings: [] })
+    const print = bridge.request({ action: 'print', printer: 'DS-RX1', jpegPath: 'C:\\a.jpg', copies: 10, documentName: 'x', settings: [], restore: false })
     const outcomes: string[] = []
     void print.then(() => outcomes.push('print ok'), (e: Error) => outcomes.push(`print: ${e.message}`))
     await vi.advanceTimersByTimeAsync(5_000)
@@ -51,7 +51,7 @@ describe('createHelperBridge with a sequential helper', () => {
     const bridge = createHelperBridge({ spawn: () => helper.process, timeoutMs: (r) => (r.action === 'print' ? 120_000 : 5_000) })
     const status = bridge.request({ action: 'list' })
     status.catch(() => {})
-    const print = bridge.request({ action: 'print', printer: 'DS-RX1', jpegPath: 'C:\\a.jpg', copies: 1, documentName: 'x', settings: [] })
+    const print = bridge.request({ action: 'print', printer: 'DS-RX1', jpegPath: 'C:\\a.jpg', copies: 1, documentName: 'x', settings: [], restore: false })
     let settled = false
     print.then(() => (settled = true), () => (settled = true))
     // The helper hangs on the list; it is killed at 5 s and never answers the print.

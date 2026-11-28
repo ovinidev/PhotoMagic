@@ -131,3 +131,30 @@ export function planTicket(capabilities: Capabilities, cut: boolean): TicketPlan
   if (resolution) settings.push(setting('resolution', { ns: PSK, name: 'PageResolution' }, resolution, false))
   return { ok: true, settings }
 }
+
+/** One feature and the option a saved PrintTicket selects for it. */
+export type Selection = { feature: QName; option: QName }
+
+/**
+ * The saved Windows printing preferences in the driver's own words (printer screen): the paper,
+ * the orientation and the 2" cut the queue's ticket selects, each by its display name (falling back
+ * to the option's name), or `null` when the ticket says nothing about it.
+ */
+export function describePreferences(capabilities: Capabilities, selections: readonly Selection[]): { paper: string | null; orientation: string | null; cut: string | null } {
+  const selected = (feature: QName | undefined) => {
+    if (!feature) return null
+    const pick = selections.find((selection) => selection.feature.ns === feature.ns && selection.feature.name === feature.name)
+    if (!pick) return null
+    const option = capabilities.features
+      .find((candidate) => candidate.ns === feature.ns && candidate.name === feature.name)
+      ?.options.find((candidate) => candidate.ns === pick.option.ns && candidate.name === pick.option.name)
+    return option ? describe(option) : pick.option.name
+  }
+  const cut = findCutFeature(capabilities)
+  return {
+    paper: selected({ ns: PSK, name: 'PageMediaSize' }),
+    orientation: selected({ ns: PSK, name: 'PageOrientation' }),
+    cut: selected(cut.ok ? cut.feature : undefined),
+  }
+}
+

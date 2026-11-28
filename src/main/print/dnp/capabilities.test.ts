@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PSK, chooseCutOption, chooseMedia, chooseResolution, findCutFeature, planTicket, type Capabilities, type CapabilityFeature } from './capabilities'
+import { PSK, chooseCutOption, describePreferences, chooseMedia, chooseResolution, findCutFeature, planTicket, type Capabilities, type CapabilityFeature } from './capabilities'
 
 const PRIVATE = 'http://schemas.dnp.example/2007/printschema'
 
@@ -145,3 +145,21 @@ describe('planTicket', () => {
     expect(plan.ok && plan.settings.map((s) => s.role)).toEqual(['cut', 'media', 'orientation'])
   })
 })
+
+describe('describePreferences (printer screen)', () => {
+  it('names the paper, orientation and cut the saved ticket selects, in the driver words', () => {
+    const selections = [
+      { feature: { ns: PSK, name: 'PageMediaSize' }, option: { ns: PRIVATE, name: 'PC_6x4' } },
+      { feature: { ns: PSK, name: 'PageOrientation' }, option: { ns: PSK, name: 'Portrait' } },
+      { feature: { ns: cutFeature.ns, name: cutFeature.name }, option: { ns: cutFeature.options[1]!.ns, name: cutFeature.options[1]!.name } },
+    ]
+    expect(describePreferences(dsRx1, selections)).toEqual({ paper: '(6x4)', orientation: 'Portrait', cut: describeOption(cutFeature.options[1]!) })
+  })
+
+  it('says nothing for a feature the ticket leaves out', () => {
+    expect(describePreferences(dsRx1, [])).toEqual({ paper: null, orientation: null, cut: null })
+  })
+})
+
+const describeOption = (option: { name: string; displayName: string | null }) => option.displayName ?? option.name
+

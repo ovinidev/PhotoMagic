@@ -5,7 +5,7 @@ import { readRuntimeFlags } from '@shared/runtime'
 import { renderSheet } from './compose/renderSheet'
 import { broadcastGalleryChanged, broadcastPrinterStatus, broadcastSession, broadcastShareState, broadcastUpdateStatus, broadcastZoomState, registerIpcHandlers } from './ipc'
 import { applyCameraFixture, restrictPermissions } from './media'
-import { createPrinter, createPrinterMonitor, type Printer } from './print'
+import { createPrinter, createPrinterMonitor, withPrinterSettings, type Printer } from './print'
 import { readConfig } from './persist'
 import { createSession, saveMontage } from './session'
 import { createShareService } from './share'
@@ -70,11 +70,15 @@ if (!app.requestSingleInstanceLock()) {
     app.on('will-quit', () => void share.stop())
     const printerHandle = createPrinter(flags, userData)
     const printerMonitor = createPrinterMonitor({ printer: printerHandle.printer, intervalMs: printerHandle.pollMs, onChange: broadcastPrinterStatus })
+    // The operator's printer screen: the cut per mode and whether the Windows preferences go back.
+    let printerSettings = (await readConfig(userData)).printer
     // After every send the line on both screens shows what the spooler says now, not 5 s later.
+    const configured = withPrinterSettings(printerHandle.printer, () => printerSettings)
     const printer: Printer = {
       status: printerMonitor.refresh,
+      inspect: configured.inspect,
       print: async (ticket) => {
-        const result = await printerHandle.printer.print(ticket)
+        const result = await configured.print(ticket)
         void printerMonitor.refresh()
         return result
       },
@@ -143,6 +147,12 @@ if (!app.requestSingleInstanceLock()) {
       session,
       printerMonitor,
       printer,
+      printerSettings: {
+        get: () => printerSettings,
+        set: (next) => {
+          printerSettings = next
+        },
+      },
       updateStatus: updater.status,
       zoom,
       share,
