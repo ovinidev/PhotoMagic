@@ -68,7 +68,7 @@ describe('useFramingEditor (RF09)', () => {
     vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 1080, height: 1920, close: () => {} })))
     stubBridge({ session: { getPhoto: () => Promise.resolve(new Uint8Array([1, 2, 3])) } })
     const base = eventState({ taken: 1 })
-    const slots = TWO_STRIPS_SEED.map((slot) => (slot.id === 'bottom-1' ? { ...slot, left: 20, top: 500, width: 900, height: 700 } : slot))
+    const slots = TWO_STRIPS_SEED.map((slot) => (slot.id === 'bottom-1' ? { ...slot, left: 20, top: 500, width: 900, height: 700, angle: 0 } : slot))
     render(<Harness session={{ ...base, slots }} />)
     await screen.findAllByTestId('framing-photo')
     const mask = document.querySelector<HTMLElement>('[data-mask-for="bottom-1"]')!

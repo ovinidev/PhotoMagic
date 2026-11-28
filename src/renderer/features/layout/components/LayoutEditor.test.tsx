@@ -17,8 +17,11 @@ const pointer = (type: 'pointerDown' | 'pointerMove' | 'pointerUp', element: Ele
 const percent = (value: string) => Number.parseFloat(value)
 const field = (name: string) => screen.getByLabelText(name) as HTMLInputElement
 
-async function open(mode: 'two-strips' | 'one-strip' = 'two-strips') {
-  const bridge = stubBridge()
+/** 2 tiras with the bottom cards lying (Angle 0), for gestures whose numbers assume an unturned card. */
+const LYING_BOTTOM = { ...SEED_LAYOUTS, 'two-strips': SEED_LAYOUTS['two-strips'].map((slot) => (slot.id.startsWith('bottom-') ? { ...slot, angle: 0 } : slot)) }
+
+async function open(mode: 'two-strips' | 'one-strip' = 'two-strips', layouts = SEED_LAYOUTS) {
+  const bridge = stubBridge({ layout: { get: () => Promise.resolve(layouts) } })
   render(<LayoutEditor initialMode={mode} onClose={() => {}} />)
   await screen.findByTestId('layout-sheet')
   return bridge
@@ -70,7 +73,7 @@ describe('LayoutEditor (RF03)', () => {
   })
 
   it('snaps to the sheet edge at 6 px, and not with Alt held', async () => {
-    await open()
+    await open('two-strips', LYING_BOTTOM)
     const card = screen.getByTestId('slot-card-bottom-1')
     const sheet = screen.getByTestId('layout-sheet')
     pointer('pointerDown', card, 300, 800)
@@ -93,7 +96,7 @@ describe('LayoutEditor (RF03)', () => {
   })
 
   it('resizes from a handle with Width and Height live', async () => {
-    await open()
+    await open('two-strips', LYING_BOTTOM)
     await userEvent.click(screen.getByTestId('slot-card-bottom-1'))
     const sheet = screen.getByTestId('layout-sheet')
     pointer('pointerDown', screen.getByTestId('handle-se'), 664, 1135)
@@ -167,7 +170,7 @@ describe('LayoutEditor (RF03)', () => {
   it('keeps every card number upright, whatever the card angle (client, 2026-11-28)', async () => {
     await open()
     expect(screen.getByTestId('slot-number-top-1').style.transform).toBe('rotate(-270deg)')
-    expect(screen.getByTestId('slot-number-bottom-1').style.transform).toBe('rotate(0deg)')
+    expect(screen.getByTestId('slot-number-bottom-1').style.transform).toBe('rotate(-270deg)')
     await userEvent.click(screen.getByTestId('slot-card-bottom-1'))
     const sheet = screen.getByTestId('layout-sheet')
     pointer('pointerDown', screen.getByTestId('handle-rotate'), 363, 1180)

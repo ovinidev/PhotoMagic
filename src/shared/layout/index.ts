@@ -11,7 +11,7 @@ export {
   type Slot,
 } from './types'
 export { boxToSlot, defaultFixedBoxes, fixedBox, guideBoxes, photoInBox, slotOnBox, slotToBox, type GuideBox } from './guides'
-export { CLIENT_BOX_BLEED, CLIENT_BOX_RADIUS, ONE_STRIP_SEED, SEED_LAYOUTS, TWO_STRIPS_CLIENT_BOXES, TWO_STRIPS_SEED } from './seed'
+export { CLIENT_BOX_BLEED, CLIENT_BOX_RADIUS, ONE_STRIP_SEED, SEED_LAYOUTS, TWO_STRIPS_CLIENT_BOXES, TWO_STRIPS_SEED, SEED_BOXES, migrateTwoStrips } from './seed'
 export {
   DEFAULT_FRAMING,
   FRAMING_ROTATION_RANGE,
