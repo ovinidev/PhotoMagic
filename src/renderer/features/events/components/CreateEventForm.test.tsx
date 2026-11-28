@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DisplayState, TemplateInfo, Templates } from '@shared/ipc'
+import { guideBoxes } from '@shared/layout'
 import { stubBridge } from '@renderer/test/bridge'
 import { CreateEventForm } from './CreateEventForm'
 
@@ -47,6 +48,20 @@ describe('CreateEventForm (RF01, RF04)', () => {
     await waitFor(() => expect(start()).toBeEnabled())
     await userEvent.click(start())
     expect(api.event.start).toHaveBeenCalledWith({ name: 'Festa', mode: 'two-strips' })
+  })
+
+  it('draws the fixed boxes in use over the template preview, and reads them again on a new layout revision (DESIGN §6)', async () => {
+    const moved = guideBoxes('two-strips').map((box) => (box.id === 'bottom-2' ? { ...box, rect: { ...box.rect, left: 900 } } : box))
+    const { api } = stubBridge({
+      template: { getAll: () => Promise.resolve(WITH_TWO_STRIPS) },
+      layout: { getBoxes: () => Promise.resolve({ 'two-strips': { boxes: moved, defaults: [...guideBoxes('two-strips')] }, 'one-strip': { boxes: [...guideBoxes('one-strip')], defaults: [...guideBoxes('one-strip')] } }) },
+    })
+    const { rerender } = render(<CreateEventForm layoutRevision={0} />)
+    await screen.findByAltText('Template do modo 2 tiras')
+    await waitFor(() => expect(screen.getByTestId('guide-bottom-2').getAttribute('x')).toBe('900'))
+    const reads = api.layout.getBoxes.mock.calls.length
+    rerender(<CreateEventForm layoutRevision={1} />)
+    await waitFor(() => expect(api.layout.getBoxes.mock.calls.length).toBeGreaterThan(reads))
   })
 
   it.each([

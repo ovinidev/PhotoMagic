@@ -1,8 +1,8 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
-import { slotListSchema, webcamCapabilitiesSchema, webcamValuesSchema } from '@shared/ipc'
-import { SEED_LAYOUTS, type Layouts, type PrintMode, type Slot } from '@shared/layout'
+import { guideBoxListSchema, slotListSchema, webcamCapabilitiesSchema, webcamValuesSchema } from '@shared/ipc'
+import { SEED_LAYOUTS, type GuideBox, type Layouts, type PrintMode, type Slot } from '@shared/layout'
 import { NO_WEBCAM_VALUES, type WebcamCapabilities, type WebcamValues } from '@shared/webcam'
 import { defaultShareSettings, shareSettingsSchema, type ShareSettings } from '@shared/share'
 import { DEFAULT_USER_ZOOM, sanitizeUserZoom } from '@shared/zoom'
@@ -25,6 +25,12 @@ export type TemplateRef = z.infer<typeof templateRefSchema>
 export type Config = {
   layouts: Layouts
   templates: Partial<Record<PrintMode, TemplateRef>>
+  /**
+   * The operator's fixed boxes for each mode's current template (DESIGN §6): where every photo is
+   * clipped. Missing uses the template's detected dark boxes, else the seed. Importing a new template
+   * for a mode clears its entry, so each template keeps its own boxes.
+   */
+  boxes: Partial<Record<PrintMode, GuideBox[]>>
   /** The operator's webcam values and the controls the camera last advertised (RF15, RNF11). */
   webcam: { values: WebcamValues; capabilities: WebcamCapabilities | null }
   /** The operator's laptop zoom on this computer (DESIGN §3), times the automatic factor. */
@@ -48,6 +54,12 @@ const configSchema = z.object({
       'one-strip': templateRefSchema.optional().catch(undefined),
     })
     .catch(() => ({})),
+  boxes: z
+    .object({
+      'two-strips': guideBoxListSchema.optional().catch(undefined),
+      'one-strip': guideBoxListSchema.optional().catch(undefined),
+    })
+    .catch(() => ({})),
   webcam: z
     .object({
       values: webcamValuesSchema.catch(() => ({ ...NO_WEBCAM_VALUES, controls: {} })),
@@ -62,7 +74,7 @@ export const CONFIG_FILE = 'config.json'
 export const TEMPLATES_DIR = 'templates'
 
 export function defaultConfig(): Config {
-  return { layouts: { ...SEED_LAYOUTS }, templates: {}, webcam: noWebcam(), zoom: DEFAULT_USER_ZOOM, share: defaultShareSettings() }
+  return { layouts: { ...SEED_LAYOUTS }, templates: {}, boxes: {}, webcam: noWebcam(), zoom: DEFAULT_USER_ZOOM, share: defaultShareSettings() }
 }
 
 /** Parses whatever is on disk; never throws. */
@@ -74,7 +86,12 @@ export function parseConfig(raw: unknown): Config {
     const ref = parsed.data.templates[mode]
     if (ref) templates[mode] = ref
   }
-  return { layouts: parsed.data.layouts, templates, webcam: parsed.data.webcam as Config['webcam'], zoom: sanitizeUserZoom(parsed.data.zoom), share: parsed.data.share }
+  const boxes: Config['boxes'] = {}
+  for (const mode of ['two-strips', 'one-strip'] as const) {
+    const saved = parsed.data.boxes[mode]
+    if (saved && saved.length === SEED_LAYOUTS[mode].length) boxes[mode] = saved
+  }
+  return { layouts: parsed.data.layouts, templates, boxes, webcam: parsed.data.webcam as Config['webcam'], zoom: sanitizeUserZoom(parsed.data.zoom), share: parsed.data.share }
 }
 
 export async function readConfig(userData: string): Promise<Config> {
@@ -118,6 +135,11 @@ export function saveWebcam(userData: string, webcam: Partial<Config['webcam']>):
 /** Writes one mode's layout and leaves the other one, and the templates, as they are (RF03). */
 export function saveLayout(userData: string, mode: PrintMode, slots: readonly Slot[]): Promise<Config> {
   return updateConfig(userData, (config) => ({ ...config, layouts: { ...config.layouts, [mode]: [...slots] } }))
+}
+
+/** Writes one mode's fixed boxes and leaves everything else as it is (DESIGN §6). */
+export function saveBoxes(userData: string, mode: PrintMode, boxes: readonly GuideBox[]): Promise<Config> {
+  return updateConfig(userData, (config) => ({ ...config, boxes: { ...config.boxes, [mode]: [...boxes] } }))
 }
 
 /** Writes the photo download settings and leaves everything else as it is (DESIGN §17). */

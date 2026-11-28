@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path'
 import sharp from 'sharp'
 import { TWO_STRIPS_CLIENT_BOXES } from '@shared/layout'
 import { expect, test } from './fixtures'
-import { PRINT_TIMEOUT, setSimulatedPrinter, simulatedTickets, startEvent, takePhotos } from './event'
+import { PRINT_TIMEOUT, closeLayoutEditor, layoutEditor, setSimulatedPrinter, simulatedTickets, startEvent, takePhotos } from './event'
 import { writeY4m } from './y4m'
 
 /** The client's real 2 tiras artwork (Canva PDF rendered at 1844×1240): black rounded photo boxes. */
@@ -281,4 +281,34 @@ test.describe('print: client 2 tiras artwork', () => {
       expect(white(box.left + 2, box.top + 2), `rounded corner of ${box.left},${box.top}`).toBe(true)
     }
   })
+
+  test('DESIGN §6 a gray box moved in the editor shows on the home preview and moves that photo on the printed sheet', async ({ app, operatorWindow, dirs }) => {
+    await operatorWindow.getByRole('button', { name: 'Editar posições das fotos (2 tiras)' }).click()
+    const editor = layoutEditor(operatorWindow)
+    await expect(editor).toBeVisible()
+    const left = editor.getByLabel('Left de Quadro cinza Baixo 2')
+    await left.fill('1150')
+    await left.press('Enter')
+    await expect(editor.getByTestId('layout-save-state')).toHaveText('Salvo')
+    await closeLayoutEditor(operatorWindow)
+    // The home preview draws the box where the operator left it.
+    await expect(operatorWindow.getByTestId('guide-bottom-2')).toHaveAttribute('x', '1150')
+
+    const tv = await startEvent(app, operatorWindow, { name: 'Festa Quadros', mode: 'two-strips', template: null })
+    await takePhotos(tv, 3)
+    await tv.getByRole('button', { name: 'Imprimir' }).click()
+    await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
+    const files = readdirSync(join(dirs.desktop, 'Festa Quadros'))
+    const { data, info } = await sharp(join(dirs.desktop, 'Festa Quadros', files[0]!)).raw().toBuffer({ resolveWithObject: true })
+    const white = (x: number, y: number) => {
+      const i = (y * info.width + x) * info.channels
+      return [data[i]!, data[i + 1]!, data[i + 2]!].every((value) => value > 245)
+    }
+    // Baixo 2 now fills 1150–1752: its photo is there, and its old place (from 709) is white sheet.
+    expect(white(1700, 934), 'photo in the moved box').toBe(false)
+    expect(white(1000, 934), 'old place of the box').toBe(true)
+    // Baixo 1 did not move.
+    expect(white(360, 934), 'Baixo 1 photo').toBe(false)
+  })
 })
+

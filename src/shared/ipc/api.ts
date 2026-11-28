@@ -1,8 +1,10 @@
-import type { Layouts, PhotoIndex } from '../layout'
+import type { GuideBox, Layouts, PhotoIndex, PrintMode } from '../layout'
 import type { ShareSettings } from '../share/settings'
 import type { WebcamValues } from '../webcam'
 import type {
   AppVersion,
+  BoxesSaveResult,
+  FixedBoxes,
   CameraStatus,
   DisplayState,
   EventStartInput,
@@ -64,6 +66,10 @@ export type FotomagicaApi = {
     get: () => Promise<Layouts>
     /** Writes the layout of one mode only, once per gesture, on release (DESIGN §7). Refused while an event runs. */
     save: (input: LayoutSaveInput) => Promise<LayoutSaveResult>
+    /** Each mode's fixed boxes for its current template, and their defaults (DESIGN §6). */
+    getBoxes: () => Promise<FixedBoxes>
+    /** Writes one mode's fixed boxes, on release. Refused while an event runs. */
+    saveBoxes: (input: { mode: PrintMode; boxes: GuideBox[] }) => Promise<BoxesSaveResult>
   }
   event: {
     /** Checks the name and the template, opens the TV and creates or reuses `Desktop\<name>` (RF01, RF02, RF04). */

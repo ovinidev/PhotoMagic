@@ -18,7 +18,12 @@ import { TemplatePicker } from './TemplatePicker'
  * accepted, and from the button below the template. The home page owns the editor. `footer` is a
  * slot under `Iniciar evento` (the home page puts the photo-download row there, DESIGN §17).
  */
-export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?: (mode: PrintMode) => void; logo?: ReactNode; footer?: ReactNode } = {}) {
+export function CreateEventForm({
+  onEditLayout,
+  logo,
+  footer,
+  layoutRevision,
+}: { onEditLayout?: (mode: PrintMode) => void; logo?: ReactNode; footer?: ReactNode; layoutRevision?: number } = {}) {
   const nameId = useId()
   const nameHintId = useId()
   const [name, setName] = useState('')
@@ -162,6 +167,7 @@ export function CreateEventForm({ onEditLayout, logo, footer }: { onEditLayout?:
           templates={templates}
           template={template}
           importState={imports[mode]}
+          layoutRevision={layoutRevision}
           actions={
             onEditLayout ? (
               <Button variant="ghost" className="h-auto min-w-0 max-w-full whitespace-normal text-left" onClick={() => onEditLayout(mode)}>

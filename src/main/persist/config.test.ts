@@ -3,8 +3,8 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { SEED_LAYOUTS } from '@shared/layout'
-import { CONFIG_FILE, parseConfig, readConfig, saveLayout, saveWebcam, updateConfig, writeConfig } from './config'
+import { SEED_LAYOUTS, guideBoxes } from '@shared/layout'
+import { CONFIG_FILE, parseConfig, readConfig, saveBoxes, saveLayout, saveWebcam, updateConfig, writeConfig } from './config'
 
 const ref = { file: 'two-strips.png', fileName: 'Tema Festa.png' }
 const NO_WEBCAM = { values: { controls: {} }, capabilities: null }
@@ -12,9 +12,9 @@ const NO_WEBCAM = { values: { controls: {} }, capabilities: null }
 describe('config.json', () => {
   it('falls back to the seeds and no templates when the file is missing or broken', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'fotomagica-config-'))
-    expect(await readConfig(dir)).toEqual({ layouts: SEED_LAYOUTS, templates: {}, webcam: NO_WEBCAM, zoom: 1, share: defaultShareSettings() })
+    expect(await readConfig(dir)).toEqual({ layouts: SEED_LAYOUTS, templates: {}, boxes: {}, webcam: NO_WEBCAM, zoom: 1, share: defaultShareSettings() })
     await writeFile(join(dir, CONFIG_FILE), '{ not json')
-    expect(await readConfig(dir)).toEqual({ layouts: SEED_LAYOUTS, templates: {}, webcam: NO_WEBCAM, zoom: 1, share: defaultShareSettings() })
+    expect(await readConfig(dir)).toEqual({ layouts: SEED_LAYOUTS, templates: {}, boxes: {}, webcam: NO_WEBCAM, zoom: 1, share: defaultShareSettings() })
   })
 
   it('keeps a valid layout when the other one is invalid', () => {
@@ -31,7 +31,7 @@ describe('config.json', () => {
 
   it('round-trips through disk', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'fotomagica-config-'))
-    const config = { layouts: SEED_LAYOUTS, templates: { 'two-strips': ref }, webcam: NO_WEBCAM, zoom: 1.25, share: defaultShareSettings() }
+    const config = { layouts: SEED_LAYOUTS, templates: { 'two-strips': ref }, boxes: {}, webcam: NO_WEBCAM, zoom: 1.25, share: defaultShareSettings() }
     await writeConfig(dir, config)
     expect(await readConfig(dir)).toEqual(config)
     expect(JSON.parse(await readFile(join(dir, CONFIG_FILE), 'utf8')).templates).toEqual({ 'two-strips': ref })
@@ -39,7 +39,7 @@ describe('config.json', () => {
 
   it('saves one layout without touching the other or the templates (RF03)', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'fotomagica-config-'))
-    await writeConfig(dir, { layouts: SEED_LAYOUTS, templates: { 'two-strips': ref }, webcam: NO_WEBCAM, zoom: 1, share: defaultShareSettings() })
+    await writeConfig(dir, { layouts: SEED_LAYOUTS, templates: { 'two-strips': ref }, boxes: {}, webcam: NO_WEBCAM, zoom: 1, share: defaultShareSettings() })
     const moved = SEED_LAYOUTS['one-strip'].map((slot) => (slot.id === 'photo-1' ? { ...slot, left: 60, photo: null } : slot))
     await saveLayout(dir, 'one-strip', moved)
     const read = await readConfig(dir)
@@ -69,12 +69,20 @@ describe('config.json', () => {
 
   it('keeps the webcam values and the last advertised controls, and drops a broken entry alone (RF15, RNF11)', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'fotomagica-config-'))
-    await writeConfig(dir, { layouts: SEED_LAYOUTS, templates: { 'two-strips': ref }, webcam: NO_WEBCAM, zoom: 1, share: defaultShareSettings() })
+    await writeConfig(dir, { layouts: SEED_LAYOUTS, templates: { 'two-strips': ref }, boxes: {}, webcam: NO_WEBCAM, zoom: 1, share: defaultShareSettings() })
     const capabilities = { controls: { brightness: { key: 'brightness', min: 0, max: 255, step: 1 } }, whiteBalanceModes: [], powerLineFrequency: false }
     await saveWebcam(dir, { values: { controls: { brightness: 140 } }, capabilities })
     const config = await readConfig(dir)
     expect(config.webcam).toEqual({ values: { controls: { brightness: 140 } }, capabilities })
     expect(config.templates).toEqual({ 'two-strips': ref })
     expect(parseConfig({ webcam: { values: { controls: { brightness: 'x' } }, capabilities } }).webcam).toEqual({ values: { controls: {} }, capabilities })
+  })
+
+  it('saves one mode fixed boxes and drops a list with the wrong count (DESIGN §6)', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'fotomagica-config-'))
+    const moved = guideBoxes('two-strips').map((box) => ({ ...box, rect: { ...box.rect, top: box.rect.top + 10 } }))
+    await saveBoxes(dir, 'two-strips', moved)
+    expect((await readConfig(dir)).boxes).toEqual({ 'two-strips': moved })
+    expect(parseConfig({ boxes: { 'two-strips': moved.slice(0, 2), 'one-strip': [{ id: 'x' }] } }).boxes).toEqual({})
   })
 })

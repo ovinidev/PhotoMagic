@@ -1,12 +1,13 @@
 import { SHEET } from '@shared/constants'
-import { guideBoxes, type PrintMode } from '@shared/layout'
+import { guideBoxes, type GuideBox, type PrintMode } from '@shared/layout'
 
 /**
- * The mode's standard photo boxes as gray rounded rectangles over a sheet-sized parent (PRD §6.2):
- * the operator sees where the photos go even when the background art has no boxes. Decorative only;
- * it never takes the pointer, so the cards above keep every gesture.
+ * The mode's fixed photo boxes as gray rounded rectangles over a sheet-sized parent (PRD §6.2): the
+ * operator sees where the photos go even when the background art has no boxes. `boxes` are the ones
+ * in use for the current template (DESIGN §6); missing shows the standard (seed) boxes. Decorative
+ * only; it never takes the pointer.
  */
-export function SheetGuides({ mode, className }: { mode: PrintMode; className?: string }) {
+export function SheetGuides({ mode, boxes, className }: { mode: PrintMode; boxes?: readonly GuideBox[] | null; className?: string }) {
   return (
     <svg
       aria-hidden
@@ -16,7 +17,7 @@ export function SheetGuides({ mode, className }: { mode: PrintMode; className?: 
       preserveAspectRatio="none"
       className={className ?? 'pointer-events-none absolute inset-0 h-full w-full'}
     >
-      {guideBoxes(mode).map((box) => (
+      {(boxes ?? guideBoxes(mode)).map((box) => (
         <rect
           key={box.id}
           data-testid={`guide-${box.id}`}
