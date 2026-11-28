@@ -111,8 +111,8 @@ if (!app.requestSingleInstanceLock()) {
     const desktop = (flags.e2e && flags.fixtures.paths.desktop) || app.getPath('desktop')
     const session = createSession({
       render: renderSheet,
-      saveMontage: async (folder, jpeg) => {
-        const saved = await saveMontage(folder, jpeg)
+      saveMontage: async (folder, jpeg, originals) => {
+        const saved = await saveMontage(folder, jpeg, originals, undefined, (message, error) => console.error(`[share] ${message}`, error))
         broadcastGalleryChanged()
         share.publish(saved)
         return saved

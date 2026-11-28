@@ -5,7 +5,7 @@ import { createShareRegistry } from './registry'
 describe('share registry', () => {
   it('hands out URL-safe 128-bit tokens that map only to the registered file', () => {
     const registry = createShareRegistry()
-    const token = registry.add({ path: 'C:\\Users\\op\\Desktop\\Festa\\21-45-08.jpg', fileName: '21-45-08.jpg' })
+    const token = registry.add({ fileName: '21-45-08.jpg', photos: [{ index: 1, path: 'C:\\Users\\op\\Desktop\\Festa\\Originais\\21-45-08_1.jpg' }] })
     expect(token).toMatch(SHARE_TOKEN_PATTERN)
     expect(registry.get(token)?.fileName).toBe('21-45-08.jpg')
     expect(registry.get('AAAAAAAAAAAAAAAAAAAAAA')).toBeNull()
@@ -14,9 +14,9 @@ describe('share registry', () => {
 
   it('drops the oldest entry past the cap and forgets everything on clear', () => {
     const registry = createShareRegistry(2)
-    const first = registry.add({ path: 'a', fileName: 'a.jpg' })
-    registry.add({ path: 'b', fileName: 'b.jpg' })
-    registry.add({ path: 'c', fileName: 'c.jpg' })
+    const first = registry.add({ fileName: 'a.jpg', photos: [] })
+    registry.add({ fileName: 'b.jpg', photos: [] })
+    registry.add({ fileName: 'c.jpg', photos: [] })
     expect(registry.get(first)).toBeNull()
     expect(registry.size).toBe(2)
     registry.clear()

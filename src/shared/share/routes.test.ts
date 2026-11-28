@@ -7,7 +7,8 @@ describe('parseShareRoute', () => {
   it('maps the page and the download of a well-formed token', () => {
     expect(parseShareRoute(`/p/${token}`)).toEqual({ kind: 'page', token })
     expect(parseShareRoute(`/p/${token}?x=1`)).toEqual({ kind: 'page', token })
-    expect(parseShareRoute(`/p/${token}/foto.jpg`)).toEqual({ kind: 'download', token })
+    expect(parseShareRoute(`/p/${token}/foto-1.jpg`)).toEqual({ kind: 'download', token, index: 1 })
+    expect(parseShareRoute(`/p/${token}/foto-3.jpg`)).toEqual({ kind: 'download', token, index: 3 })
   })
 
   it.each([
@@ -25,7 +26,11 @@ describe('parseShareRoute', () => {
     `//p/${token}`,
     `/P/${token}`,
     `/p/${token}/other.jpg`,
-    `/p/${token}/foto.jpg/x`,
+    `/p/${token}/foto-1.jpg/x`,
+    `/p/${token}/foto.jpg`,
+    `/p/${token}/foto-4.jpg`,
+    `/p/${token}/foto-0.jpg`,
+    `/p/${token}/foto-01.jpg`,
     `http://evil/p/${token}`,
     '/p/AbCdEfGhIjKlMnOpQrSt.v',
   ])('refuses %s', (url) => {
@@ -34,10 +39,10 @@ describe('parseShareRoute', () => {
 })
 
 describe('parseShareRoute, event gallery', () => {
-  it('maps the gallery, a thumbnail and a montage of a well-formed token', () => {
+  it('maps the gallery, and a thumbnail and a download of one original of a round', () => {
     expect(parseShareRoute(`/e/${token}`)).toEqual({ kind: 'gallery', token })
-    expect(parseShareRoute(`/e/${token}/t/21-45-08.jpg`)).toEqual({ kind: 'gallery-thumb', token, fileName: '21-45-08.jpg' })
-    expect(parseShareRoute(`/e/${token}/f/21-45-08-2.jpg`)).toEqual({ kind: 'gallery-file', token, fileName: '21-45-08-2.jpg' })
+    expect(parseShareRoute(`/e/${token}/t/21-45-08.jpg/1`)).toEqual({ kind: 'gallery-thumb', token, fileName: '21-45-08.jpg', index: 1 })
+    expect(parseShareRoute(`/e/${token}/f/21-45-08-2.jpg/3`)).toEqual({ kind: 'gallery-file', token, fileName: '21-45-08-2.jpg', index: 3 })
   })
 
   it.each([
@@ -53,6 +58,10 @@ describe('parseShareRoute, event gallery', () => {
     `/e/${token}/f/25-00-00.jpg`,
     `/e/${token}/x/21-45-08.jpg`,
     `/e/${token}/f/21-45-08.jpg/x`,
+    `/e/${token}/f/21-45-08.jpg`,
+    `/e/${token}/f/21-45-08.jpg/4`,
+    `/e/${token}/f/21-45-08.jpg/1/x`,
+    `/e/${token}/f/21-45-08_1.jpg/1`,
     `/e/${token}/foto.jpg`,
     `/e/short`,
   ])('refuses %s', (url) => {

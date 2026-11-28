@@ -31,3 +31,20 @@ export function isMontageFileName(name: string): boolean {
   const [hours, minutes, seconds] = [match[1], match[2], match[3]].map(Number) as [number, number, number]
   return hours < 24 && minutes < 60 && seconds < 60
 }
+
+/**
+ * The round's three original captures, as the camera took them, without the template (DESIGN §17):
+ * `Originais/21-45-08_1.jpg` … `_3.jpg` next to the montage `21-45-08.jpg`. Guests download these.
+ */
+export const ORIGINALS_DIR = 'Originais'
+export const ORIGINAL_INDEXES = [1, 2, 3] as const
+export type OriginalIndex = (typeof ORIGINAL_INDEXES)[number]
+
+export function originalFileName(montage: string, index: OriginalIndex): string {
+  return montage.replace(/\.jpg$/, `_${index}.jpg`)
+}
+
+export function isOriginalIndex(value: number): value is OriginalIndex {
+  return value === 1 || value === 2 || value === 3
+}
+
