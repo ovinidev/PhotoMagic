@@ -50,15 +50,43 @@ async function allPhotos() {
   return { 1: await capture(1), 2: await capture(2), 3: await capture(3) }
 }
 
+
+/**
+ * 2 tiras with the bottom cards at Angle 0, as before 2026-11-28. The seed's bottom cards stand at
+ * Angle 270 now, but the photo is planned on the fixed box and the person stays upright, so the sheet
+ * is the same (checked below); the geometry these tests probe is the lying card's.
+ */
+const LANDSCAPE_BOTTOM: Slot[] = TWO_STRIPS_SEED.map((slot) => (slot.id.startsWith('bottom-') ? { ...slot, angle: 0 } : slot))
+
 describe('renderSheet (RF08, RF12)', () => {
+  it('prints the same sheet with the bottom cards standing (Angle 270) as lying (Angle 0)', async () => {
+    const tpl = await template()
+    const photos = await allPhotos()
+    const standing = await sharp(await renderSheet({ mode: 'two-strips', template: tpl, slots: TWO_STRIPS_SEED, photos }, { kind: 'montage' })).raw().toBuffer()
+    const lying = await sharp(await renderSheet({ mode: 'two-strips', template: tpl, slots: LANDSCAPE_BOTTOM, photos }, { kind: 'montage' })).raw().toBuffer()
+    // The same crop, up to a pixel of rounding where the photo's bar meets its body: well under 1 % of
+    // the two bottom boxes differs, and nothing outside them.
+    const [, , , b1, b2] = guideBoxes('two-strips')
+    const inBottom = (x: number, y: number) => [b1!, b2!].some(({ rect }) => x >= rect.left && x < rect.left + rect.width && y >= rect.top && y < rect.top + rect.height)
+    let different = 0
+    let outside = 0
+    for (let pixel = 0; pixel < standing.length / 3; pixel += 1) {
+      if ([0, 1, 2].every((c) => Math.abs(standing[pixel * 3 + c]! - lying[pixel * 3 + c]!) <= 24)) continue
+      different += 1
+      if (!inBottom(pixel % 1844, Math.floor(pixel / 1844))) outside += 1
+    }
+    expect(outside).toBe(0)
+    expect(different).toBeLessThan(0.01 * 2 * 602 * 402)
+  })
+
   it('writes a 1844×1240 JPEG at 300 DPI', async () => {
-    const jpeg = await renderSheet({ mode: 'two-strips', template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
+    const jpeg = await renderSheet({ mode: 'two-strips', template: await template(), slots: LANDSCAPE_BOTTOM, photos: await allPhotos() }, { kind: 'montage' })
     const meta = await sharp(jpeg).metadata()
     expect(meta).toMatchObject({ format: 'jpeg', width: 1844, height: 1240, density: 300 })
   })
 
   it.each([
-    ['two-strips', TWO_STRIPS_SEED],
+    ['two-strips', LANDSCAPE_BOTTOM],
     ['one-strip', ONE_STRIP_SEED],
   ] as const)('puts each photo upright in its slots, bar on top, in %s', async (mode, slots) => {
     const jpeg = await renderSheet({ mode, template: await template(), slots, photos: await allPhotos() }, { kind: 'montage' })
@@ -78,9 +106,9 @@ describe('renderSheet (RF08, RF12)', () => {
   })
 
   it('crops the center of the portrait in a horizontal slot: bar only in the top part', async () => {
-    const jpeg = await renderSheet({ mode: 'two-strips', template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
+    const jpeg = await renderSheet({ mode: 'two-strips', template: await template(), slots: LANDSCAPE_BOTTOM, photos: await allPhotos() }, { kind: 'montage' })
     const at = await pixels(jpeg)
-    const bottom1 = TWO_STRIPS_SEED[3]!
+    const bottom1 = LANDSCAPE_BOTTOM[3]!
     // Cover fit: the portrait is scaled to the slot width, so the slot shows a centered band of it.
     const shown = bottom1.height / ((PHOTO.height * bottom1.width) / PHOTO.width)
     const hidden = (1 - shown) / 2
@@ -92,11 +120,11 @@ describe('renderSheet (RF08, RF12)', () => {
   })
 
   it('leaves the template visible where a photo is still missing', async () => {
-    const jpeg = await renderSheet({ mode: 'two-strips', template: await template(), slots: TWO_STRIPS_SEED, photos: { 1: await capture(1) } }, { kind: 'montage' })
+    const jpeg = await renderSheet({ mode: 'two-strips', template: await template(), slots: LANDSCAPE_BOTTOM, photos: { 1: await capture(1) } }, { kind: 'montage' })
     const at = await pixels(jpeg)
-    const top3 = visible(TWO_STRIPS_SEED[2]!)
+    const top3 = visible(LANDSCAPE_BOTTOM[2]!)
     expect(near(at(top3.left + top3.width / 2, top3.top + top3.height / 2), GRAY)).toBe(true)
-    const bottom1 = TWO_STRIPS_SEED[3]!
+    const bottom1 = LANDSCAPE_BOTTOM[3]!
     expect(near(at(bottom1.left + 250, bottom1.top + 250), BODY[1])).toBe(true)
   })
 
@@ -116,20 +144,20 @@ describe('renderSheet (RF08, RF12)', () => {
 
   it('frames one slot without moving it or the other slot of the same capture (RF09)', async () => {
     const photos = await allPhotos()
-    const bottom1 = TWO_STRIPS_SEED[3]!
+    const bottom1 = LANDSCAPE_BOTTOM[3]!
     // Pan to the top of the portrait: the bar now fills Baixo 1 down to its middle.
     const framings = { 'bottom-1': { zoom: 1, panX: 0, panY: -1, rotation: 0 } }
-    const at = await pixels(await renderSheet({ mode: 'two-strips', template: await template(), slots: TWO_STRIPS_SEED, photos, framings }, { kind: 'montage' }))
+    const at = await pixels(await renderSheet({ mode: 'two-strips', template: await template(), slots: LANDSCAPE_BOTTOM, photos, framings }, { kind: 'montage' }))
     expect(near(at(bottom1.left + 250, bottom1.top + 140), BAR)).toBe(true)
     // Cima 1 uses the same capture and keeps its default framing: bar on top, body below.
-    const top1 = visible(TWO_STRIPS_SEED[0]!)
+    const top1 = visible(LANDSCAPE_BOTTOM[0]!)
     expect(near(at(top1.left + top1.width / 2, top1.top - top1.hiddenTop + top1.fullHeight * 0.8), BODY[1])).toBe(true)
   })
 
   it('rotates the photo inside the slot and leaves no template corner showing (RF09)', async () => {
-    const bottom1 = TWO_STRIPS_SEED[3]!
+    const bottom1 = LANDSCAPE_BOTTOM[3]!
     const framings = { 'bottom-1': { zoom: 1, panX: 0, panY: 0, rotation: 15 } }
-    const at = await pixels(await renderSheet({ mode: 'two-strips', template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos(), framings }, { kind: 'montage' }))
+    const at = await pixels(await renderSheet({ mode: 'two-strips', template: await template(), slots: LANDSCAPE_BOTTOM, photos: await allPhotos(), framings }, { kind: 'montage' }))
     // Probed just inside the seed's rounded corner (radius 30: the arc is 9 px in along the diagonal).
     for (const [x, y] of [
       [bottom1.left + 12, bottom1.top + 12],
@@ -154,7 +182,7 @@ describe('renderSheet (RF08, RF12)', () => {
       'top-1': { zoom: 1.6, panX: 0.4, panY: -0.3, rotation: 12 },
       'bottom-2': { zoom: 2, panX: -0.5, panY: 0.5, rotation: -30 },
     }
-    const input = { mode: 'two-strips' as const, template: await template(), slots: TWO_STRIPS_SEED, photos: await allPhotos(), framings }
+    const input = { mode: 'two-strips' as const, template: await template(), slots: LANDSCAPE_BOTTOM, photos: await allPhotos(), framings }
     const full = await composeSheet(input)
     const half = await composeSheet(input, PREVIEW_WIDTH / 1844)
     expect(half.info).toMatchObject({ width: 922, height: 620 })
@@ -173,7 +201,7 @@ describe('renderSheet over the client 2 tiras artwork', () => {
   const ink = ([r, g, b]: Rgb) => Math.abs(r - g) < 14 && Math.abs(g - b) < 14 && r < 225
 
   it('fills every black photo box: no black corner or edge shows, the art around stays', async () => {
-    const jpeg = await renderSheet({ mode: 'two-strips', template: await readFile(CLIENT), slots: TWO_STRIPS_SEED, photos: await allPhotos() }, { kind: 'montage' })
+    const jpeg = await renderSheet({ mode: 'two-strips', template: await readFile(CLIENT), slots: LANDSCAPE_BOTTOM, photos: await allPhotos() }, { kind: 'montage' })
     const { data, info } = await sharp(jpeg).raw().toBuffer({ resolveWithObject: true })
     const at = (x: number, y: number): Rgb => {
       const i = (y * info.width + x) * info.channels
@@ -271,9 +299,9 @@ describe('renderSheet keeps each photo inside its slot (RF09, DESIGN §8)', PIXE
   it('leaves every pixel outside the slots equal to the template when photos are moved, zoomed and turned', async () => {
     const tpl = await stripes()
     const photo = await gradient()
-    const empty = await sharp(await renderSheet({ mode: 'two-strips', template: tpl, slots: TWO_STRIPS_SEED, photos: {} }, { kind: 'montage' })).raw().toBuffer()
+    const empty = await sharp(await renderSheet({ mode: 'two-strips', template: tpl, slots: LANDSCAPE_BOTTOM, photos: {} }, { kind: 'montage' })).raw().toBuffer()
     const framed = await sharp(
-      await renderSheet({ mode: 'two-strips', template: tpl, slots: TWO_STRIPS_SEED, photos: { 1: photo, 2: photo, 3: photo }, framings: moved }, { kind: 'montage' }),
+      await renderSheet({ mode: 'two-strips', template: tpl, slots: LANDSCAPE_BOTTOM, photos: { 1: photo, 2: photo, 3: photo }, framings: moved }, { kind: 'montage' }),
     )
       .raw()
       .toBuffer()
@@ -282,7 +310,7 @@ describe('renderSheet keeps each photo inside its slot (RF09, DESIGN §8)', PIXE
     for (let y = 0; y < 1240; y += 1) {
       for (let x = 0; x < 1844; x += 1) {
         // JPEG blocks are 8 px: pixels sharing a block with the photo edge may move a little.
-        if (TWO_STRIPS_SEED.some((slot) => nearSlot(slot, x, y, 10))) continue
+        if (LANDSCAPE_BOTTOM.some((slot) => nearSlot(slot, x, y, 10))) continue
         const at = (y * 1844 + x) * 3
         checked += 1
         // A photo pixel over the stripes would be off by far more; a few levels are JPEG ringing.
@@ -295,8 +323,8 @@ describe('renderSheet keeps each photo inside its slot (RF09, DESIGN §8)', PIXE
 
   it('draws each photo exactly where the shared placement (the laptop CSS transform) puts it', async () => {
     const photo = await gradient()
-    const at = await pixels(await renderSheet({ mode: 'two-strips', template: await stripes(), slots: TWO_STRIPS_SEED, photos: { 1: photo, 2: photo, 3: photo }, framings: moved }, { kind: 'montage' }))
-    for (const slot of TWO_STRIPS_SEED) {
+    const at = await pixels(await renderSheet({ mode: 'two-strips', template: await stripes(), slots: LANDSCAPE_BOTTOM, photos: { 1: photo, 2: photo, 3: photo }, framings: moved }, { kind: 'montage' }))
+    for (const slot of LANDSCAPE_BOTTOM) {
       const placement = photoPlacement(planSlot(slot, GRADIENT, moved[slot.id]))
       const radians = (-placement.rotation * Math.PI) / 180
       const center = slotCenter(slot)
@@ -354,7 +382,7 @@ describe('renderSheet clips every photo to its fixed gray box (DESIGN §6)', PIX
   }
 
   // The owner's case: cards enlarged, moved off their boxes, shrunk and turned in the editor.
-  const edited: Slot[] = TWO_STRIPS_SEED.map((slot) => {
+  const edited: Slot[] = LANDSCAPE_BOTTOM.map((slot) => {
     switch (slot.id) {
       case 'top-1':
         return { ...slot, left: slot.left - 80, top: slot.top - 60, width: slot.width + 300, height: slot.height + 260 }
@@ -370,7 +398,7 @@ describe('renderSheet clips every photo to its fixed gray box (DESIGN §6)', PIX
   })
 
   it.each([
-    ['the seed slots', TWO_STRIPS_SEED],
+    ['the seed slots', LANDSCAPE_BOTTOM],
     ['enlarged, moved, shrunk and turned slots', edited],
   ] as const)('with %s, leaves every pixel outside the boxes equal to the template and covers each box', async (_name, slots) => {
     const tpl = await stripes()

@@ -38,11 +38,14 @@ test.describe('layout editor (RF03)', () => {
     await expect(editor.getByLabel('Angle de Cima 3')).toHaveValue('270')
     await expect(editor.getByLabel('Left de Baixo 2')).toHaveValue('708')
     await expect(editor.getByTestId('cut-line')).toBeVisible()
-    // Cima 1 at Angle 270 is drawn tall, Baixo 1 at Angle 0 lying down.
+    // Every card stands (Angle 270), top and bottom, with its number upright; Baixo 1's gray box lies.
     const top1 = (await editor.getByTestId('slot-card-top-1').boundingBox())!
     const bottom1 = (await editor.getByTestId('slot-card-bottom-1').boundingBox())!
+    const bottomBox = (await editor.getByTestId('fixed-box-bottom-1').boundingBox())!
     expect(top1.height).toBeGreaterThan(top1.width)
-    expect(bottom1.width).toBeGreaterThan(bottom1.height)
+    expect(bottom1.height).toBeGreaterThan(bottom1.width)
+    expect(bottomBox.width).toBeGreaterThan(bottomBox.height)
+    await expect(editor.getByLabel('Angle de Baixo 1')).toHaveValue('270')
 
     await editor.getByRole('radio', { name: '1 tira' }).click()
     await expect(editor.getByRole('button', { name: /^Foto \d, foto \d$/ })).toHaveCount(3)
@@ -80,13 +83,14 @@ test.describe('layout editor (RF03)', () => {
     const start = await center(editor.getByTestId('slot-card-bottom-1'))
     await operatorWindow.mouse.move(start.x, start.y)
     await operatorWindow.mouse.down()
-    // Baixo 1 starts at Left 62: 56 px left puts it 6 px from the sheet edge.
-    await operatorWindow.mouse.move(start.x - 56 * scale, start.y, { steps: 6 })
-    await expect(left).toHaveValue('0')
+    // Baixo 1 stands at Angle 270 (402 wide on screen, Left 62 unturned): its visible left edge is at
+    // 162, so 156 px left puts it 6 px from the sheet edge. Snapped there, Left is -100.
+    await operatorWindow.mouse.move(start.x - 156 * scale, start.y, { steps: 6 })
+    await expect(left).toHaveValue('-100')
     await operatorWindow.keyboard.down('Alt')
-    await operatorWindow.mouse.move(start.x - 56 * scale, start.y + 1)
-    await expect.poll(() => numberOf(left)).toBeGreaterThan(2)
-    expect(Math.abs((await numberOf(left)) - 6)).toBeLessThanOrEqual(3)
+    await operatorWindow.mouse.move(start.x - 156 * scale, start.y + 1)
+    await expect.poll(() => numberOf(left)).toBeGreaterThan(-98)
+    expect(Math.abs((await numberOf(left)) + 94)).toBeLessThanOrEqual(3)
     await operatorWindow.mouse.up()
     await operatorWindow.keyboard.up('Alt')
   })
@@ -133,8 +137,9 @@ test.describe('layout editor (RF03)', () => {
     const card = editor.getByTestId('slot-card-bottom-1')
     await editor.getByLabel('Left de Baixo 1').fill('1000')
     await editor.getByLabel('Left de Baixo 1').press('Enter')
-    await expect.poll(async () => Math.round(((await card.boundingBox())!.x - x) / scale)).toBeGreaterThan(995)
-    expect(Math.abs(((await card.boundingBox())!.x - x) / scale - 1000)).toBeLessThan(5)
+    // The card stands (Angle 270): its visible left edge is 100 px right of its unturned Left.
+    await expect.poll(async () => Math.round(((await card.boundingBox())!.x - x) / scale)).toBeGreaterThan(1095)
+    expect(Math.abs(((await card.boundingBox())!.x - x) / scale - 1100)).toBeLessThan(5)
     await expect(editor.getByTestId('layout-save-state')).toHaveText('Salvo')
   })
 

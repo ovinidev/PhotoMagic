@@ -3,7 +3,8 @@ import { DEFAULT_FRAMING } from './geometry'
 import { panFraming, rotateFraming, turnFraming, wheelZoomFactor, zoomFraming } from './framing'
 import { TWO_STRIPS_SEED } from './seed'
 
-const bottom1 = TWO_STRIPS_SEED[3]!
+/** A lying slot at Angle 0 (Baixo 1 as it was before its card stood up). */
+const bottom1 = { ...TWO_STRIPS_SEED[3]!, angle: 0 }
 const top1 = TWO_STRIPS_SEED[0]!
 
 describe('panFraming (RF09)', () => {

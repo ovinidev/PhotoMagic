@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
 import { guideBoxListSchema, slotListSchema, webcamCapabilitiesSchema, webcamValuesSchema } from '@shared/ipc'
-import { SEED_LAYOUTS, type GuideBox, type Layouts, type PrintMode, type Slot } from '@shared/layout'
+import { SEED_LAYOUTS, migrateTwoStrips, type GuideBox, type Layouts, type PrintMode, type Slot } from '@shared/layout'
 import { NO_WEBCAM_VALUES, type WebcamCapabilities, type WebcamValues } from '@shared/webcam'
 import { defaultShareSettings, shareSettingsSchema, type ShareSettings } from '@shared/share'
 import { DEFAULT_USER_ZOOM, sanitizeUserZoom } from '@shared/zoom'
@@ -91,7 +91,8 @@ export function parseConfig(raw: unknown): Config {
     const saved = parsed.data.boxes[mode]
     if (saved && saved.length === SEED_LAYOUTS[mode].length) boxes[mode] = saved
   }
-  return { layouts: parsed.data.layouts, templates, boxes, webcam: parsed.data.webcam as Config['webcam'], zoom: sanitizeUserZoom(parsed.data.zoom), share: parsed.data.share }
+  const layouts: Layouts = { ...parsed.data.layouts, 'two-strips': migrateTwoStrips(parsed.data.layouts['two-strips']) }
+  return { layouts, templates, boxes, webcam: parsed.data.webcam as Config['webcam'], zoom: sanitizeUserZoom(parsed.data.zoom), share: parsed.data.share }
 }
 
 export async function readConfig(userData: string): Promise<Config> {

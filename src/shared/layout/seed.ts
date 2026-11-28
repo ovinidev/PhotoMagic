@@ -25,17 +25,33 @@ export const CLIENT_BOX_BLEED = 1
  * wide), so the seed bleeds 1 px left and right (`CLIENT_BOX_BLEED`): no gray hairline shows, the
  * centers do not move and the numbers stay integers. The top slots turn by 270°, so their unrotated
  * box is 532 × 358 around the same center: Left = 121 + 178 − 266 = 33, Top = 44 + 266 − 179 = 131
- * (and 445, 856 for the next two). The bottom slots have Angle 0: the visible rectangle widened by
- * 1 px each side. The cut line y = 620 falls in the 576–733 gap. The
+ * (and 445, 856 for the next two). The bottom slots turn by 270° as well, so all five cards stand
+ * upright like the top ones (client, 2026-11-28): the card is 602 × 402 unrotated around the box's
+ * center, so it shows 402 wide and 602 tall over the lying box. The photo still fills the box (it is
+ * planned on the fixed box, DESIGN §6) and the person stays upright, so the print does not change.
+ * The cut line y = 620 falls in the 576–733 gap. The
  * photos are clipped to the boxes' rounded corners (`radius`, see `CLIENT_BOX_RADIUS`).
  */
 export const TWO_STRIPS_SEED: readonly Slot[] = [
   { id: 'top-1', photo: 1, left: 33, top: 131, width: 532, height: 358, angle: 270, radius: CLIENT_BOX_RADIUS },
   { id: 'top-2', photo: 2, left: 445, top: 131, width: 532, height: 358, angle: 270, radius: CLIENT_BOX_RADIUS },
   { id: 'top-3', photo: 3, left: 856, top: 131, width: 532, height: 358, angle: 270, radius: CLIENT_BOX_RADIUS },
-  { id: 'bottom-1', photo: 1, left: 62, top: 733, width: 602, height: 402, angle: 0, radius: CLIENT_BOX_RADIUS },
-  { id: 'bottom-2', photo: 2, left: 708, top: 733, width: 602, height: 402, angle: 0, radius: CLIENT_BOX_RADIUS },
+  { id: 'bottom-1', photo: 1, left: 62, top: 733, width: 602, height: 402, angle: 270, radius: CLIENT_BOX_RADIUS },
+  { id: 'bottom-2', photo: 2, left: 708, top: 733, width: 602, height: 402, angle: 270, radius: CLIENT_BOX_RADIUS },
 ]
+
+/**
+ * A saved 2 tiras layout whose bottom cards still sit exactly on the old seed (Angle 0, never edited
+ * by hand) gets the new Angle 270; any other value is the operator's own and stays.
+ */
+export function migrateTwoStrips(slots: readonly Slot[]): Slot[] {
+  return slots.map((slot) => {
+    const seed = TWO_STRIPS_SEED.find((current) => current.id === slot.id)
+    const untouched =
+      seed && seed.id.startsWith('bottom-') && slot.angle === 0 && slot.left === seed.left && slot.top === seed.top && slot.width === seed.width && slot.height === seed.height
+    return untouched ? { ...slot, angle: seed.angle } : slot
+  })
+}
 
 
 
@@ -67,3 +83,20 @@ export const SEED_LAYOUTS: Layouts = {
   'two-strips': TWO_STRIPS_SEED,
   'one-strip': ONE_STRIP_SEED,
 }
+
+/**
+ * The standard gray boxes of each mode, as unrotated rectangles (DESIGN §6): where the photos print
+ * by default. They are not the cards: the 2 tiras bottom cards stand upright (Angle 270) over boxes
+ * that lie down (602 × 402), so the boxes keep their own list.
+ */
+export const SEED_BOXES: Record<keyof Layouts, readonly { id: string; left: number; top: number; width: number; height: number; radius: number }[]> = {
+  'two-strips': [
+    { id: 'top-1', left: 120, top: 44, width: 358, height: 532, radius: CLIENT_BOX_RADIUS },
+    { id: 'top-2', left: 532, top: 44, width: 358, height: 532, radius: CLIENT_BOX_RADIUS },
+    { id: 'top-3', left: 943, top: 44, width: 358, height: 532, radius: CLIENT_BOX_RADIUS },
+    { id: 'bottom-1', left: 62, top: 733, width: 602, height: 402, radius: CLIENT_BOX_RADIUS },
+    { id: 'bottom-2', left: 708, top: 733, width: 602, height: 402, radius: CLIENT_BOX_RADIUS },
+  ],
+  'one-strip': ONE_STRIP_SEED.map(({ id, left, top, width, height }) => ({ id, left, top, width, height, radius: CLIENT_BOX_RADIUS })),
+}
+

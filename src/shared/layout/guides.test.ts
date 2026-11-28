@@ -66,7 +66,7 @@ describe('fixedBox with the template boxes', () => {
     expect(fixed.seedSlot).toMatchObject({ id: 'top-2', angle: 270, width: 500, height: 380, left: 460, top: 140, radius: 58 })
     expect(slotBounds(fixed.seedSlot)).toEqual(detected[1]!.rect)
     const bottom = fixedBox('two-strips', 'bottom-2', 4, detected)!
-    expect(bottom.seedSlot).toMatchObject({ angle: 0, left: 760, top: 690, width: 570, height: 470 })
+    expect(bottom.seedSlot).toMatchObject({ angle: 270, left: 810, top: 640, width: 470, height: 570 })
   })
 
   it('falls back to the seed boxes when the count does not match the mode', () => {

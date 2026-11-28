@@ -29,10 +29,13 @@ test.describe('capture round', () => {
     await operatorWindow.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 15, { steps: 5 })
     await operatorWindow.mouse.up()
 
+    // Baixo 1's card stands at Angle 270, so the pan is stored in the card's turned frame: a drag down
+    // moves the photo along that frame's x axis.
     await expect.poll(async () => {
       const current = await state()
-      return current.kind === 'event' ? current.framings['bottom-1']?.panY ?? 0 : 0
-    }).toBeLessThan(0)
+      const framing = current.kind === 'event' ? current.framings['bottom-1'] : undefined
+      return Math.abs(framing?.panX ?? 0) + Math.abs(framing?.panY ?? 0)
+    }).toBeGreaterThan(0)
     const after = await state()
     if (after.kind !== 'event') throw new Error('expected an event')
     expect(after.framings['bottom-1']?.zoom).toBe(1.25)

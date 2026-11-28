@@ -1,5 +1,5 @@
-import { clampFraming, nearestQuarterTurn, normalizeAngle, slotBounds, type Framing, type Rect } from './geometry'
-import { SEED_LAYOUTS } from './seed'
+import { clampFraming, nearestQuarterTurn, normalizeAngle, type Framing, type Rect } from './geometry'
+import { SEED_BOXES, SEED_LAYOUTS } from './seed'
 import type { PrintMode, Slot } from './types'
 
 /** One standard photo box of a mode, as the sheet shows it: axis-aligned, with its corner radius. */
@@ -13,7 +13,7 @@ export type GuideBox = { id: string; rect: Rect; radius: number }
  * They do not follow the operator's edits, so they keep showing where the standard boxes are.
  */
 export function guideBoxes(mode: PrintMode): readonly GuideBox[] {
-  return SEED_LAYOUTS[mode].map((slot) => ({ id: slot.id, rect: slotBounds(slot), radius: slot.radius ?? 0 }))
+  return SEED_BOXES[mode].map(({ id, radius, ...rect }) => ({ id, rect, radius }))
 }
 
 /**
@@ -53,7 +53,8 @@ export function fixedBox(mode: PrintMode, slotId: string, index: number, boxes?:
   if (!seedSlot) return null
   const detected = boxes && boxes.length === seed.length ? boxes[at] : undefined
   if (detected) return { box: { ...detected, id: seedSlot.id }, seedSlot: slotOnBox(seedSlot, detected) }
-  return { box: { id: seedSlot.id, rect: slotBounds(seedSlot), radius: seedSlot.radius ?? 0 }, seedSlot }
+  const box = guideBoxes(mode)[at]!
+  return { box, seedSlot: slotOnBox(seedSlot, box) }
 }
 
 /**
