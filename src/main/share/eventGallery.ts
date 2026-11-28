@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
-import { isAbsolute, relative, resolve } from 'node:path'
-import { isMontageFileName } from '@shared/files'
+import { readdir } from 'node:fs/promises'
+import { isAbsolute, join, relative, resolve } from 'node:path'
+import { ORIGINALS_DIR, ORIGINAL_INDEXES, isMontageFileName, originalFileName, type OriginalIndex } from '@shared/files'
 
 export type SharedEvent = { token: string; name: string; folder: string }
 
@@ -39,3 +40,21 @@ export function resolveEventFile(folder: string, fileName: string): string | nul
   if (!rel || rel.startsWith('..') || isAbsolute(rel) || rel !== fileName) return null
   return path
 }
+
+/** The path of original `index` of the round `montage` in the event's `Originais/`, or `null` (same checks). */
+export function resolveOriginalFile(folder: string, montage: string, index: OriginalIndex): string | null {
+  if (!resolveEventFile(folder, montage)) return null
+  const root = resolve(folder, ORIGINALS_DIR)
+  const fileName = originalFileName(montage, index)
+  const path = resolve(root, fileName)
+  const rel = relative(root, path)
+  if (rel !== fileName || isAbsolute(rel)) return null
+  return path
+}
+
+/** Which originals of each round exist on disk, for the gallery page (rounds without any are dropped). */
+export async function listOriginals(folder: string, montages: readonly string[]): Promise<{ fileName: string; indexes: OriginalIndex[] }[]> {
+  const present = new Set(await readdir(join(folder, ORIGINALS_DIR)).catch(() => [] as string[]))
+  return montages.map((fileName) => ({ fileName, indexes: ORIGINAL_INDEXES.filter((index) => present.has(originalFileName(fileName, index))) }))
+}
+

@@ -4,11 +4,11 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import sharp from 'sharp'
 import { parseShareRoute } from '@shared/share'
 import { listMontages, THUMBNAIL_WIDTH } from '../gallery'
-import { resolveEventFile, type EventGallery } from './eventGallery'
+import { listOriginals, resolveOriginalFile, type EventGallery } from './eventGallery'
 import { galleryPage, sharePage } from './page'
 import type { ShareRegistry } from './registry'
 
-/** What the server can answer: the rounds' montages by token and the open event's folder by token. */
+/** What the server can answer: each round's originals by token and the open event's folder by token. */
 export type ShareSources = { registry: ShareRegistry; gallery: EventGallery }
 
 const BASE_HEADERS = {
@@ -72,24 +72,27 @@ async function handle(sources: ShareSources, req: IncomingMessage, res: ServerRe
   if (route.kind === 'page' || route.kind === 'download') {
     const file = sources.registry.get(route.token)
     if (!file) return notFound(res)
-    if (route.kind === 'page') return sendHtml(req, res, sharePage(route.token, file.fileName))
-    return sendJpeg(req, res, file.path, file.fileName)
+    if (route.kind === 'page') return sendHtml(req, res, sharePage(route.token, file.fileName, file.photos.map((photo) => photo.index)))
+    const photo = file.photos.find((candidate) => candidate.index === route.index)
+    if (!photo) return notFound(res)
+    return sendJpeg(req, res, photo.path, file.fileName.replace(/\.jpg$/, `-${route.index}.jpg`))
   }
 
-  // The event gallery: the token names the open event's folder, and only its montages are served.
+  // The event gallery: the token names the open event's folder, and only its rounds' originals are served.
   const event = sources.gallery.get(route.token)
   if (!event) return notFound(res)
-  if (route.kind === 'gallery') return sendHtml(req, res, galleryPage(route.token, event.name, await listMontages(event.folder)))
-  const path = resolveEventFile(event.folder, route.fileName)
+  if (route.kind === 'gallery') return sendHtml(req, res, galleryPage(route.token, event.name, await listOriginals(event.folder, await listMontages(event.folder))))
+  const path = resolveOriginalFile(event.folder, route.fileName, route.index)
   if (!path) return notFound(res)
-  return route.kind === 'gallery-file' ? sendJpeg(req, res, path, route.fileName) : sendThumbnail(req, res, path)
+  return route.kind === 'gallery-file' ? sendJpeg(req, res, path, route.fileName.replace(/\.jpg$/, `-${route.index}.jpg`)) : sendThumbnail(req, res, path)
 }
 
 /**
  * The read-only photo server on the event Wi-Fi (DESIGN §17): plain `node:http`, bound to one
  * address, answering only the registry's round tokens and the open event's gallery token. No
  * listing outside the event folder, no upload, and a file name from the URL is only used after it
- * is checked to be a montage name that resolves directly inside the event folder.
+ * is checked to be a montage name (and a photo number 1 to 3) resolving inside the event folder.
+ * Guests only ever get the original photos, never the montage with the template.
  */
 export function startShareServer(sources: ShareSources, host: string, port: number): Promise<Server> {
   const server = createServer((req, res) => {

@@ -23,8 +23,11 @@ export type OpenEvent = {
 
 export type SessionDeps = {
   render: (input: SheetInput, output: SheetOutput) => Promise<Uint8Array>
-  /** Writes the montage into the folder under a free `HH-mm-ss.jpg` name; returns the file name and path. */
-  saveMontage: (folder: string, jpeg: Uint8Array) => Promise<{ fileName: string; path: string }>
+  /**
+   * Writes the montage into the folder under a free `HH-mm-ss.jpg` name, with the round's original
+   * captures (`[index, jpeg]`, for the guests' download); returns the file name and path.
+   */
+  saveMontage: (folder: string, jpeg: Uint8Array, originals: readonly (readonly [PhotoIndex, Uint8Array])[]) => Promise<{ fileName: string; path: string }>
   printer: Printer
   onChange: (state: SessionState) => void
   /** Reports a preview that could not be composed; the round keeps going. */
@@ -226,7 +229,8 @@ export function createSession(deps: SessionDeps): Session {
         notify()
         try {
           const jpeg = await deps.render(sheetInput(open, current), { kind: 'montage' })
-          current.saved = await deps.saveMontage(open.folder, jpeg)
+          const originals = [...current.photos.entries()].sort(([a], [b]) => a - b)
+          current.saved = await deps.saveMontage(open.folder, jpeg, originals)
         } catch (error) {
           // Nothing was written, so nothing is announced as printed (DESIGN §10).
           if (round === current) fail('save-failed', error instanceof Error ? error.message : String(error))

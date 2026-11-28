@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { ElectronApplication, Page } from '@playwright/test'
@@ -98,3 +98,9 @@ export function setSimulatedPrinter(app: ElectronApplication, next: { status?: '
     hook.setPrinter(flags)
   }, next)
 }
+
+/** The montages of an event folder: its `.jpg` files, without the `Originais/` folder of raw captures (DESIGN §17). */
+export function montagesIn(folder: string): string[] {
+  return readdirSync(folder).filter((name) => name.endsWith('.jpg')).sort()
+}
+

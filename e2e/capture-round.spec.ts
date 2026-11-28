@@ -1,10 +1,10 @@
-import { mkdtempSync, readdirSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Page } from '@playwright/test'
 import sharp from 'sharp'
 import { expect, test } from './fixtures'
-import { PHOTO_TIMEOUT, PRINT_TIMEOUT, startEvent, takePhotos } from './event'
+import { PHOTO_TIMEOUT, PRINT_TIMEOUT, startEvent, montagesIn, takePhotos } from './event'
 import { writeY4m } from './y4m'
 
 test.describe('capture round', () => {
@@ -185,7 +185,7 @@ test.describe('capture round', () => {
     await tv.getByRole('button', { name: 'Cancelar' }).click()
     await expect(tv.getByTestId('print-screen')).toHaveCount(0)
     await expect(tv.getByTestId('photo-counter')).toHaveText('1/3')
-    expect(readdirSync(join(dirs.desktop, 'Festa'))).toEqual([])
+    expect(montagesIn(join(dirs.desktop, 'Festa'))).toEqual([])
   })
 
   test('DESIGN §14 the print screen appears and leaves at once, with no animation', async ({ app, operatorWindow }) => {
@@ -262,7 +262,7 @@ test.describe('capture round: live view and file (RF05)', () => {
     await takePhotos(tv, 3)
     await tv.getByRole('button', { name: 'Imprimir' }).click()
     await expect(tv.getByTestId('print-screen')).toHaveAttribute('data-phase', 'printed', { timeout: PRINT_TIMEOUT })
-    const [file] = readdirSync(join(dirs.desktop, 'Festa'))
+    const [file] = montagesIn(join(dirs.desktop, 'Festa'))
     const { data, info } = await sharp(join(dirs.desktop, 'Festa', file!)).raw().toBuffer({ resolveWithObject: true })
     const at = (x: number, y: number) => Array.from(data.subarray((y * info.width + x) * info.channels, (y * info.width + x) * info.channels + 3))
     expect(closeTo(at(322, 80), RED), 'top of slot 1 is the sensor left edge').toBe(true)

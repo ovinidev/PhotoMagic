@@ -1,9 +1,12 @@
 import { randomBytes } from 'node:crypto'
 
-export type SharedFile = { path: string; fileName: string }
+import type { OriginalIndex } from '@shared/files'
+
+/** One round as the guest sees it: its original photos on disk (never the montage), by number. */
+export type SharedFile = { fileName: string; photos: readonly { index: OriginalIndex; path: string }[] }
 
 /**
- * Token → montage on disk, in memory only (DESIGN §17). A token is 128 random bits; only a token
+ * Token → one round's original photos on disk, in memory only (DESIGN §17). A token is 128 random bits; only a token
  * handed out here maps to a file, so a URL can never name a path. The oldest entries go first once
  * `max` is reached, and the event's end forgets them all.
  */

@@ -1,25 +1,34 @@
-import { isMontageFileName } from '../files'
+import { isMontageFileName, isOriginalIndex, type OriginalIndex } from '../files'
 
 /**
- * The only URLs the local photo server answers (DESIGN §17): `/p/<token>` (the guest page) and
- * `/p/<token>/foto.jpg` (the montage download) for one round; `/e/<token>` (the event gallery),
- * `/e/<token>/t/<HH-mm-ss.jpg>` (a thumbnail) and `/e/<token>/f/<HH-mm-ss.jpg>` (the montage) for
- * the open event. Anything else, a directory, `..`, an encoded slash, a name this app does not
- * write or a token of the wrong shape, is `null` and gets a 404. A round token names one file; an
- * event token names one folder, and only montage names are accepted inside it.
+ * The only URLs the local photo server answers (DESIGN §17). Guests get the round's three original
+ * photos, never the montage with the template: `/p/<token>` (the guest page) and `/p/<token>/foto-N.jpg`
+ * (original N, 1 to 3) for one round; `/e/<token>` (the event gallery), `/e/<token>/t/<HH-mm-ss.jpg>/N`
+ * (a thumbnail of original N of that round) and `/e/<token>/f/<HH-mm-ss.jpg>/N` (original N) for the
+ * open event. Anything else, a directory, `..`, an encoded slash, a name this app does not write or
+ * a token of the wrong shape, is `null` and gets a 404. A round token names one round; an event
+ * token names one folder, and only montage names and photo numbers are accepted inside it.
  */
 
 /** 128 random bits, base64url: 22 characters. */
 export const SHARE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{22}$/
 
-export const DOWNLOAD_FILE = 'foto.jpg'
+/** The download name of original N on the guest page. */
+export const photoFile = (index: OriginalIndex) => `foto-${index}.jpg`
 
 export type ShareRoute =
   | { kind: 'page'; token: string }
-  | { kind: 'download'; token: string }
+  | { kind: 'download'; token: string; index: OriginalIndex }
   | { kind: 'gallery'; token: string }
-  | { kind: 'gallery-thumb'; token: string; fileName: string }
-  | { kind: 'gallery-file'; token: string; fileName: string }
+  | { kind: 'gallery-thumb'; token: string; fileName: string; index: OriginalIndex }
+  | { kind: 'gallery-file'; token: string; fileName: string; index: OriginalIndex }
+
+/** `1`, `2` or `3` as a photo number; anything else (`01`, `4`, `1.jpg`) is `null`. */
+function photoIndex(text: string | undefined): OriginalIndex | null {
+  if (!text || !/^[1-9]$/.test(text)) return null
+  const value = Number(text)
+  return isOriginalIndex(value) ? value : null
+}
 
 export function parseShareRoute(rawUrl: string): ShareRoute | null {
   if (!rawUrl.startsWith('/')) return null
@@ -31,15 +40,17 @@ export function parseShareRoute(rawUrl: string): ShareRoute | null {
   if (!SHARE_TOKEN_PATTERN.test(token)) return null
   if (parts[1] === 'p') {
     if (parts.length === 3) return { kind: 'page', token }
-    if (parts.length === 4 && parts[3] === DOWNLOAD_FILE) return { kind: 'download', token }
+    const index = photoIndex(/^foto-(\d)\.jpg$/.exec(parts[3] ?? '')?.[1])
+    if (parts.length === 4 && index !== null) return { kind: 'download', token, index }
     return null
   }
-  // ['', 'e', token] or ['', 'e', token, 't' | 'f', 'HH-mm-ss.jpg'].
+  // ['', 'e', token] or ['', 'e', token, 't' | 'f', 'HH-mm-ss.jpg', '1' | '2' | '3'].
   if (parts.length === 3) return { kind: 'gallery', token }
   const fileName = parts[4] ?? ''
-  if (parts.length !== 5 || !isMontageFileName(fileName)) return null
-  if (parts[3] === 't') return { kind: 'gallery-thumb', token, fileName }
-  if (parts[3] === 'f') return { kind: 'gallery-file', token, fileName }
+  const index = photoIndex(parts[5])
+  if (parts.length !== 6 || !isMontageFileName(fileName) || index === null) return null
+  if (parts[3] === 't') return { kind: 'gallery-thumb', token, fileName, index }
+  if (parts[3] === 'f') return { kind: 'gallery-file', token, fileName, index }
   return null
 }
 

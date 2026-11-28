@@ -98,7 +98,8 @@ describe('session', () => {
     const state = await session.print()
     expect(phase(state)).toEqual({ kind: 'printed', fileName: '21-45-08.jpg' })
     expect(render).toHaveBeenCalledWith(expect.objectContaining({ photos: { 1: jpeg(1), 2: jpeg(2), 3: jpeg(3) } }), { kind: 'montage' })
-    expect(saveMontage).toHaveBeenCalledWith(EVENT.folder, new Uint8Array([9]))
+    // The round's originals go along, in photo order, for the guests' download (DESIGN §17).
+    expect(saveMontage).toHaveBeenCalledWith(EVENT.folder, new Uint8Array([9]), [[1, jpeg(1)], [2, jpeg(2)], [3, jpeg(3)]])
     expect(print).toHaveBeenCalledWith({ jpegPath: '/Desktop/Aniversário AJ/21-45-08.jpg', copies: 2, mode: 'two-strips', cut: true })
   })
 
